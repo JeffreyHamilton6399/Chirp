@@ -686,6 +686,7 @@
     .ptt-ring { width: 170px; height: 170px; }
     .ptt-ring-2 { width: 210px; height: 210px; }
     .brand-name { font-size: 1.3rem; }
+    .channel-create { border-top: none; border-left: 1px solid var(--border); margin-top: 0; padding: 8px; display: flex; align-items: center; }
   }
 
   /* ─── TOAST ─────────────────────────────────────────────── */
@@ -715,6 +716,198 @@
   #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
   #toast.green { border-color: var(--green-dim); color: var(--green); }
   #toast.red { border-color: var(--danger); color: var(--danger); }
+
+  /* ─── CHANNEL CREATE ────────────────────────────────────── */
+  .channel-create {
+    padding: 10px 12px;
+    border-top: 1px solid var(--border);
+    margin-top: auto;
+    flex-shrink: 0;
+  }
+
+  .channel-create-row {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+
+  .channel-create input {
+    flex: 1;
+    min-width: 0;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 6px 8px;
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    color: var(--green);
+    outline: none;
+    letter-spacing: 0.05em;
+    transition: border-color 0.2s;
+  }
+
+  .channel-create input::placeholder { color: var(--text-dim); }
+  .channel-create input:focus { border-color: var(--green-dim); }
+
+  .channel-create button {
+    background: none;
+    border: 1px solid var(--green-dim);
+    border-radius: 3px;
+    padding: 6px 8px;
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    color: var(--green);
+    cursor: pointer;
+    transition: background 0.15s;
+    flex-shrink: 0;
+  }
+
+  .channel-create button:hover { background: var(--green-glow); }
+
+  /* ─── JOIN REQUEST TOAST ─────────────────────────────────── */
+  #join-toast {
+    position: fixed;
+    bottom: 32px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--bg3);
+    border: 1px solid var(--green-dim);
+    border-radius: 6px;
+    padding: 12px 16px;
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    color: var(--text);
+    letter-spacing: 0.08em;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s, transform 0.25s;
+    z-index: 600;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-width: 260px;
+    max-width: 90vw;
+  }
+
+  #join-toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+    pointer-events: all;
+  }
+
+  .join-toast-msg {
+    color: var(--green);
+    font-size: 0.72rem;
+  }
+
+  .join-toast-timer {
+    font-size: 0.6rem;
+    color: var(--text-dim);
+  }
+
+  .join-toast-actions {
+    display: flex;
+    gap: 8px;
+  }
+
+  .btn-accept {
+    flex: 1;
+    background: var(--green);
+    color: #000;
+    border: none;
+    border-radius: 3px;
+    padding: 7px 12px;
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+
+  .btn-accept:hover { opacity: 0.85; }
+
+  .btn-deny {
+    flex: 1;
+    background: none;
+    color: var(--danger);
+    border: 1px solid var(--danger);
+    border-radius: 3px;
+    padding: 7px 12px;
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+
+  .btn-deny:hover { background: rgba(255,68,68,0.1); }
+
+  /* ─── HOST BADGE ─────────────────────────────────────────── */
+  .host-badge {
+    font-family: var(--mono);
+    font-size: 0.55rem;
+    color: var(--green);
+    border: 1px solid var(--green-dim);
+    border-radius: 2px;
+    padding: 1px 4px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    flex-shrink: 0;
+  }
+
+  /* Waiting-for-host overlay */
+  #waiting-overlay {
+    display: none;
+    position: absolute;
+    inset: 0;
+    background: rgba(8,13,8,0.85);
+    z-index: 10;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  #waiting-overlay.show { display: flex; }
+
+  .waiting-spinner {
+    width: 40px;
+    height: 40px;
+    border: 2px solid var(--border);
+    border-top-color: var(--green);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .waiting-text {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    text-align: center;
+  }
+
+  .waiting-cancel {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 6px 14px;
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: border-color 0.2s, color 0.2s;
+  }
+
+  .waiting-cancel:hover { border-color: var(--danger); color: var(--danger); }
 
   /* ─── SCROLLBAR ─────────────────────────────────────────── */
   ::-webkit-scrollbar { width: 4px; height: 4px; }
@@ -772,6 +965,12 @@
     <!-- Channel list -->
     <div class="sidebar" id="channel-list">
       <div class="sidebar-label">Channels</div>
+      <div class="channel-create">
+        <div class="channel-create-row">
+          <input id="new-ch-input" type="text" maxlength="20" placeholder="new channel…" autocomplete="off" spellcheck="false">
+          <button id="new-ch-btn">+</button>
+        </div>
+      </div>
     </div>
 
     <!-- Center -->
@@ -813,6 +1012,13 @@
           </div>
           <div class="ptt-hint" id="ptt-keyboard-hint">hold button · or hold <kbd>Space</kbd></div>
         </div>
+
+        <!-- Waiting for host approval overlay -->
+        <div id="waiting-overlay">
+          <div class="waiting-spinner"></div>
+          <div class="waiting-text">Waiting for host approval…<br><span id="waiting-countdown"></span></div>
+          <button class="waiting-cancel" id="waiting-cancel-btn">Cancel</button>
+        </div>
       </div>
     </div>
 
@@ -825,6 +1031,16 @@
 </div>
 
 <div id="toast"></div>
+
+<!-- Join-request toast (host only) -->
+<div id="join-toast">
+  <div class="join-toast-msg" id="join-toast-msg"></div>
+  <div class="join-toast-timer" id="join-toast-timer"></div>
+  <div class="join-toast-actions">
+    <button class="btn-accept" id="join-accept-btn">Accept</button>
+    <button class="btn-deny"   id="join-deny-btn">Deny</button>
+  </div>
+</div>
 
 <!-- ─── PEERJS CDN ──────────────────────────────────────── -->
 <script>
@@ -861,11 +1077,11 @@
 ═══════════════════════════════════════════════════════════ */
 const CONFIG = {
   appName:    "Chirp",
-  channels:   ["general", "gaming", "chill", "ops"],
   peerJsHost: "0.peerjs.com",   // free public PeerJS matchmaking server
   peerJsPort: 443,
   peerJsPath: "/",
   peerJsSecure: true,
+  joinTimeout: 15,              // seconds before auto-deny
 };
 /* ═══════════════════════════════════════════════════════════ */
 
@@ -875,14 +1091,20 @@ const state = {
   myName:        null,   // display name
   peer:          null,   // PeerJS instance
   currentChannel: null,  // channel string
-  connections:   {},     // peerId → { conn, name, talking }
+  connections:   {},     // peerId → { conn, name, talking, joinTime }
   localStream:   null,   // MediaStream
   audioTrack:    null,   // MediaStreamTrack
   calls:         {},     // peerId → MediaConnection (outgoing)
   inboundCalls:  {},     // peerId → MediaConnection (incoming)
   isTalking:     false,
   wakeLock:      null,
-  channelPeers:  {},     // channel → [peerId, …] (discovered list)
+  hostPeer:      null,   // PeerJS instance holding the rendezvous ID (if we're host)
+  isHost:        false,  // whether we are the channel host
+  // Join request state (host side)
+  pendingJoin:   null,   // { peerId, name, conn, timer, countdownInterval }
+  // Join request state (requester side)
+  joinRequestConn: null, // data conn to host's rendezvous peer while waiting
+  joinTimeout:   null,
 };
 
 // ─── Persistence ───────────────────────────────────────────
@@ -924,6 +1146,7 @@ function startApp() {
   setupPTT();
   setupInstallPrompt();
   setupServiceWorker();
+  setupChannelCreate();
 
   document.getElementById('change-name-btn').addEventListener('click', () => {
     const n = prompt('New callsign:', state.myName);
@@ -936,27 +1159,67 @@ function startApp() {
       toast(`Callsign: ${state.myName}`, 'green');
     }
   });
+
+  document.getElementById('waiting-cancel-btn').addEventListener('click', () => {
+    cancelJoinRequest();
+  });
+}
+
+// ─── Dynamic Channel List ──────────────────────────────────
+// Channels are ephemeral; we track them in this Set locally
+const liveChannels = new Set();
+
+function setupChannelCreate() {
+  const input = document.getElementById('new-ch-input');
+  const btn   = document.getElementById('new-ch-btn');
+
+  function createChannel() {
+    const raw = input.value.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 20);
+    if (!raw) { input.focus(); return; }
+    input.value = '';
+    if (!liveChannels.has(raw)) {
+      liveChannels.add(raw);
+      renderChannels();
+    }
+    joinChannel(raw);
+  }
+
+  btn.addEventListener('click', createChannel);
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') createChannel(); });
 }
 
 // ─── Render Channels ───────────────────────────────────────
 function renderChannels() {
   const list = document.getElementById('channel-list');
-  const label = list.querySelector('.sidebar-label');
+  // Preserve create widget
+  const createEl = list.querySelector('.channel-create');
   list.innerHTML = '';
-  if (label) list.appendChild(label); else {
-    const l = document.createElement('div');
-    l.className = 'sidebar-label';
-    l.textContent = 'Channels';
-    list.appendChild(l);
+
+  const label = document.createElement('div');
+  label.className = 'sidebar-label';
+  label.textContent = 'Channels';
+  list.appendChild(label);
+
+  if (liveChannels.size === 0) {
+    const empty = document.createElement('div');
+    empty.style.cssText = 'padding:12px 16px;font-family:var(--mono);font-size:0.6rem;color:var(--text-dim);letter-spacing:0.1em;';
+    empty.textContent = 'no channels yet';
+    list.appendChild(empty);
   }
-  CONFIG.channels.forEach(ch => {
+
+  liveChannels.forEach(ch => {
     const el = document.createElement('div');
-    el.className = 'channel-item';
+    el.className = `channel-item${state.currentChannel === ch ? ' active' : ''}`;
     el.dataset.channel = ch;
+
+    const memberCount = ch === state.currentChannel
+      ? 1 + Object.keys(state.connections).length
+      : 0;
+
     el.innerHTML = `
       <span class="ch-hash">#</span>
       <span class="ch-name">${ch}</span>
-      <span class="ch-count" id="count-${ch}">0</span>
+      <span class="ch-count" id="count-${ch}">${memberCount}</span>
     `;
     el.addEventListener('click', () => {
       if (state.currentChannel === ch) return;
@@ -964,6 +1227,18 @@ function renderChannels() {
     });
     list.appendChild(el);
   });
+
+  if (createEl) list.appendChild(createEl);
+  else {
+    // Rebuild create widget (first render)
+    const cw = document.createElement('div');
+    cw.className = 'channel-create';
+    cw.innerHTML = `<div class="channel-create-row">
+      <input id="new-ch-input" type="text" maxlength="20" placeholder="new channel…" autocomplete="off" spellcheck="false">
+      <button id="new-ch-btn">+</button>
+    </div>`;
+    list.appendChild(cw);
+  }
 }
 
 // ─── PeerJS Init ───────────────────────────────────────────
@@ -987,15 +1262,28 @@ function initPeer() {
   });
 
   state.peer.on('error', err => {
-    console.error('Peer error:', err);
+    console.warn('Peer error:', err.type, err.message);
+
     if (err.type === 'unavailable-id') {
+      // Our own ID is taken — regenerate
       state.myId = crypto.randomUUID().replace(/-/g,'').slice(0,16);
       localStorage.setItem('chirp_peer_id', state.myId);
       initPeer();
       return;
     }
-    setStatus('error');
-    toast('Connection error: ' + err.type, 'red');
+
+    if (err.type === 'peer-unavailable') {
+      // Normal when joining an empty channel — we're the first one here
+      return;
+    }
+
+    if (err.type === 'network' || err.type === 'server-error' || err.type === 'socket-error') {
+      setStatus('reconnecting…');
+      setTimeout(() => { try { state.peer.reconnect(); } catch {} }, 2000);
+      return;
+    }
+
+    console.error('Unhandled peer error:', err);
   });
 
   state.peer.on('disconnected', () => {
@@ -1036,7 +1324,7 @@ function initPeer() {
 function setupDataConn(conn) {
   conn.on('open', () => {
     // Greet: send our info
-    conn.send({ type: 'hello', name: state.myName, channel: state.currentChannel });
+    conn.send({ type: 'hello', name: state.myName, channel: state.currentChannel, joinTime: state.myJoinTime || Date.now() });
   });
 
   conn.on('data', data => {
@@ -1051,7 +1339,7 @@ function setupDataConn(conn) {
     removePeer(conn.peer);
   });
 
-  state.connections[conn.peer] = { conn, name: conn.peer, talking: false };
+  state.connections[conn.peer] = { conn, name: conn.peer, talking: false, joinTime: Date.now() };
 }
 
 // ─── Handle Incoming Data ──────────────────────────────────
@@ -1059,23 +1347,24 @@ function handleData(peerId, data) {
   switch (data.type) {
 
     case 'hello':
-      // Peer introduced themselves
       if (state.connections[peerId]) {
         state.connections[peerId].name = data.name;
+        state.connections[peerId].joinTime = data.joinTime || Date.now();
       }
       renderMembers();
       // Send them our peer list so they can mesh-connect
       if (state.currentChannel) {
-        const peerList = Object.keys(state.connections).filter(id => id !== peerId);
+        const peerList = Object.keys(state.connections)
+          .filter(id => id !== peerId)
+          .map(id => ({ id, joinTime: state.connections[id].joinTime || 0 }));
         state.connections[peerId]?.conn.send({ type: 'peer-list', peers: peerList });
       }
       break;
 
     case 'peer-list':
-      // Connect to peers we don't know yet
-      data.peers.forEach(pid => {
+      data.peers.forEach(({ id: pid, joinTime }) => {
         if (!state.connections[pid] && pid !== state.myId) {
-          connectToPeer(pid, true);
+          connectToPeer(pid, true, joinTime);
         }
       });
       break;
@@ -1090,15 +1379,50 @@ function handleData(peerId, data) {
     case 'leave':
       removePeer(peerId);
       break;
+
+    // ── Join-request flow ──────────────────────────────────
+    case 'join-approved':
+      // Host approved us; now connect for real
+      hideWaitingOverlay();
+      clearTimeout(state.joinTimeout);
+      if (state.joinRequestConn) { try { state.joinRequestConn.close(); } catch {} state.joinRequestConn = null; }
+      // data.hostRealId is the host's real peer ID
+      if (data.hostRealId && data.hostRealId !== state.myId && !state.connections[data.hostRealId]) {
+        connectToPeer(data.hostRealId, true);
+      }
+      toast(`Joined #${state.currentChannel}`, 'green');
+      // Also add channel to live list if not present
+      if (state.currentChannel) {
+        liveChannels.add(state.currentChannel);
+        renderChannels();
+      }
+      break;
+
+    case 'join-denied':
+      hideWaitingOverlay();
+      if (state.joinRequestConn) { try { state.joinRequestConn.close(); } catch {} state.joinRequestConn = null; }
+      toast('Join request denied', 'red');
+      // Leave the channel attempt
+      state.currentChannel = null;
+      document.querySelectorAll('.channel-item').forEach(el => el.classList.remove('active'));
+      document.getElementById('ptt-section').classList.remove('visible');
+      document.getElementById('no-channel').style.display = '';
+      updateChannelCount();
+      break;
+
+    case 'host-transfer':
+      // We are the new host
+      promoteToHost(data.channel);
+      break;
   }
 }
 
 // ─── Connect to a Peer ─────────────────────────────────────
-function connectToPeer(peerId, initiateCall) {
+function connectToPeer(peerId, initiateCall, joinTime) {
   if (state.connections[peerId] || peerId === state.myId) return;
 
   const conn = state.peer.connect(peerId, { reliable: true });
-  state.connections[peerId] = { conn, name: peerId, talking: false };
+  state.connections[peerId] = { conn, name: peerId, talking: false, joinTime: joinTime || Date.now() };
   setupDataConn(conn);
 
   if (initiateCall && state.localStream) {
@@ -1151,40 +1475,292 @@ async function joinChannel(ch) {
       state.localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
       state.audioTrack = state.localStream.getAudioTracks()[0];
       state.audioTrack.enabled = false; // muted until PTT
-    } catch (err) {
+    } catch {
       toast('Mic permission denied — PTT will not work', 'red');
     }
   }
 
   state.currentChannel = ch;
+  state.myJoinTime = Date.now();
+  liveChannels.add(ch);
 
   // Update UI
-  document.querySelectorAll('.channel-item').forEach(el => {
-    el.classList.toggle('active', el.dataset.channel === ch);
-  });
+  renderChannels();
   document.getElementById('channel-name-display').textContent = ch;
   document.getElementById('no-channel').style.display = 'none';
   document.getElementById('ptt-section').classList.add('visible');
 
   renderMembers();
-  toast(`Joined #${ch}`);
 
-  // Discover channel host by well-known peer ID pattern
-  const hostId = `chirp-${ch}`;
-  if (hostId !== state.myId) {
-    connectToPeer(hostId, true);
-  } else {
-    // We're the host — announce via well-known ID
-    // (Already listening on our own ID)
+  // Try to become the rendezvous host
+  const rendezvousId = 'chirpch--' + ch;
+  tryBecomeHost(ch, rendezvousId);
+}
+
+// ─── Try to register as channel host ───────────────────────
+function tryBecomeHost(ch, rendezvousId) {
+  if (state.currentChannel !== ch) return;
+
+  const hostPeer = new Peer(rendezvousId, {
+    host:   CONFIG.peerJsHost,
+    port:   CONFIG.peerJsPort,
+    path:   CONFIG.peerJsPath,
+    secure: CONFIG.peerJsSecure,
+  });
+
+  hostPeer.on('open', () => {
+    // We are the host — no approval needed for ourselves
+    state.hostPeer = hostPeer;
+    state.isHost   = true;
+    toast(`You are host of #${ch}`, 'green');
+    renderMembers();
+
+    // Accept join-request connections from newcomers
+    hostPeer.on('connection', conn => {
+      conn.on('open', () => {
+        // Wait for data
+      });
+      conn.on('data', data => {
+        if (data.type === 'join-request' && state.currentChannel === ch) {
+          showJoinRequest(conn.peer, data.name, ch, conn);
+        }
+      });
+      conn.on('error', () => {});
+    });
+  });
+
+  hostPeer.on('error', err => {
+    if (err.type === 'unavailable-id') {
+      // Someone else is already host — send a join request
+      sendJoinRequest(ch, rendezvousId);
+    }
+  });
+}
+
+// ─── Send join request to existing host ────────────────────
+function sendJoinRequest(ch, rendezvousId) {
+  if (state.currentChannel !== ch) return;
+
+  // Show waiting overlay
+  showWaitingOverlay(ch);
+
+  const conn = state.peer.connect(rendezvousId, { reliable: true });
+  state.joinRequestConn = conn;
+
+  conn.on('open', () => {
+    conn.send({ type: 'join-request', name: state.myName, channel: ch });
+  });
+
+  conn.on('data', data => {
+    handleData(conn.peer, data);
+  });
+
+  conn.on('error', () => {
+    hideWaitingOverlay();
+    toast('Host unreachable — trying again…');
+    // Host may have left; retry becoming host
+    setTimeout(() => tryBecomeHost(ch, rendezvousId), 600);
+  });
+
+  conn.on('close', () => {
+    // May close after host responds
+  });
+
+  // Auto-deny timeout (15 s)
+  state.joinTimeout = setTimeout(() => {
+    if (state.currentChannel === ch && !state.isHost) {
+      hideWaitingOverlay();
+      toast('No response from host — request timed out', 'red');
+      state.currentChannel = null;
+      document.querySelectorAll('.channel-item').forEach(el => el.classList.remove('active'));
+      document.getElementById('ptt-section').classList.remove('visible');
+      document.getElementById('no-channel').style.display = '';
+      updateChannelCount();
+      // If channel is now empty, remove it
+      maybeRemoveChannel(ch);
+    }
+  }, CONFIG.joinTimeout * 1000);
+}
+
+function cancelJoinRequest() {
+  clearTimeout(state.joinTimeout);
+  hideWaitingOverlay();
+  if (state.joinRequestConn) { try { state.joinRequestConn.close(); } catch {} state.joinRequestConn = null; }
+  const ch = state.currentChannel;
+  state.currentChannel = null;
+  document.querySelectorAll('.channel-item').forEach(el => el.classList.remove('active'));
+  document.getElementById('ptt-section').classList.remove('visible');
+  document.getElementById('no-channel').style.display = '';
+  updateChannelCount();
+  if (ch) maybeRemoveChannel(ch);
+}
+
+// ─── Waiting Overlay ───────────────────────────────────────
+function showWaitingOverlay(ch) {
+  const overlay = document.getElementById('waiting-overlay');
+  overlay.classList.add('show');
+  let secs = CONFIG.joinTimeout;
+  document.getElementById('waiting-countdown').textContent = `auto-deny in ${secs}s`;
+  const interval = setInterval(() => {
+    secs--;
+    const el = document.getElementById('waiting-countdown');
+    if (el) el.textContent = secs > 0 ? `auto-deny in ${secs}s` : '';
+    if (secs <= 0) clearInterval(interval);
+  }, 1000);
+  overlay._interval = interval;
+}
+
+function hideWaitingOverlay() {
+  const overlay = document.getElementById('waiting-overlay');
+  overlay.classList.remove('show');
+  clearInterval(overlay._interval);
+}
+
+// ─── Host: show join request toast ─────────────────────────
+let joinToastTimer, joinToastCountdown;
+
+function showJoinRequest(peerId, name, ch, conn) {
+  // If already showing one, queue or ignore (simplest: deny the earlier one)
+  if (state.pendingJoin) {
+    denyJoin(state.pendingJoin);
   }
+
+  state.pendingJoin = { peerId, name, ch, conn };
+
+  const msgEl   = document.getElementById('join-toast-msg');
+  const timerEl = document.getElementById('join-toast-timer');
+  const toastEl = document.getElementById('join-toast');
+
+  msgEl.textContent = `${name} wants to join #${ch}`;
+  let secs = CONFIG.joinTimeout;
+  timerEl.textContent = `Auto-deny in ${secs}s`;
+
+  clearInterval(joinToastCountdown);
+  clearTimeout(joinToastTimer);
+
+  toastEl.classList.add('show');
+
+  joinToastCountdown = setInterval(() => {
+    secs--;
+    timerEl.textContent = secs > 0 ? `Auto-deny in ${secs}s` : '';
+    if (secs <= 0) clearInterval(joinToastCountdown);
+  }, 1000);
+
+  joinToastTimer = setTimeout(() => {
+    if (state.pendingJoin) denyJoin(state.pendingJoin);
+  }, CONFIG.joinTimeout * 1000);
+
+  document.getElementById('join-accept-btn').onclick = () => {
+    clearTimeout(joinToastTimer);
+    clearInterval(joinToastCountdown);
+    acceptJoin(state.pendingJoin);
+  };
+
+  document.getElementById('join-deny-btn').onclick = () => {
+    clearTimeout(joinToastTimer);
+    clearInterval(joinToastCountdown);
+    denyJoin(state.pendingJoin);
+  };
+}
+
+function acceptJoin(req) {
+  if (!req) return;
+  document.getElementById('join-toast').classList.remove('show');
+  state.pendingJoin = null;
+  // Tell requester they're approved + our real peer ID
+  try { req.conn.send({ type: 'join-approved', hostRealId: state.myId }); } catch {}
+  toast(`${req.name} joined`, 'green');
+}
+
+function denyJoin(req) {
+  if (!req) return;
+  document.getElementById('join-toast').classList.remove('show');
+  state.pendingJoin = null;
+  try { req.conn.send({ type: 'join-denied' }); } catch {}
+}
+
+// ─── Host transfer when host leaves ────────────────────────
+function promoteToHost(ch) {
+  if (state.isHost || !ch) return;
+  state.isHost = true;
+  const rendezvousId = 'chirpch--' + ch;
+
+  const hostPeer = new Peer(rendezvousId, {
+    host:   CONFIG.peerJsHost,
+    port:   CONFIG.peerJsPort,
+    path:   CONFIG.peerJsPath,
+    secure: CONFIG.peerJsSecure,
+  });
+
+  hostPeer.on('open', () => {
+    state.hostPeer = hostPeer;
+    toast(`You are now host of #${ch}`, 'green');
+    renderMembers();
+
+    hostPeer.on('connection', conn => {
+      conn.on('data', data => {
+        if (data.type === 'join-request') {
+          showJoinRequest(conn.peer, data.name, ch, conn);
+        }
+      });
+      conn.on('error', () => {});
+    });
+  });
+
+  hostPeer.on('error', () => {
+    // Another peer grabbed it first — that's fine
+    state.isHost = false;
+  });
+}
+
+// ─── Remove empty channel ──────────────────────────────────
+function maybeRemoveChannel(ch) {
+  // Only remove if nobody is in it (count = 0)
+  if (ch && ch !== state.currentChannel) {
+    const countEl = document.getElementById(`count-${ch}`);
+    if (!countEl || countEl.textContent === '0') {
+      liveChannels.delete(ch);
+      renderChannels();
+    }
+  }
+}
+
+// ─── Connect to existing rendezvous host ───────────────────
+function connectToRendezvous(ch, rendezvousId) {
+  // Legacy — now handled by sendJoinRequest
+  sendJoinRequest(ch, rendezvousId);
 }
 
 // ─── Leave Channel ─────────────────────────────────────────
 async function leaveChannel() {
   if (!state.currentChannel) return;
+  const ch = state.currentChannel;
+
+  stopTalking();
+
+  // If we're host, transfer to oldest remaining member before releasing rendezvous
+  if (state.isHost && Object.keys(state.connections).length > 0) {
+    // Find oldest member (lowest joinTime)
+    const oldest = Object.entries(state.connections)
+      .sort((a, b) => (a[1].joinTime || 0) - (b[1].joinTime || 0))[0];
+    if (oldest) {
+      try { oldest[1].conn.send({ type: 'host-transfer', channel: ch }); } catch {}
+    }
+  }
 
   broadcast({ type: 'leave' });
-  stopTalking();
+
+  // Release rendezvous host peer
+  if (state.hostPeer) {
+    try { state.hostPeer.destroy(); } catch {}
+    state.hostPeer = null;
+  }
+  state.isHost = false;
+
+  // Clear join request state
+  clearTimeout(state.joinTimeout);
+  hideWaitingOverlay();
+  if (state.joinRequestConn) { try { state.joinRequestConn.close(); } catch {} state.joinRequestConn = null; }
 
   Object.keys(state.connections).forEach(pid => {
     state.connections[pid]?.conn.close();
@@ -1202,6 +1778,9 @@ async function leaveChannel() {
   document.getElementById('ptt-section').classList.remove('visible');
   document.getElementById('no-channel').style.display = '';
   updateChannelCount();
+
+  // Channel is now empty — remove it
+  maybeRemoveChannel(ch);
 }
 
 // ─── Remove a Peer ─────────────────────────────────────────
@@ -1217,6 +1796,10 @@ function removePeer(peerId) {
   removeAudio(peerId);
   renderMembers();
   toast(`${name} left the channel`);
+
+  // If we're now alone, channel might go empty when we leave — but we're still here
+  // so just update counts
+  updateChannelCount();
 }
 
 // ─── Broadcast Data ────────────────────────────────────────
@@ -1239,6 +1822,7 @@ function renderMembers() {
   selfEl.innerHTML = `
     <div class="member-avatar">${state.myName.charAt(0)}</div>
     <span class="member-name">${state.myName}</span>
+    ${state.isHost ? '<span class="host-badge">host</span>' : ''}
     <svg class="member-mic" width="12" height="12" viewBox="0 0 12 12" fill="none">
       <rect x="4" y="1" width="4" height="7" rx="2" fill="#39ff14"/>
       <path d="M2 6.5C2 9.26 3.79 11 6 11C8.21 11 10 9.26 10 6.5" stroke="#39ff14" stroke-width="1.2" stroke-linecap="round"/>
@@ -1265,7 +1849,7 @@ function renderMembers() {
 }
 
 function updateChannelCount() {
-  CONFIG.channels.forEach(ch => {
+  liveChannels.forEach(ch => {
     const el = document.getElementById(`count-${ch}`);
     if (!el) return;
     if (ch === state.currentChannel) {
