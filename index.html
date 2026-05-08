@@ -181,6 +181,7 @@ header {
 .conn-pill.error   { border-color: #7f1d1d; color: var(--danger); }
 .conn-pill.error .dot { background: var(--danger); }
 .conn-pill.hidden { opacity: 0; pointer-events: none; width: 0; padding: 0; border-color: transparent; overflow: hidden; margin: 0; transition: opacity 0.5s, width 0.5s, padding 0.5s; }
+.conn-pill::after {
   content: attr(data-tip); position: absolute; top: calc(100% + 6px); left: 50%;
   transform: translateX(-50%) translateY(-4px);
   background: var(--bg4); border: 1px solid var(--border2);
@@ -725,18 +726,25 @@ header {
    MOBILE RESPONSIVE
 ═══════════════════════════════════════════ */
 @media (max-width: 640px) {
+  :root { --mobile-nav-height: calc(64px + env(safe-area-inset-bottom, 0px)); }
   .mobile-nav { display: flex; }
+  .mobile-nav {
+    height: var(--mobile-nav-height); min-height: 0;
+    padding: 4px 4px calc(4px + env(safe-area-inset-bottom, 0px));
+  }
   header { height: 52px; padding: 0 14px; }
+  .header-left, .channel-bar-left { min-width: 0; }
+  .header-right, .tx-pill, .ch-privacy-bar-btn { flex-shrink: 0; }
   .brand-name { font-size: 1rem; }
   #install-btn { display: none !important; }
   #toast      { bottom: 84px; }
   #join-toast { bottom: 84px; right: 12px; left: 12px; max-width: none; }
   #waiting-overlay { z-index: 50; }
 
-  .app-body { position: relative; overflow: hidden; padding-bottom: 68px; }
+  .app-body { position: relative; overflow: hidden; padding-bottom: 0; min-height: 0; }
 
   .sidebar, .main-content, .members-panel {
-    position: absolute; inset: 0; width: 100%; height: 100%; border: none;
+    position: absolute; inset: 0 0 var(--mobile-nav-height); width: 100%; height: auto; border: none;
     transition: transform 0.32s cubic-bezier(0.4,0,0.2,1), opacity 0.32s ease;
     will-change: transform; background: var(--bg);
   }
@@ -774,14 +782,15 @@ header {
   .member-name    { font-size: 0.9rem; }
 
   .main-content   { background: var(--bg); }
-  .channel-bar    { padding: 12px 16px; }
+  .channel-bar    { padding: 11px 14px; gap: 10px; min-height: 48px; }
+  .channel-bar h2 { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   #ptt-btn        { width: 160px; height: 160px; }
   .ptt-ring-1     { width: 195px; height: 195px; }
   .ptt-ring-2     { width: 238px; height: 238px; }
   .ptt-ring-3     { width: 280px; height: 280px; }
-  .center-area    { gap: 28px; }
+  .center-area    { gap: 24px; padding: 18px 16px; min-height: 0; }
+  #ptt-section    { gap: 22px; max-width: min(320px, 100%); }
 
-  /* Ensure create-channel bar stays above mobile nav */
   .ch-create-wrap {
     padding: 10px 12px;
     padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
@@ -794,7 +803,16 @@ header {
   .ch-random-btn   { padding: 9px 10px; font-size: 0.6rem; }
   .ch-create-row   { gap: 8px; }
 
-  #no-channel .hint::before { content: '↓ tap '; }
+  #no-channel .hint::before { content: ''; }
+}
+
+@media (max-width: 640px) and (max-width: 380px), (max-width: 640px) and (max-height: 700px) {
+  #ptt-btn    { width: 140px; height: 140px; }
+  .ptt-ring-1 { width: 170px; height: 170px; }
+  .ptt-ring-2 { width: 210px; height: 210px; }
+  .ptt-ring-3 { width: 248px; height: 248px; }
+  .center-area { gap: 18px; padding-top: 12px; padding-bottom: 12px; }
+  .ptt-hint { font-size: 0.58rem; }
 }
 
 /* ═══════════════════════════════════════════
@@ -2086,6 +2104,28 @@ const state = {
   outputVolume: 1,
 };
 
+function makePeerInfo(conn, opts = {}) {
+  const peerId = opts.peerId || conn?.peer || '';
+  return {
+    conn,
+    name: opts.name || peerId,
+    channel: opts.channel ?? null,
+    talking: false,
+    joinTime: opts.joinTime || Date.now(),
+    volume: opts.volume ?? 1,
+    ping: null,
+  };
+}
+
+function setLobbyChannel(peerId, channel, name) {
+  if (!peerId) return;
+  const current = state.lobbyRegistry[peerId] || {};
+  state.lobbyRegistry[peerId] = {
+    name: name || current.name || peerId,
+    channel: channel ?? null,
+  };
+}
+
 /* ═══════════════════════════════════════════
    DOM CACHE — looked up once, reused everywhere
 ═══════════════════════════════════════════ */
@@ -2131,6 +2171,34 @@ function toast(msg, type = '') {
   toastTimer = setTimeout(() => { el.className = type; }, 3500);
 }
 
+function announceLeavingChannel() {
+  if (!state.currentChannel) return;
+  broadcastAll({ type: 'leave', channel: state.currentChannel, name: state.myName });
+
+  if (state.isLobbyHost) {
+    state.lobbyRegistry[state.myId] = { name: state.myName, channel: null };
+    lobbyBroadcast({ type: 'lobby-update', registry: state.lobbyRegistry, channels: [...liveChannels] });
+    return;
+  }
+
+  try {
+    state.lobbyConn?.send({
+      type: 'lobby-announce',
+      id: state.myId,
+      name: state.myName,
+      channel: null,
+      channels: [...liveChannels],
+    });
+  } catch {}
+}
+
+function setupLeaveCleanup() {
+  if (setupLeaveCleanup.bound) return;
+  setupLeaveCleanup.bound = true;
+  window.addEventListener('pagehide', announceLeavingChannel);
+  window.addEventListener('beforeunload', announceLeavingChannel);
+}
+
 /* ═══════════════════════════════════════════
    ONBOARDING
 ═══════════════════════════════════════════ */
@@ -2173,6 +2241,7 @@ function startApp() {
   setupModMenu();
   setupPrivacyBtn();
   setupMobileNav();
+  setupLeaveCleanup();
 }
 
 /* ═══════════════════════════════════════════
@@ -2742,7 +2811,7 @@ function requestJoinChannel(ch) {
     sendJoinRequest(ch, targetId, existingInfo.conn);
   } else {
     const conn = state.peer.connect(targetId, { reliable: true });
-    state.connections[targetId] = { conn, name: targetId, channel: null, talking: false, joinTime: Date.now(), volume: 1, ping: null };
+    state.connections[targetId] = makePeerInfo(conn, { peerId: targetId });
     conn.on('open',  () => { conn.send({ type: 'hello', name: state.myName, channel: null, joinTime: Date.now(), channels: [...liveChannels] }); sendJoinRequest(ch, targetId, conn); });
     conn.on('data',  data => handleData(targetId, data));
     conn.on('error', () => { delete state.connections[targetId]; cancelPendingJoin('Could not reach channel member'); });
@@ -3011,7 +3080,7 @@ function startPing() {
 ═══════════════════════════════════════════ */
 function setupDataConn(conn) {
   if (!state.connections[conn.peer]) {
-    state.connections[conn.peer] = { conn, name: conn.peer, channel: null, talking: false, joinTime: Date.now(), volume: 1, ping: null };
+    state.connections[conn.peer] = makePeerInfo(conn);
   } else {
     state.connections[conn.peer].conn = conn;
   }
@@ -3059,6 +3128,7 @@ function handleData(peerId, data) {
         state.connections[peerId].channel  = data.channel;
         state.connections[peerId].joinTime = data.joinTime || Date.now();
       }
+      setLobbyChannel(peerId, data.channel, data.name);
       if (Array.isArray(data.channels)) data.channels.forEach(ch => safeAddChannel(ch));
       if (data.channel === state.currentChannel) SFX.peerJoin();
       renderMembers(); renderChannels();
@@ -3093,7 +3163,10 @@ function handleData(peerId, data) {
       }
       break;
 
-    case 'leave': removePeer(peerId); break;
+    case 'leave':
+      setLobbyChannel(peerId, null, data.name);
+      removePeer(peerId);
+      break;
     case 'ping':  try { state.connections[peerId]?.conn.send({ type: 'pong', t: data.t }); } catch {} break;
 
     case 'mod-mute':
@@ -3168,7 +3241,7 @@ function handleData(peerId, data) {
 function connectToPeer(peerId, initiateCall, joinTime) {
   if (state.connections[peerId] || peerId === state.myId || !state.peer?.open) return;
   const conn = state.peer.connect(peerId, { reliable: true });
-  state.connections[peerId] = { conn, name: peerId, channel: null, talking: false, joinTime: joinTime || Date.now(), volume: 1, ping: null };
+  state.connections[peerId] = makePeerInfo(conn, { peerId, joinTime });
   setupDataConn(conn);
   if (initiateCall && state.localStream) callPeer(peerId);
 }
@@ -3200,6 +3273,23 @@ function playRemoteStream(peerId, stream) {
 
 function removeAudio(peerId) { document.getElementById(`audio-${peerId}`)?.remove(); }
 
+function ensureChannelHost() {
+  if (!state.currentChannel) return;
+  const candidates = [
+    { id: state.myId, joinTime: state.myJoinTime || 0 },
+    ...Object.entries(state.connections)
+      .filter(([, info]) => info.channel === state.currentChannel)
+      .map(([id, info]) => ({ id, joinTime: info.joinTime || 0 })),
+  ].sort((a, b) => (a.joinTime - b.joinTime) || a.id.localeCompare(b.id));
+
+  const nextHostId = candidates[0]?.id || state.myId;
+  const changed = state.channelHostId !== nextHostId;
+  state.channelHostId = nextHostId;
+  state.isChannelHost = nextHostId === state.myId;
+  if (changed && state.isChannelHost) broadcastAll({ type: 'host-changed', newHostId: state.myId });
+  updatePrivacyBtn();
+}
+
 /* ═══════════════════════════════════════════
    JOIN / LEAVE CHANNEL
 ═══════════════════════════════════════════ */
@@ -3229,7 +3319,7 @@ async function joinChannel(ch) {
   state.currentChannel = ch;
   state.myJoinTime = Date.now();
   safeAddChannel(ch);
-  // Persist last channel for auto-rejoin
+  setLobbyChannel(state.myId, ch, state.myName);
   localStorage.setItem('chirp_last_channel', ch);
 
   // Become host if no one else is in the channel
@@ -3256,9 +3346,10 @@ async function joinChannel(ch) {
 
 async function leaveChannel() {
   if (!state.currentChannel) return;
+  const leftChannel = state.currentChannel;
   stopTalking(); stopVAD();
   SFX.leave();
-  broadcastAll({ type: 'leave' });
+  broadcastAll({ type: 'leave', channel: leftChannel, name: state.myName });
 
   Object.keys(state.connections).forEach(pid => {
     try { state.connections[pid]?.conn.close(); } catch {}
@@ -3268,6 +3359,7 @@ async function leaveChannel() {
     removeAudio(pid);
   });
 
+  setLobbyChannel(state.myId, null, state.myName);
   state.currentChannel = null;
   state.isChannelHost = false;
   state.channelHostId = null;
@@ -3285,15 +3377,24 @@ async function leaveChannel() {
 }
 
 function removePeer(peerId) {
-  if (!state.connections[peerId]) return;
-  const name = state.connections[peerId].name;
+  const info = state.connections[peerId];
+  if (!info) return;
+  const name = info.name || peerId;
+  const wasInChannel = info.channel === state.currentChannel;
+  const wasHost = state.channelHostId === peerId;
+
+  if (wasInChannel || state.lobbyRegistry[peerId]?.channel === state.currentChannel) {
+    setLobbyChannel(peerId, null, name);
+  }
+
   try { state.connections[peerId]?.conn.close(); } catch {}
   try { state.calls[peerId]?.close(); } catch {}
   try { state.inboundCalls[peerId]?.close(); } catch {}
   delete state.connections[peerId]; delete state.calls[peerId]; delete state.inboundCalls[peerId];
   removeAudio(peerId);
+  if (wasHost) ensureChannelHost();
   renderMembers(); renderChannels();
-  toast(`${name} left`); SFX.peerLeave();
+  if (wasInChannel) { toast(`${name} left`); SFX.peerLeave(); }
 }
 
 function broadcastAll(data) {
@@ -3807,28 +3908,23 @@ function setupInstallPrompt() {
    MOBILE NAV TABS
 ═══════════════════════════════════════════ */
 function setupMobileNav() {
-  const tabs = document.querySelectorAll('.nav-tab');
+  const tabs = [...document.querySelectorAll('.nav-tab')];
   if (!tabs.length) return;
 
   if (window.matchMedia('(max-width: 640px)').matches) {
     const hint = document.getElementById('no-channel-hint');
-    if (hint) hint.textContent = '↓ tap Channels to get started';
+    if (hint) hint.textContent = 'Tap Channels to get started';
   }
 
-  document.body.classList.add('tab-talk');
-  tabs.forEach(tab => {
-    tab.addEventListener('click', () => {
-      tabs.forEach(t => t.classList.remove('active'));
-      tab.classList.add('active');
-      document.body.classList.remove('tab-channels','tab-talk','tab-members');
-      document.body.classList.add(`tab-${tab.dataset.tab}`);
-    });
-  });
-
-  window._mobileGoTalk = () => {
-    const talkBtn = document.getElementById('nav-talk');
-    if (talkBtn && window.matchMedia('(max-width:640px)').matches) talkBtn.click();
+  const setTab = tabName => {
+    tabs.forEach(tab => tab.classList.toggle('active', tab.dataset.tab === tabName));
+    document.body.classList.remove('tab-channels','tab-talk','tab-members');
+    document.body.classList.add(`tab-${tabName}`);
   };
+
+  setTab('talk');
+  tabs.forEach(tab => tab.addEventListener('click', () => setTab(tab.dataset.tab)));
+  window._mobileGoTalk = () => { if (window.matchMedia('(max-width: 640px)').matches) setTab('talk'); };
 }
 
 /* ═══════════════════════════════════════════
