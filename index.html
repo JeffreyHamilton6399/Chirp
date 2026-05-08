@@ -759,6 +759,116 @@ header {
 /* ═══════════════════════════════════════════
    KEYFRAMES
 ═══════════════════════════════════════════ */
+/* ═══════════════════════════════════════════
+   YOUTUBE LINK
+═══════════════════════════════════════════ */
+.yt-link {
+  display: flex; align-items: center; gap: 2px;
+  text-decoration: none;
+}
+.yt-label { display: none; }
+@media (min-width: 480px) { .yt-label { display: inline; } }
+
+/* ═══════════════════════════════════════════
+   FEEDBACK MODAL
+═══════════════════════════════════════════ */
+#feedback-overlay {
+  display: none; position: fixed; inset: 0; z-index: 500;
+  background: rgba(0,0,0,0.55); backdrop-filter: blur(4px);
+  align-items: center; justify-content: center; padding: 20px;
+}
+#feedback-overlay.show { display: flex; }
+
+.feedback-card {
+  background: var(--bg2); border: 1px solid var(--border2);
+  border-radius: 16px; padding: 28px; width: 100%; max-width: 380px;
+  box-shadow: 0 24px 64px rgba(0,0,0,0.55), 0 0 0 1px rgba(124,106,255,0.08);
+  display: flex; flex-direction: column; gap: 18px;
+  animation: fadeUp 0.3s cubic-bezier(0.34,1.56,0.64,1) both;
+}
+
+.feedback-card h3 {
+  font-size: 1rem; font-weight: 700; color: var(--text);
+  display: flex; align-items: center; justify-content: space-between;
+}
+
+.feedback-close {
+  background: none; border: none; color: var(--text-dim);
+  font-size: 1.1rem; cursor: pointer; line-height: 1;
+  padding: 2px 6px; border-radius: 4px; transition: color 0.15s, background 0.15s;
+}
+.feedback-close:hover { color: var(--text); background: rgba(255,255,255,0.06); }
+
+.feedback-select {
+  width: 100%;
+  background: var(--bg3); border: 1px solid var(--border2);
+  border-radius: var(--radius-sm); padding: 10px 14px;
+  font-family: var(--mono); font-size: 0.72rem; color: var(--text);
+  outline: none; cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%236b6a80' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 12px center;
+}
+.feedback-select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+.feedback-select option { background: var(--bg3); }
+
+.feedback-textarea {
+  width: 100%; min-height: 110px; resize: vertical;
+  background: var(--bg3); border: 1px solid var(--border2);
+  border-radius: var(--radius-sm); padding: 12px 14px;
+  font-family: var(--mono); font-size: 0.78rem; color: var(--text);
+  outline: none; line-height: 1.6;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.feedback-textarea::placeholder { color: var(--text-dim); }
+.feedback-textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+
+.feedback-footer { display: flex; gap: 10px; justify-content: flex-end; }
+
+.feedback-send {
+  background: var(--accent); color: #fff; border: none;
+  border-radius: var(--radius-sm); padding: 10px 22px;
+  font-family: var(--sans); font-size: 0.85rem; font-weight: 700;
+  letter-spacing: 0.04em; cursor: pointer;
+  transition: opacity 0.15s, box-shadow 0.2s;
+  box-shadow: 0 4px 16px rgba(124,106,255,0.3);
+}
+.feedback-send:hover  { opacity: 0.9; box-shadow: 0 4px 24px rgba(124,106,255,0.45); }
+.feedback-send:active { opacity: 0.75; transform: scale(0.98); }
+.feedback-send:disabled { opacity: 0.45; cursor: not-allowed; box-shadow: none; }
+
+.feedback-cancel {
+  background: none; border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 10px 16px;
+  font-family: var(--mono); font-size: 0.65rem; color: var(--text-dim);
+  letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer;
+  transition: border-color 0.18s, color 0.18s, background 0.18s;
+}
+.feedback-cancel:hover { border-color: var(--border2); color: var(--text); background: rgba(255,255,255,0.03); }
+.feedback-cancel:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* Success state */
+.feedback-success {
+  display: none; flex-direction: column; align-items: center;
+  gap: 12px; padding: 12px 0; text-align: center;
+}
+.feedback-success.show { display: flex; }
+.feedback-success svg { color: var(--green); }
+.feedback-success p {
+  font-family: var(--mono); font-size: 0.68rem;
+  color: var(--text-mid); letter-spacing: 0.1em; text-transform: uppercase;
+}
+
+/* EmailJS setup hint (shown in dev, hidden in prod) */
+.fb-setup-note {
+  font-family: var(--mono); font-size: 0.58rem; color: var(--text-dim);
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 8px 10px; line-height: 1.6;
+}
+.fb-setup-note a { color: var(--accent); text-decoration: none; }
+.fb-setup-note a:hover { text-decoration: underline; }
+
 @keyframes fadeUp    { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
 @keyframes fadeIn    { from { opacity: 0; } to { opacity: 1; } }
 @keyframes slideLeft { from { transform: translateX(24px); opacity: 0; } to { transform: none; opacity: 1; } }
@@ -832,6 +942,13 @@ header {
     </div>
     <div class="header-right">
       <span class="ping-chip" id="ping-chip" style="display:none"></span>
+      <a href="https://www.youtube.com/@Jeffrey_Creates" target="_blank" rel="noopener" class="btn-ghost yt-link" title="Jeffrey_Creates on YouTube">
+        <svg width="13" height="10" viewBox="0 0 13 10" fill="none" style="vertical-align:middle;margin-right:3px">
+          <rect x="0.5" y="0.5" width="12" height="9" rx="2.5" fill="#ff0000" opacity="0.85"/>
+          <polygon points="5,2.8 5,7.2 9,5" fill="white"/>
+        </svg><span class="yt-label">jeffrey_creates</span>
+      </a>
+      <button class="btn-ghost" id="feedback-btn" title="Send Feedback">feedback</button>
       <button class="btn-ghost" id="settings-btn" title="Settings">settings</button>
       <button class="btn-ghost" id="install-btn">install</button>
     </div>
@@ -994,6 +1111,56 @@ header {
   </div>
 </div>
 
+<!-- Feedback modal -->
+<div id="feedback-overlay">
+  <div class="feedback-card">
+    <h3>
+      Send Feedback
+      <button class="feedback-close" id="feedback-close">✕</button>
+    </h3>
+
+    <!-- Success state (hidden until sent) -->
+    <div class="feedback-success" id="feedback-success">
+      <svg width="44" height="44" viewBox="0 0 44 44" fill="none">
+        <circle cx="22" cy="22" r="20" stroke="currentColor" stroke-width="2" opacity="0.2"/>
+        <path d="M13 22l6 6 12-12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <p>Message sent — thanks!</p>
+    </div>
+
+    <!-- Form fields -->
+    <div id="feedback-form-body" style="display:flex;flex-direction:column;gap:14px;">
+      <div class="field-wrap">
+        <div class="field-label">Type</div>
+        <select class="feedback-select" id="feedback-type">
+          <option value="bug">🐛  Bug report</option>
+          <option value="idea">💡  Feature idea</option>
+          <option value="praise">⭐  Praise</option>
+          <option value="other">💬  Other</option>
+        </select>
+      </div>
+
+      <div class="field-wrap">
+        <div class="field-label">Message</div>
+        <textarea class="feedback-textarea" id="feedback-text"
+          placeholder="Tell me what's on your mind…" maxlength="1000"></textarea>
+      </div>
+
+      <!-- EmailJS setup note — shows your keys are needed -->
+      <div class="fb-setup-note" id="fb-setup-note" style="display:none">
+        ⚙️ To activate email delivery, set your keys in the script below.<br>
+        Get them free at <a href="https://www.emailjs.com" target="_blank">emailjs.com</a>
+        (200 emails/month, no server needed).
+      </div>
+
+      <div class="feedback-footer">
+        <button class="feedback-cancel" id="feedback-cancel">Cancel</button>
+        <button class="feedback-send"   id="feedback-send">Send</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Settings panel -->
 <div id="settings-overlay">
   <div class="settings-card">
@@ -1113,7 +1280,24 @@ let brokerIdx = 0;
 const liveChannels = new Set();
 // Channels that should never be auto-created or received from lobby
 const BLOCKED_DEFAULTS = new Set(['ops', 'general', 'lounge']);
-function safeAddChannel(ch) { if (ch && !BLOCKED_DEFAULTS.has(ch)) liveChannels.add(ch); }
+
+function persistChannels() {
+  try { localStorage.setItem('chirp_channels', JSON.stringify([...liveChannels])); } catch {}
+}
+
+function loadPersistedChannels() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('chirp_channels') || '[]');
+    if (Array.isArray(saved)) saved.forEach(ch => { if (ch && !BLOCKED_DEFAULTS.has(ch)) liveChannels.add(ch); });
+  } catch {}
+}
+
+function safeAddChannel(ch) {
+  if (ch && !BLOCKED_DEFAULTS.has(ch) && !liveChannels.has(ch)) {
+    liveChannels.add(ch);
+    persistChannels();
+  }
+}
 
 const state = {
   myId: null, myName: null, peer: null,
@@ -1183,6 +1367,7 @@ function startApp() {
   document.getElementById('onboarding').style.display = 'none';
   document.getElementById('app').classList.add('visible');
 
+  loadPersistedChannels();
   renderChannels();
   initPeer();
   setupPTT();
@@ -2271,6 +2456,116 @@ function setupMobileNav() {
       : st === 'error' ? 'check your network' : 'finding server…');
   };
   if (typeof _pendingConnUI !== 'undefined' && _pendingConnUI) { setConnUI(..._pendingConnUI); _pendingConnUI = null; }
+})();
+
+/* ═══════════════════════════════════════════
+   FEEDBACK — EmailJS
+   ─────────────────────────────────────────
+   SETUP (one-time, free):
+   1. Go to https://www.emailjs.com → create free account
+   2. Add Email Service (Gmail) → copy Service ID → paste below
+   3. Create Email Template:
+        Subject: "Chirp Feedback: {{from_type}}"
+        Body:    "Type: {{from_type}}\n\n{{message}}\n\nSent: {{sent_at}}"
+      → copy Template ID → paste below
+   4. Account → API Keys → copy Public Key → paste below
+═══════════════════════════════════════════ */
+(function setupFeedback() {
+  // ↓ Paste your EmailJS credentials here
+  const EMAILJS_PUBLIC_KEY  = 'YOUR_PUBLIC_KEY';   // ← from emailjs.com → Account
+  const EMAILJS_SERVICE_ID  = 'YOUR_SERVICE_ID';   // ← from Email Services
+  const EMAILJS_TEMPLATE_ID = 'YOUR_TEMPLATE_ID';  // ← from Email Templates
+
+  const keysConfigured = !EMAILJS_PUBLIC_KEY.startsWith('YOUR_');
+
+  const overlay   = document.getElementById('feedback-overlay');
+  const openBtn   = document.getElementById('feedback-btn');
+  const closeBtn  = document.getElementById('feedback-close');
+  const cancelBtn = document.getElementById('feedback-cancel');
+  const sendBtn   = document.getElementById('feedback-send');
+  const textarea  = document.getElementById('feedback-text');
+  const typeEl    = document.getElementById('feedback-type');
+  const successEl = document.getElementById('feedback-success');
+  const formBody  = document.getElementById('feedback-form-body');
+  const setupNote = document.getElementById('fb-setup-note');
+
+  if (!overlay) return;
+
+  // Show setup note if keys aren't configured yet
+  if (!keysConfigured && setupNote) setupNote.style.display = '';
+
+  function openModal() {
+    textarea.value = '';
+    sendBtn.textContent = 'Send';
+    sendBtn.disabled = false;
+    cancelBtn.disabled = false;
+    successEl.classList.remove('show');
+    formBody.style.opacity = '';
+    overlay.classList.add('show');
+    setTimeout(() => textarea.focus(), 120);
+  }
+
+  function closeModal() { overlay.classList.remove('show'); }
+
+  openBtn?.addEventListener('click', openModal);
+  closeBtn?.addEventListener('click', closeModal);
+  cancelBtn?.addEventListener('click', closeModal);
+  overlay?.addEventListener('click', e => { if (e.target === overlay) closeModal(); });
+
+  sendBtn.addEventListener('click', async () => {
+    const msg = textarea.value.trim();
+    if (!msg) { textarea.focus(); return; }
+
+    // Always save locally as backup
+    try {
+      const all = JSON.parse(localStorage.getItem('chirp_feedback') || '[]');
+      all.push({ type: typeEl.value, msg, ts: new Date().toISOString() });
+      localStorage.setItem('chirp_feedback', JSON.stringify(all));
+    } catch {}
+
+    sendBtn.textContent = 'Sending…';
+    sendBtn.disabled = true;
+    cancelBtn.disabled = true;
+
+    if (!keysConfigured) {
+      // No keys yet — show success UI but note it's saved locally only
+      successEl.querySelector('p').textContent = 'Saved locally (EmailJS not configured yet)';
+      successEl.classList.add('show');
+      formBody.style.opacity = '0';
+      setTimeout(closeModal, 2600);
+      return;
+    }
+
+    try {
+      if (!window.emailjs) {
+        await new Promise((res, rej) => {
+          const s = document.createElement('script');
+          s.src = 'https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js';
+          s.onload = res; s.onerror = rej;
+          document.head.appendChild(s);
+        });
+        emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY });
+      }
+
+      await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+        from_type: typeEl.options[typeEl.selectedIndex].text,
+        message:   msg,
+        sent_at:   new Date().toLocaleString()
+      });
+
+      successEl.querySelector('p').textContent = 'Message sent — thanks!';
+      successEl.classList.add('show');
+      formBody.style.opacity = '0';
+      setTimeout(closeModal, 2400);
+
+    } catch (err) {
+      console.error('EmailJS error:', err);
+      sendBtn.textContent = 'Error — retry?';
+      sendBtn.disabled = false;
+      cancelBtn.disabled = false;
+      toast('Saved locally — EmailJS send failed', 'red');
+    }
+  });
 })();
 </script>
 </body>
