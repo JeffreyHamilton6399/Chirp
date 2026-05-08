@@ -235,6 +235,17 @@ header {
 .channel-item.active .ch-count { background: var(--accent-dim); color: #c4b5fd; }
 
 /* Channel create */
+.ch-search-wrap {
+  padding: 7px 10px 6px; border-bottom: 1px solid var(--border); flex-shrink: 0;
+}
+.ch-search-row {
+  display: flex; align-items: center; gap: 7px;
+  background: var(--bg3); border: 1px solid var(--border2);
+  border-radius: var(--radius-sm); padding: 6px 10px;
+  transition: border-color 0.2s;
+}
+.ch-search-row:focus-within { border-color: var(--accent); }
+
 .ch-create-wrap {
   padding: 10px; border-top: 1px solid var(--border); flex-shrink: 0;
 }
@@ -753,6 +764,13 @@ header {
     <!-- Sidebar: channel list -->
     <div class="sidebar" id="sidebar">
       <div class="sidebar-header">Channels</div>
+      <div class="ch-search-wrap">
+        <div class="ch-search-row">
+          <svg width="11" height="11" viewBox="0 0 11 11" fill="none" style="flex-shrink:0;opacity:0.4"><circle cx="4.5" cy="4.5" r="3.5" stroke="#e0dff5" stroke-width="1.3"/><line x1="7.4" y1="7.4" x2="10" y2="10" stroke="#e0dff5" stroke-width="1.3" stroke-linecap="round"/></svg>
+          <input id="ch-search-input" class="ch-create-input" type="text" maxlength="20"
+            placeholder="search or join…" autocomplete="off" spellcheck="false" style="background:transparent;border:none;padding:0;font-size:0.65rem;">
+        </div>
+      </div>
       <div class="channel-scroll" id="channel-scroll"></div>
       <div class="ch-create-wrap">
         <div class="ch-create-row">
@@ -1000,20 +1018,45 @@ function setupChannelCreate() {
     input.value = '';
     liveChannels.add(raw);
     renderChannels();
+    // Tell all connected peers about the new channel so their sidebar updates
+    broadcast({ type: 'channel-list', channels: [...liveChannels] });
     joinChannel(raw);
   }
   btn.addEventListener('click', create);
   input.addEventListener('keydown', e => { if (e.key === 'Enter') create(); });
+
+  // Search / join-by-name input
+  const searchInput = document.getElementById('ch-search-input');
+  searchInput.addEventListener('input', () => {
+    const q = searchInput.value.trim().toLowerCase();
+    renderChannels(q);
+  });
+  searchInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      const raw = searchInput.value.trim().toLowerCase().replace(/[^a-z0-9_-]/g,'').slice(0,20);
+      if (!raw) return;
+      searchInput.value = '';
+      renderChannels('');
+      // Join existing or create new
+      liveChannels.add(raw);
+      renderChannels();
+      broadcast({ type: 'channel-list', channels: [...liveChannels] });
+      joinChannel(raw);
+    }
+    if (e.key === 'Escape') { searchInput.value = ''; renderChannels(''); }
+  });
 }
 
-function renderChannels() {
+function renderChannels(filter) {
+  const q = (filter !== undefined ? filter : (document.getElementById('ch-search-input')?.value.trim().toLowerCase() || ''));
   const scroll = document.getElementById('channel-scroll');
   scroll.innerHTML = '';
-  if (liveChannels.size === 0) {
-    scroll.innerHTML = '<div style="padding:12px 16px;font-family:var(--mono);font-size:0.6rem;color:var(--text-dim)">no channels yet</div>';
+  const channels = [...liveChannels].filter(ch => !q || ch.includes(q));
+  if (channels.length === 0) {
+    scroll.innerHTML = `<div style="padding:12px 16px;font-family:var(--mono);font-size:0.6rem;color:var(--text-dim)">${q ? 'no match — press Enter to create' : 'no channels yet'}</div>`;
     return;
   }
-  liveChannels.forEach(ch => {
+  channels.forEach(ch => {
     const el = document.createElement('div');
     el.className = `channel-item${state.currentChannel === ch ? ' active' : ''}`;
     const count = ch === state.currentChannel ? 1 + Object.keys(state.connections).length : 0;
@@ -1171,7 +1214,7 @@ function startPing() {
 ══════════════════════════════════════════ */
 function setupDataConn(conn) {
   conn.on('open', () => {
-    conn.send({ type: 'hello', name: state.myName, channel: state.currentChannel, joinTime: state.myJoinTime || Date.now() });
+    conn.send({ type: 'hello', name: state.myName, channel: state.currentChannel, joinTime: state.myJoinTime || Date.now(), channels: [...liveChannels] });
   });
   conn.on('data', data => handleData(conn.peer, data));
   conn.on('close', () => removePeer(conn.peer));
@@ -1190,12 +1233,20 @@ function handleData(peerId, data) {
         state.connections[peerId].name = data.name;
         state.connections[peerId].joinTime = data.joinTime || Date.now();
       }
+      // Merge their known channels into ours so the sidebar stays in sync
+      if (Array.isArray(data.channels)) {
+        let added = false;
+        data.channels.forEach(ch => { if (!liveChannels.has(ch)) { liveChannels.add(ch); added = true; } });
+        if (added) renderChannels();
+      }
       renderMembers();
       if (state.currentChannel) {
         const peerList = Object.keys(state.connections)
           .filter(id => id !== peerId)
           .map(id => ({ id, joinTime: state.connections[id].joinTime || 0 }));
         try { state.connections[peerId]?.conn.send({ type: 'peer-list', peers: peerList }); } catch {}
+        // Also send our channel list back so they get ours
+        try { state.connections[peerId]?.conn.send({ type: 'channel-list', channels: [...liveChannels] }); } catch {}
       }
       break;
 
@@ -1226,10 +1277,22 @@ function handleData(peerId, data) {
       }
       break;
 
+    case 'channel-list':
+      if (Array.isArray(data.channels)) {
+        let added = false;
+        data.channels.forEach(ch => { if (!liveChannels.has(ch)) { liveChannels.add(ch); added = true; } });
+        if (added) renderChannels();
+      }
+      break;
+
     case 'join-approved':
       hideWaitingOverlay();
       clearTimeout(state.joinTimeout);
       if (state.joinRequestConn) { try { state.joinRequestConn.close(); } catch {} state.joinRequestConn = null; }
+      // Sync channels from host
+      if (Array.isArray(data.channels)) {
+        data.channels.forEach(ch => liveChannels.add(ch));
+      }
       if (data.hostRealId && data.hostRealId !== state.myId && !state.connections[data.hostRealId]) {
         connectToPeer(data.hostRealId, true);
       }
@@ -1462,7 +1525,12 @@ function acceptJoin(req) {
   if (!req) return;
   document.getElementById('join-toast').classList.remove('show');
   state.pendingJoin = null;
-  try { req.conn.send({ type: 'join-approved', hostRealId: state.myId }); } catch {}
+  // Send approval so joiner can proceed
+  try { req.conn.send({ type: 'join-approved', hostRealId: state.myId, channels: [...liveChannels] }); } catch {}
+  // Actually connect to the joiner on the real mesh — without this, nobody sees each other
+  if (req.peerId && req.peerId !== state.myId && !state.connections[req.peerId]) {
+    connectToPeer(req.peerId, true);
+  }
   toast(`${req.name} joined`, 'green');
 }
 
