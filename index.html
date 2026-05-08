@@ -1574,7 +1574,7 @@ header {
             <li>Go to <a href="https://www.emailjs.com" target="_blank" rel="noopener">emailjs.com</a> → create a free account</li>
             <li>Add an <strong>Email Service</strong> (e.g. Gmail) → copy your <strong>Service ID</strong></li>
             <li>Create an <strong>Email Template</strong> with these variables:<br>
-              <code style="background:var(--bg4);padding:2px 5px;border-radius:3px;font-size:0.6rem;color:var(--accent)">{{from_name}} {{from_type}} {{message}} {{sent_at}}</code>
+              <code style="background:var(--bg4);padding:2px 5px;border-radius:3px;font-size:0.6rem;color:var(--accent)">{{name}} {{time}} {{message}}</code>
             </li>
             <li>Go to <strong>Account → API Keys</strong> → copy your <strong>Public Key</strong></li>
             <li>Open this file in a text editor and find <code style="background:var(--bg4);padding:2px 5px;border-radius:3px;font-size:0.6rem;color:var(--accent)">setupFeedback()</code> — paste your three keys where indicated</li>
@@ -3655,7 +3655,7 @@ function setupMobileNav() {
 (function setupFeedback() {
   // ↓ Paste your EmailJS credentials here
   const EMAILJS_PUBLIC_KEY  = '2gn3Wt4jXxkkwP8iX';
-  const EMAILJS_SERVICE_ID  = 'service_v6c1q3p';
+  const EMAILJS_SERVICE_ID  = 'service_4y4r3d6';
   const EMAILJS_TEMPLATE_ID = 'template_90sz08f';
 
   const overlay   = document.getElementById('feedback-overlay');
@@ -3716,10 +3716,9 @@ function setupMobileNav() {
 
       emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY });
       await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
-        from_name : state.myName || 'Chirp User',
-        from_type : typeEl.options[typeEl.selectedIndex].text,
-        message   : msg,
-        sent_at   : new Date().toLocaleString(),
+        name    : `${state.myName || 'Chirp User'} (${typeEl.options[typeEl.selectedIndex].text})`,
+        time    : new Date().toLocaleString(),
+        message : msg,
       });
 
       successEl.querySelector('p').textContent = 'Message sent — thanks!';
