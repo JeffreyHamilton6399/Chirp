@@ -1215,6 +1215,8 @@ function startPing() {
 function setupDataConn(conn) {
   conn.on('open', () => {
     conn.send({ type: 'hello', name: state.myName, channel: state.currentChannel, joinTime: state.myJoinTime || Date.now(), channels: [...liveChannels] });
+    // Also send channel list immediately so peer's sidebar populates even before channel join
+    conn.send({ type: 'channel-list', channels: [...liveChannels] });
   });
   conn.on('data', data => handleData(conn.peer, data));
   conn.on('close', () => removePeer(conn.peer));
@@ -1286,16 +1288,15 @@ function handleData(peerId, data) {
       break;
 
     case 'join-approved':
-      hideWaitingOverlay();
       clearTimeout(state.joinTimeout);
       if (state.joinRequestConn) { try { state.joinRequestConn.close(); } catch {} state.joinRequestConn = null; }
       // Sync channels from host
       if (Array.isArray(data.channels)) {
         data.channels.forEach(ch => liveChannels.add(ch));
+        renderChannels();
       }
-      if (data.hostRealId && data.hostRealId !== state.myId && !state.connections[data.hostRealId]) {
-        connectToPeer(data.hostRealId, true);
-      }
+      // Host will connect to us via connectToPeer — don't double-connect from our side too.
+      // Just toast and wait for the incoming connection event on state.peer.
       toast(`Joined #${state.currentChannel}`, 'green');
       if (state.currentChannel) { liveChannels.add(state.currentChannel); renderChannels(); }
       break;
@@ -1408,9 +1409,25 @@ function tryBecomeHost(ch, rendezvousId) {
     renderMembers();
 
     hp.on('connection', conn => {
+      conn.on('open', () => {
+        // Auto-accept: send approval immediately, no human gate needed
+        try {
+          conn.send({ type: 'join-approved', hostRealId: state.myId, channels: [...liveChannels] });
+        } catch {}
+        // Connect joiner into the real mesh
+        const joinerId = conn.peer;
+        if (joinerId && joinerId !== state.myId && !state.connections[joinerId]) {
+          connectToPeer(joinerId, true);
+        }
+      });
       conn.on('data', data => {
+        // Still handle join-request data for the name, but approval already sent on open
         if (data.type === 'join-request' && state.currentChannel === ch) {
-          showJoinRequest(conn.peer, data.name, ch, conn);
+          if (state.connections[conn.peer]) {
+            state.connections[conn.peer].name = data.name;
+            renderMembers();
+          }
+          toast(`${data.name} joined #${ch}`, 'green');
         }
       });
       conn.on('error', () => {});
@@ -1437,8 +1454,6 @@ function sendJoinRequest(ch, rendezvousId) {
     setTimeout(() => { if (state.currentChannel === ch) sendJoinRequest(ch, rendezvousId); }, 500);
     return;
   }
-  showWaitingOverlay();
-
   const conn = state.peer.connect(rendezvousId, { reliable: true });
   state.joinRequestConn = conn;
 
@@ -1456,14 +1471,15 @@ function sendJoinRequest(ch, rendezvousId) {
     }, 800);
   });
 
+  // Short timeout — auto-accept means this should resolve in < 3s
   state.joinTimeout = setTimeout(() => {
     if (state.currentChannel === ch && !state.isHost) {
       hideWaitingOverlay();
-      toast('Host did not respond — timed out', 'red');
-      exitChannel();
-      maybeRemoveChannel(ch);
+      toast('Host did not respond — retrying…');
+      // Try to become host ourselves (maybe host left)
+      tryBecomeHost(ch, rendezvousId);
     }
-  }, CONFIG.joinTimeout * 1000);
+  }, 6000);
 }
 
 function cancelJoinRequest() {
@@ -1554,7 +1570,20 @@ function promoteToHost(ch) {
     toast(`You are now host of #${ch}`, 'info');
     renderMembers();
     hp.on('connection', conn => {
-      conn.on('data', data => { if (data.type === 'join-request') showJoinRequest(conn.peer, data.name, ch, conn); });
+      conn.on('open', () => {
+        try { conn.send({ type: 'join-approved', hostRealId: state.myId, channels: [...liveChannels] }); } catch {}
+        const joinerId = conn.peer;
+        if (joinerId && joinerId !== state.myId && !state.connections[joinerId]) {
+          connectToPeer(joinerId, true);
+        }
+      });
+      conn.on('data', data => {
+        if (data.type === 'join-request' && state.connections[conn.peer]) {
+          state.connections[conn.peer].name = data.name;
+          renderMembers();
+          toast(`${data.name} joined #${ch}`, 'green');
+        }
+      });
       conn.on('error', () => {});
     });
     hp.on('disconnected', () => { try { hp.reconnect(); } catch {} });
