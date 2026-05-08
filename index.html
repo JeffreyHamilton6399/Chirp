@@ -12,7 +12,7 @@
 <title>Chirp</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+
 <style>
 /* ═══════════════════════════════════════════
    DESIGN TOKENS
@@ -1553,8 +1553,8 @@ header {
       <div class="field-wrap">
         <div class="field-label">Type</div>
         <select class="feedback-select" id="feedback-type">
-          <option value="bug">🐛  Bug report</option>
-          <option value="idea">💡  Feature idea</option>
+          <option value="bug">Bug report</option>
+          <option value="idea">Feature idea</option>
           <option value="praise">⭐  Praise</option>
           <option value="other">💬  Other</option>
         </select>
@@ -2213,6 +2213,69 @@ const SFX = (() => {
     online() {
       tone({ freq: 880, gain: 0.048, attack: 0.01, sustain: 0.03, release: 0.24 });
     },
+
+    // Recording started — quick downward sweep
+    recStart() {
+      tone({ freq: 660, gain: 0.060, attack: 0.005, sustain: 0.02, release: 0.12 });
+      tone({ freq: 880, gain: 0.052, attack: 0.005, sustain: 0.02, release: 0.15, when: 0.10 });
+    },
+
+    // Recording stopped — two falling tones, deliberate
+    recStop() {
+      tone({ freq: 550, gain: 0.058, attack: 0.008, sustain: 0.04, release: 0.18 });
+      tone({ freq: 440, gain: 0.044, attack: 0.008, sustain: 0.04, release: 0.18, when: 0.14 });
+    },
+
+    // Paused — single muted mid click
+    recPause() {
+      click({ freq: 300, gain: 0.05, decay: 0.055 });
+    },
+
+    // Resumed — slightly higher click
+    recResume() {
+      click({ freq: 380, gain: 0.055, decay: 0.05 });
+      tone({ freq: 660, gain: 0.035, attack: 0.005, sustain: 0.01, release: 0.10, when: 0.04 });
+    },
+
+    // Muted self — dull thud
+    mute() {
+      click({ freq: 140, gain: 0.06, decay: 0.07 });
+    },
+
+    // Unmuted self — bright click
+    unmute() {
+      click({ freq: 420, gain: 0.052, decay: 0.04 });
+      tone({ freq: 700, gain: 0.030, attack: 0.005, sustain: 0.01, release: 0.09, when: 0.03 });
+    },
+
+    // Toast / notification pop
+    notify() {
+      tone({ freq: 1046, gain: 0.032, attack: 0.005, sustain: 0.015, release: 0.12 });
+    },
+
+    // Error / warning — dissonant pair
+    error() {
+      tone({ freq: 330, gain: 0.055, attack: 0.006, sustain: 0.05, release: 0.20 });
+      tone({ freq: 311, gain: 0.040, attack: 0.006, sustain: 0.05, release: 0.20, when: 0.06 });
+    },
+
+    // Download / save complete — rising two-note
+    saved() {
+      tone({ freq: 784, gain: 0.050, attack: 0.008, sustain: 0.03, release: 0.20 });
+      tone({ freq: 1046, gain: 0.040, attack: 0.008, sustain: 0.03, release: 0.22, when: 0.13 });
+    },
+
+    // Channel created — soft tri-tone rise
+    channelCreate() {
+      tone({ freq: 523, gain: 0.048, attack: 0.007, sustain: 0.025, release: 0.16 });
+      tone({ freq: 659, gain: 0.042, attack: 0.007, sustain: 0.025, release: 0.16, when: 0.09 });
+      tone({ freq: 784, gain: 0.036, attack: 0.007, sustain: 0.025, release: 0.18, when: 0.18 });
+    },
+
+    // Settings opened — faint neutral blip
+    settingsOpen() {
+      tone({ freq: 740, gain: 0.030, attack: 0.006, sustain: 0.012, release: 0.10 });
+    },
   };
 })();
 
@@ -2235,6 +2298,7 @@ function setupSettings() {
   btn.addEventListener('click', () => {
     callsignInput.value = state.myName || '';
     overlay.classList.add('show');
+    SFX.settingsOpen();
   });
   closeBtn.addEventListener('click', () => overlay.classList.remove('show'));
   overlay.addEventListener('click', e => { if (e.target === overlay) overlay.classList.remove('show'); });
@@ -2255,11 +2319,15 @@ function setupSettings() {
   callsignSave.addEventListener('click', saveCallsign);
   callsignInput.addEventListener('keydown', e => { if (e.key === 'Enter') saveCallsign(); });
 
-  // VAD toggle — disabled by default
-  vadToggle.checked = false;
-  vadRow.classList.add('disabled');
+  // VAD toggle — restore saved state
+  const savedVad = localStorage.getItem('chirp_vad') === '1';
+  vadToggle.checked = savedVad;
+  state.vadEnabled  = savedVad;
+  vadRow.classList.toggle('disabled', !savedVad);
+
   vadToggle.addEventListener('change', () => {
     state.vadEnabled = vadToggle.checked;
+    localStorage.setItem('chirp_vad', state.vadEnabled ? '1' : '0');
     vadRow.classList.toggle('disabled', !state.vadEnabled);
     updatePttLabel();
     if (state.vadEnabled && state.currentChannel) startVAD();
@@ -2267,10 +2335,16 @@ function setupSettings() {
     toast(state.vadEnabled ? 'VAD on — auto-transmit active' : 'VAD off — hold to talk', state.vadEnabled ? 'info' : '');
   });
 
-  // VAD threshold
+  // VAD threshold — restore saved value
+  const savedThr = parseInt(localStorage.getItem('chirp_vad_thr') || '50');
+  vadSlider.value = savedThr;
+  state.vadThreshold = savedThr;
+  if (vadValEl) vadValEl.textContent = `${savedThr}%`;
+
   vadSlider.addEventListener('input', () => {
     state.vadThreshold = parseInt(vadSlider.value);
     vadValEl.textContent = `${state.vadThreshold}%`;
+    localStorage.setItem('chirp_vad_thr', state.vadThreshold);
   });
 
   // SFX toggle
@@ -2417,6 +2491,7 @@ function setupChannelCreate() {
     channelVisibility[raw] = isPrivate ? 'private' : 'public';
     addChannel(raw);
     joinChannel(raw);
+    SFX.channelCreate();
   }
 
   btn.addEventListener('click', () => createChannel(sanitize(input.value)));
@@ -2519,6 +2594,14 @@ function setupJoinRequestUI() {
 }
 
 function requestJoinChannel(ch) {
+  // Public channels: join directly without requesting permission
+  const visibility = channelVisibility[ch];
+  if (!visibility || visibility === 'public') {
+    joinChannel(ch);
+    return;
+  }
+
+  // Private channel: request permission from existing members
   const members = getPeersInChannel(ch);
   if (members.length === 0) { joinChannel(ch); return; }
 
@@ -2630,6 +2713,21 @@ function initPeer() {
     SFX.online();
     startPing();
     connectToLobby();
+
+    // Auto-rejoin last channel if enabled
+    if (localStorage.getItem('chirp_autojoin') === '1') {
+      const lastCh = localStorage.getItem('chirp_last_channel');
+      if (lastCh) {
+        // Small delay so lobby connects first and channel list populates
+        setTimeout(() => {
+          if (!state.currentChannel) {
+            safeAddChannel(lastCh);
+            joinChannel(lastCh);
+            toast(`Rejoined #${lastCh}`, 'green');
+          }
+        }, 1800);
+      }
+    }
   });
 
   state.peer.on('error', err => {
@@ -2805,7 +2903,16 @@ function handleData(peerId, data) {
     case 'join-request':
       if (state.currentChannel === data.channel) {
         const reqConn = state.connections[peerId]?.conn;
-        if (reqConn) { showJoinToast(data.name || peerId, data.channel, reqConn); SFX.requestIn(); }
+        if (reqConn) {
+          // Auto-approve if channel is public (or visibility unset)
+          const vis = channelVisibility[data.channel];
+          if (!vis || vis === 'public') {
+            try { reqConn.send({ type: 'join-approved', channel: data.channel }); } catch {}
+          } else {
+            showJoinToast(data.name || peerId, data.channel, reqConn);
+            SFX.requestIn();
+          }
+        }
       }
       break;
 
@@ -2951,6 +3058,7 @@ function playRemoteStream(peerId, stream) {
   const audio = document.createElement('audio');
   audio.id = `audio-${peerId}`; audio.srcObject = stream;
   audio.autoplay = true; audio.volume = state.connections[peerId]?.volume ?? 1;
+  audio.dataset.peer = peerId;
   audio.style.display = 'none';
   document.body.appendChild(audio);
 }
@@ -2975,6 +3083,8 @@ async function joinChannel(ch) {
   state.currentChannel = ch;
   state.myJoinTime = Date.now();
   safeAddChannel(ch);
+  // Persist last channel for auto-rejoin
+  localStorage.setItem('chirp_last_channel', ch);
 
   // Become host if no one else is in the channel
   const peersInCh = getPeersInChannel(ch);
@@ -3016,6 +3126,7 @@ async function leaveChannel() {
   state.isChannelHost = false;
   state.channelHostId = null;
   state.mutedPeers.clear();
+  localStorage.removeItem('chirp_last_channel');
   lobbyAnnounce();
   document.querySelectorAll('.channel-item').forEach(el => el.classList.remove('active'));
   document.getElementById('member-list').innerHTML = '';
@@ -3373,6 +3484,7 @@ function setupMuteBtn() {
     if (onIco)  onIco.style.display  = state.isMuted ? 'none' : '';
     if (offIco) offIco.style.display = state.isMuted ? '' : 'none';
     if (state.isMuted && state.isTalking) stopTalking();
+    state.isMuted ? SFX.mute() : SFX.unmute();
   });
 }
 
@@ -3536,7 +3648,7 @@ function setupMobileNav() {
    2. Add Email Service (Gmail) → copy Service ID → paste below
    3. Create Email Template:
         Subject: "Chirp Feedback: {{from_type}}"
-        Body:    "Type: {{from_type}}\n\n{{message}}\n\nSent: {{sent_at}}"
+        Body:    "From: {{from_name}}\nType: {{from_type}}\n\n{{message}}\n\nSent: {{sent_at}}"
       → copy Template ID → paste below
    4. Account → API Keys → copy Public Key → paste below
 ═══════════════════════════════════════════ */
@@ -3545,8 +3657,6 @@ function setupMobileNav() {
   const EMAILJS_PUBLIC_KEY  = '2gn3Wt4jXxkkwP8iX';
   const EMAILJS_SERVICE_ID  = 'service_v6c1q3p';
   const EMAILJS_TEMPLATE_ID = 'template_90sz08f';
-
-  const keysConfigured = !EMAILJS_PUBLIC_KEY.startsWith('YOUR_');
 
   const overlay   = document.getElementById('feedback-overlay');
   const openBtn   = document.getElementById('feedback-fab');
@@ -3557,12 +3667,8 @@ function setupMobileNav() {
   const typeEl    = document.getElementById('feedback-type');
   const successEl = document.getElementById('feedback-success');
   const formBody  = document.getElementById('feedback-form-body');
-  const setupNote = document.getElementById('fb-setup-note');
 
   if (!overlay) return;
-
-  // Show setup note if keys aren't configured yet
-  if (!keysConfigured && setupNote) setupNote.style.display = '';
 
   function openModal() {
     textarea.value = '';
@@ -3590,17 +3696,24 @@ function setupMobileNav() {
     sendBtn.disabled = true;
     cancelBtn.disabled = true;
 
-    if (!keysConfigured) {
-      // No keys yet — show success UI but note it's saved locally only
-      successEl.querySelector('p').textContent = 'EmailJS not configured — see setup guide above.';
-      successEl.classList.add('show');
-      formBody.style.opacity = '0';
-      setTimeout(() => { successEl.classList.remove('show'); formBody.style.opacity = ''; sendBtn.textContent = 'Send'; sendBtn.disabled = false; cancelBtn.disabled = false; }, 3000);
-      return;
-    }
+    // Always save locally first regardless of network
+    try {
+      const saved = JSON.parse(localStorage.getItem('chirp_feedback') || '[]');
+      saved.push({ type: typeEl.value, msg, name: state.myName || 'User', ts: new Date().toISOString() });
+      localStorage.setItem('chirp_feedback', JSON.stringify(saved));
+    } catch {}
 
     try {
-      // Use the official EmailJS browser SDK (avoids CORS issues with direct fetch)
+      // Lazy-load EmailJS SDK only when needed (avoids blocking page load)
+      if (!window.emailjs) {
+        await new Promise((res, rej) => {
+          const s = document.createElement('script');
+          s.src = 'https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js';
+          s.onload = res; s.onerror = rej;
+          document.head.appendChild(s);
+        });
+      }
+
       emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY });
       await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
         from_name : state.myName || 'Chirp User',
@@ -3616,10 +3729,11 @@ function setupMobileNav() {
 
     } catch (err) {
       console.error('EmailJS error:', err);
+      // Saved locally — let user know it's captured
       sendBtn.textContent = 'Retry';
       sendBtn.disabled = false;
       cancelBtn.disabled = false;
-      toast('Could not send — check EmailJS credentials', 'red');
+      toast('Saved locally — could not send email. Check EmailJS setup.', 'red');
     }
   });
 })();
@@ -3665,12 +3779,15 @@ function setupMobileNav() {
   if (pickDirBtn && hasFSA) {
     pickDirBtn.addEventListener('click', async () => {
       try {
-        rec.dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+        rec.dirHandle = await window.showDirectoryPicker({ mode: 'readwrite', startIn: 'downloads' });
         dirLabel.textContent = rec.dirHandle.name || 'Folder selected';
         pickDirBtn.classList.add('picked');
         if (saveNote) saveNote.textContent = 'Saves to: ' + rec.dirHandle.name;
       } catch (e) {
-        if (e.name !== 'AbortError') toast('Could not access folder', 'red');
+        if (e.name === 'AbortError') return; // user cancelled — no error needed
+        // System folder restriction — guide user
+        toast('Pick a folder like Downloads or Documents', 'red');
+        if (saveNote) saveNote.textContent = 'Tip: choose Downloads or Documents folder.';
       }
     });
   }
@@ -3911,6 +4028,7 @@ function setupMobileNav() {
     rec.blob     = null;
     rec.startTime = Date.now();
     rec.pausedAt  = 0;
+    _isPaused     = false;
 
     try {
       rec.mediaRecorder = new MediaRecorder(stream, { mimeType: rec.mimeType });
@@ -3940,37 +4058,58 @@ function setupMobileNav() {
     showScreen('active');
     badge.classList.remove('paused');
     badge.textContent = '● REC';
+    SFX.recStart();
   });
 
   // ── Pause / Resume ────────────────────────
   let _pauseStart = 0;
+  let _isPaused   = false;  // manual flag for browsers without MR.pause support
+
   pauseBtn.addEventListener('click', () => {
-    if (!rec.mediaRecorder) return;
-    if (rec.mediaRecorder.state === 'recording') {
-      rec.mediaRecorder.pause();
+    if (!rec.mediaRecorder || rec.mediaRecorder.state === 'inactive') return;
+
+    if (!_isPaused) {
+      // ── Pause ──
       _pauseStart = Date.now();
+      _isPaused   = true;
+      try { if (rec.mediaRecorder.state === 'recording') rec.mediaRecorder.pause(); } catch {}
+      clearInterval(rec.timerInterval);  // freeze timer display
       pauseIcon.style.display  = 'none';
       playIcon.style.display   = '';
       pauseLabel.textContent   = 'Resume';
       badge.classList.add('paused');
       badge.textContent        = '❙❙ PAUSED';
-    } else if (rec.mediaRecorder.state === 'paused') {
-      rec.mediaRecorder.resume();
+      SFX.recPause();
+    } else {
+      // ── Resume ──
       rec.pausedAt += Date.now() - _pauseStart;
+      _isPaused     = false;
+      try { if (rec.mediaRecorder.state === 'paused') rec.mediaRecorder.resume(); } catch {}
+      rec.timerInterval = setInterval(() => {
+        const elapsed = (Date.now() - rec.startTime - rec.pausedAt) / 1000;
+        if (timerEl) timerEl.textContent = fmtTime(elapsed);
+      }, 500);
       pauseIcon.style.display  = '';
       playIcon.style.display   = 'none';
       pauseLabel.textContent   = 'Pause';
       badge.classList.remove('paused');
       badge.textContent        = '● REC';
+      SFX.recResume();
     }
   });
 
   // ── Stop ──────────────────────────────────
   stopBtn.addEventListener('click', () => {
     if (!rec.mediaRecorder || rec.mediaRecorder.state === 'inactive') return;
+    // If paused, resume first so MediaRecorder can flush remaining chunks
+    if (_isPaused) {
+      try { if (rec.mediaRecorder.state === 'paused') rec.mediaRecorder.resume(); } catch {}
+      _isPaused = false;
+    }
     rec.mediaRecorder.stop();
     clearInterval(rec.timerInterval);
     stopRecWaveform();
+    SFX.recStop();
     fab.classList.remove('recording');
     // Cleanup audio ctx
     try { if (rec.audioCtx) rec.audioCtx.close(); } catch {}
@@ -4042,6 +4181,7 @@ function setupMobileNav() {
       a.download = filename;
       a.click();
       toast('Downloading…', 'green');
+      SFX.saved();
     };
 
     // If saved to dir, update label
@@ -4054,6 +4194,7 @@ function setupMobileNav() {
         note.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" style="flex-shrink:0;color:var(--green)"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M22 4L12 14.01l-3-3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span style="color:var(--green)">Saved to <strong>${rec.dirHandle.name}</strong></span>`;
         doneDiv.querySelector('.rec-done-actions').before(note);
       }
+      SFX.saved();
     }
   }
 
@@ -4086,6 +4227,7 @@ function setupMobileNav() {
     if (rec.audioEl) { rec.audioEl.pause(); rec.audioEl = null; }
     if (rec.playerAnimId) { cancelAnimationFrame(rec.playerAnimId); rec.playerAnimId = null; }
     rec.blob = null; rec.chunks = [];
+    _isPaused = false;
     ppPlay.style.display  = '';
     ppPause.style.display = 'none';
     scrub.value = 0;
