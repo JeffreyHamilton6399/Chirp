@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-title" content="Chirp">
 <link rel="manifest" href="data:application/json,{%22name%22:%22Chirp%22,%22short_name%22:%22Chirp%22,%22start_url%22:%22.%22,%22display%22:%22standalone%22,%22background_color%22:%22%230c0c0e%22,%22theme_color%22:%22%230c0c0e%22,%22icons%22:[{%22src%22:%22data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='40' fill='%230c0c0e'/%3E%3Ccircle cx='96' cy='96' r='56' stroke='%237c6aff' stroke-width='6' opacity='.4'/%3E%3Ccircle cx='96' cy='96' r='32' stroke='%237c6aff' stroke-width='6' opacity='.7'/%3E%3Ccircle cx='96' cy='96' r='12' fill='%237c6aff'/%3E%3C/svg%3E%22,%22sizes%22:%22192x192%22,%22type%22:%22image/svg+xml%22}]}">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230c0c0e'/%3E%3Ccircle cx='16' cy='14' r='4' fill='%237c6aff'/%3E%3Cpath d='M9 14c0-3.866 3.134-7 7-7s7 3.134 7 7' stroke='%237c6aff' stroke-width='1.6' stroke-linecap='round' fill='none' opacity='0.5'/%3E%3Cpath d='M5 14c0-6.075 4.925-11 11-11s11 4.925 11 11' stroke='%237c6aff' stroke-width='1.4' stroke-linecap='round' fill='none' opacity='0.25'/%3E%3Cline x1='16' y1='18' x2='16' y2='22' stroke='%237c6aff' stroke-width='1.6' stroke-linecap='round'/%3E%3Cline x1='12' y1='22' x2='20' y2='22' stroke='%237c6aff' stroke-width='1.6' stroke-linecap='round'/%3E%3C/svg%3E">
-<title>Chirp — Push to Talk</title>
+<title>Chirp</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -179,7 +179,7 @@ header {
 .conn-pill.online .dot { background: var(--green); box-shadow: 0 0 6px var(--green); animation: pulse-dot 2.5s ease-in-out infinite; }
 .conn-pill.error   { border-color: #7f1d1d; color: var(--danger); }
 .conn-pill.error .dot { background: var(--danger); }
-.conn-pill::after {
+.conn-pill.hidden { opacity: 0; pointer-events: none; width: 0; padding: 0; border-color: transparent; overflow: hidden; margin: 0; transition: opacity 0.5s, width 0.5s, padding 0.5s; }
   content: attr(data-tip); position: absolute; top: calc(100% + 6px); left: 50%;
   transform: translateX(-50%) translateY(-4px);
   background: var(--bg4); border: 1px solid var(--border2);
@@ -438,6 +438,7 @@ header {
   border: 1px solid var(--border2); border-radius: 20px 20px 0 0;
   padding: 28px 24px 32px;
   animation: fadeUp 0.32s cubic-bezier(0.34,1.56,0.64,1);
+  max-height: 85vh; overflow-y: auto;
 }
 .settings-card h3 {
   font-size: 1rem; font-weight: 800; margin-bottom: 20px; color: var(--text);
@@ -743,6 +744,8 @@ header {
   }
   .ch-create-input { font-size: 0.8rem; padding: 10px 12px; height: 40px; }
   .ch-create-btn   { width: 40px; height: 40px; font-size: 1.3rem; flex-shrink: 0; }
+  .ch-privacy-toggle { width: 40px; height: 40px; flex-shrink: 0; }
+  .ch-random-btn   { padding: 9px 10px; font-size: 0.6rem; }
   .ch-create-row   { gap: 8px; }
 
   #no-channel .hint::before { content: '↓ tap '; }
@@ -759,15 +762,50 @@ header {
 /* ═══════════════════════════════════════════
    KEYFRAMES
 ═══════════════════════════════════════════ */
-/* ═══════════════════════════════════════════
-   YOUTUBE LINK
-═══════════════════════════════════════════ */
-.yt-link {
-  display: flex; align-items: center; gap: 2px;
-  text-decoration: none;
+/* Settings circle button */
+#settings-btn {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: var(--bg3); border: 1px solid var(--border2);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; padding: 0; color: var(--text-dim);
+  transition: border-color 0.18s, color 0.18s, background 0.18s, transform 0.12s;
+  font-size: 0; /* hide any text */
 }
-.yt-label { display: none; }
-@media (min-width: 480px) { .yt-label { display: inline; } }
+#settings-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-glow); transform: scale(1.08); }
+#settings-btn:active { transform: scale(0.94); }
+
+/* Fixed settings button in bottom-left */
+/* Settings FAB — lives at the bottom of the sidebar */
+#settings-fab {
+  width: 28px; height: 28px; border-radius: 7px;
+  background: none; border: 1px solid transparent;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; color: var(--text-dim);
+  transition: border-color 0.18s, color 0.18s, background 0.18s, transform 0.12s;
+  flex-shrink: 0;
+}
+#settings-fab:hover { border-color: var(--border2); color: var(--text); background: var(--bg4); transform: scale(1.08); }
+#settings-fab:active { transform: scale(0.94); }
+
+/* Sidebar footer row */
+.sidebar-footer {
+  padding: 8px 10px;
+  border-top: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  flex-shrink: 0;
+}
+
+/* Feedback FAB — mirrors settings-fab */
+#feedback-fab {
+  width: 28px; height: 28px; border-radius: 7px;
+  background: none; border: 1px solid transparent;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; color: var(--text-dim);
+  transition: border-color 0.18s, color 0.18s, background 0.18s, transform 0.12s;
+  flex-shrink: 0;
+}
+#feedback-fab:hover { border-color: var(--border2); color: var(--accent); background: var(--accent-glow); transform: scale(1.08); }
+#feedback-fab:active { transform: scale(0.94); }
 
 /* ═══════════════════════════════════════════
    FEEDBACK MODAL
@@ -860,6 +898,24 @@ header {
   color: var(--text-mid); letter-spacing: 0.1em; text-transform: uppercase;
 }
 
+/* PTT key selector */
+.ptt-key-option {
+  display: flex; align-items: center; gap: 0;
+  cursor: pointer;
+}
+.ptt-key-option input[type="radio"] { display: none; }
+.ptt-key-option span {
+  font-family: var(--mono); font-size: 0.65rem; color: var(--text-dim);
+  background: var(--bg4); border: 1px solid var(--border2);
+  border-radius: var(--radius-sm); padding: 5px 12px;
+  letter-spacing: 0.06em; cursor: pointer;
+  transition: border-color 0.18s, color 0.18s, background 0.18s;
+}
+.ptt-key-option input:checked + span {
+  border-color: var(--accent); color: var(--accent); background: var(--accent-glow);
+}
+.ptt-key-option:hover span { border-color: var(--border); color: var(--text-mid); }
+
 /* EmailJS setup hint (shown in dev, hidden in prod) */
 .fb-setup-note {
   font-family: var(--mono); font-size: 0.58rem; color: var(--text-dim);
@@ -869,7 +925,279 @@ header {
 .fb-setup-note a { color: var(--accent); text-decoration: none; }
 .fb-setup-note a:hover { text-decoration: underline; }
 
-@keyframes fadeUp    { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+/* Privacy toggle in channel create */
+.ch-privacy-toggle {
+  width: 28px; height: 28px; flex-shrink: 0;
+  background: var(--bg3); border: 1px solid var(--border2);
+  border-radius: var(--radius-sm);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: all 0.2s; position: relative;
+}
+.ch-privacy-toggle input { position: absolute; opacity: 0; width: 0; height: 0; }
+.ch-privacy-icon { display: flex; align-items: center; justify-content: center; color: var(--text-dim); transition: color 0.2s; }
+.ch-privacy-toggle:hover { border-color: var(--accent-dim); }
+.ch-privacy-toggle:has(input:checked) { border-color: var(--accent-dim); background: rgba(124,106,255,0.1); }
+.ch-privacy-toggle:has(input:checked) .ch-privacy-icon { color: var(--accent); }
+
+/* Random room button */
+.ch-random-btn {
+  width: 100%; margin-top: 7px;
+  background: none; border: 1px dashed var(--border2);
+  border-radius: var(--radius-sm); padding: 7px 10px;
+  font-family: var(--mono); font-size: 0.58rem; color: var(--text-dim);
+  letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  transition: border-color 0.18s, color 0.18s, background 0.18s;
+}
+.ch-random-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-glow); border-style: solid; }
+.ch-random-btn:active { opacity: 0.75; }
+
+/* Channel privacy badge */
+.ch-privacy-badge {
+  font-size: 0.5rem; opacity: 0.5; flex-shrink: 0; line-height: 1;
+}
+
+/* ═══════════════════════════════════════════
+   HOST MODERATION MENU
+═══════════════════════════════════════════ */
+.member-item.clickable { cursor: pointer; }
+.member-item.clickable:hover { background: rgba(124,106,255,0.07); }
+
+#mod-menu {
+  position: fixed; z-index: 800;
+  background: var(--bg2); border: 1px solid var(--border2);
+  border-radius: 10px; padding: 6px;
+  min-width: 180px;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.55), 0 0 0 1px rgba(124,106,255,0.07);
+  animation: fadeUp 0.18s cubic-bezier(0.34,1.56,0.64,1);
+  display: none;
+}
+#mod-menu.show { display: block; }
+
+.mod-menu-header {
+  font-family: var(--mono); font-size: 0.58rem; color: var(--text-dim);
+  letter-spacing: 0.12em; text-transform: uppercase;
+  padding: 6px 10px 8px; border-bottom: 1px solid var(--border);
+  margin-bottom: 4px;
+}
+.mod-menu-name {
+  color: var(--text); font-size: 0.68rem; font-weight: 600;
+  letter-spacing: 0; text-transform: none; font-family: var(--sans);
+}
+
+.mod-btn {
+  width: 100%; background: none; border: none;
+  border-radius: var(--radius-sm); padding: 9px 12px;
+  font-family: var(--mono); font-size: 0.65rem; color: var(--text-mid);
+  letter-spacing: 0.06em; cursor: pointer; text-align: left;
+  display: flex; align-items: center; gap: 10px;
+  transition: background 0.14s, color 0.14s;
+}
+.mod-btn:hover { background: rgba(255,255,255,0.05); color: var(--text); }
+.mod-btn.danger { color: var(--danger); }
+.mod-btn.danger:hover { background: rgba(248,113,113,0.08); color: var(--danger); }
+.mod-btn.promote { color: var(--accent); }
+.mod-btn.promote:hover { background: var(--accent-glow); color: var(--accent); }
+.mod-btn svg { flex-shrink: 0; opacity: 0.7; }
+
+/* Host crown badge on member */
+.member-host-badge {
+  font-size: 0.6rem; line-height: 1; flex-shrink: 0; opacity: 0.8;
+  margin-left: 2px;
+}
+
+/* Record FAB */
+#record-fab {
+  width: 28px; height: 28px; border-radius: 7px;
+  background: none; border: 1px solid transparent;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; color: var(--text-dim);
+  transition: border-color 0.18s, color 0.18s, background 0.18s, transform 0.12s;
+  flex-shrink: 0;
+}
+#record-fab:hover  { border-color: rgba(248,113,113,0.4); color: var(--danger); background: rgba(248,113,113,0.08); transform: scale(1.08); }
+#record-fab:active { transform: scale(0.94); }
+#record-fab.recording { color: var(--danger); border-color: rgba(248,113,113,0.4); animation: rec-pulse-fab 1.8s ease-in-out infinite; }
+@keyframes rec-pulse-fab { 0%,100% { opacity:1; } 50% { opacity:0.5; } }
+
+/* ═══════════════════════════════════════════
+   RECORDING OVERLAY
+═══════════════════════════════════════════ */
+#rec-overlay {
+  display: none; position: fixed; inset: 0; z-index: 700;
+  background: rgba(0,0,0,0.6); backdrop-filter: blur(8px);
+  align-items: flex-end; justify-content: center;
+  padding: 0 0 env(safe-area-inset-bottom);
+}
+#rec-overlay.show { display: flex; animation: fadeIn 0.2s ease; }
+
+.rec-card {
+  width: 100%; max-width: 440px; background: var(--bg2);
+  border: 1px solid var(--border2); border-radius: 20px 20px 0 0;
+  padding: 28px 24px 36px;
+  animation: fadeUp 0.32s cubic-bezier(0.34,1.56,0.64,1);
+  max-height: 90vh; overflow-y: auto;
+}
+
+.rec-title {
+  font-size: 1rem; font-weight: 800; color: var(--text);
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 22px;
+}
+.rec-close-btn {
+  background: none; border: none; color: var(--text-dim); font-size: 1.1rem;
+  cursor: pointer; padding: 2px 6px; border-radius: 4px; line-height: 1;
+  opacity: 0.6; transition: opacity 0.15s, background 0.15s;
+}
+.rec-close-btn:hover { opacity: 1; background: rgba(255,255,255,0.06); }
+
+/* Setup screen */
+.rec-setup-icon {
+  display: flex; justify-content: center; margin-bottom: 14px;
+}
+.rec-setup-hint {
+  font-family: var(--mono); font-size: 0.65rem; color: var(--text-dim);
+  text-align: center; letter-spacing: 0.06em; margin-bottom: 22px;
+}
+.rec-setup-fields { display: flex; flex-direction: column; gap: 16px; margin-bottom: 22px; }
+
+.rec-save-info {
+  display: flex; align-items: center; gap: 9px;
+  background: var(--bg3); border: 1px solid var(--border2);
+  border-radius: var(--radius-sm); padding: 10px 14px;
+  font-family: var(--mono); font-size: 0.65rem; color: var(--text-mid);
+  letter-spacing: 0.04em; line-height: 1.5;
+}
+.rec-save-info strong { color: var(--text); font-weight: 600; }
+
+/* Action buttons */
+.rec-action-btn {
+  width: 100%; border: none; border-radius: var(--radius-sm);
+  padding: 13px 20px; font-family: var(--sans); font-size: 0.9rem; font-weight: 700;
+  letter-spacing: 0.04em; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 9px;
+  transition: opacity 0.15s, transform 0.1s, box-shadow 0.2s;
+}
+.rec-action-btn:hover  { opacity: 0.9; }
+.rec-action-btn:active { transform: scale(0.98); }
+.rec-action-red    { background: var(--danger); color: #fff; box-shadow: 0 4px 20px rgba(248,113,113,0.3); }
+.rec-action-red:hover  { box-shadow: 0 4px 28px rgba(248,113,113,0.45); }
+.rec-action-accent { background: var(--accent); color: #fff; box-shadow: 0 4px 20px rgba(124,106,255,0.3); }
+.rec-action-accent:hover { box-shadow: 0 4px 28px rgba(124,106,255,0.45); }
+.rec-action-ghost  {
+  background: none; border: 1px solid var(--border2); color: var(--text-mid);
+  box-shadow: none;
+}
+.rec-action-ghost:hover { border-color: var(--border); color: var(--text); background: rgba(255,255,255,0.03); }
+
+/* Active recording screen */
+.rec-live-header {
+  display: flex; align-items: center; gap: 12px; margin-bottom: 18px;
+  padding: 12px 16px; background: var(--bg3); border-radius: var(--radius);
+  border: 1px solid rgba(248,113,113,0.2);
+}
+.rec-badge {
+  font-family: var(--mono); font-size: 0.68rem; font-weight: 700;
+  color: var(--danger); letter-spacing: 0.14em;
+  animation: rec-badge-blink 1.2s ease-in-out infinite;
+}
+.rec-badge.paused { animation: none; opacity: 0.5; color: var(--text-dim); }
+@keyframes rec-badge-blink { 0%,100% { opacity:1; } 50% { opacity:0.3; } }
+
+.rec-timer {
+  font-family: var(--mono); font-size: 1.1rem; font-weight: 500;
+  color: var(--text); letter-spacing: 0.06em; flex: 1;
+}
+.rec-size {
+  font-family: var(--mono); font-size: 0.6rem; color: var(--text-dim);
+  letter-spacing: 0.06em;
+}
+
+#rec-waveform {
+  width: 100%; border-radius: var(--radius-sm);
+  background: var(--bg3); border: 1px solid var(--border);
+  margin-bottom: 20px; display: block;
+}
+
+.rec-controls {
+  display: flex; gap: 10px;
+}
+.rec-ctrl-btn {
+  flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px;
+  background: var(--bg3); border: 1px solid var(--border2);
+  border-radius: var(--radius-sm); padding: 12px 16px;
+  font-family: var(--mono); font-size: 0.7rem; color: var(--text-mid);
+  letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer;
+  transition: border-color 0.18s, color 0.18s, background 0.18s, transform 0.1s;
+}
+.rec-ctrl-btn:hover  { border-color: var(--accent); color: var(--accent); background: var(--accent-glow); }
+.rec-ctrl-btn:active { transform: scale(0.97); }
+.rec-stop-btn:hover  { border-color: rgba(248,113,113,0.5); color: var(--danger); background: rgba(248,113,113,0.08); }
+
+/* Done screen */
+.rec-done-header {
+  display: flex; align-items: center; gap: 14px;
+  padding: 14px 16px; background: rgba(34,211,165,0.06);
+  border: 1px solid rgba(34,211,165,0.2); border-radius: var(--radius);
+  margin-bottom: 18px;
+}
+.rec-done-icon { flex-shrink: 0; }
+.rec-done-meta { flex: 1; overflow: hidden; display: flex; flex-direction: column; gap: 4px; }
+.rec-done-name {
+  font-size: 0.88rem; font-weight: 700; color: var(--text);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.rec-done-info {
+  font-family: var(--mono); font-size: 0.58rem; color: var(--text-dim); letter-spacing: 0.06em;
+}
+
+/* Audio player */
+.rec-player {
+  background: var(--bg3); border: 1px solid var(--border2);
+  border-radius: var(--radius); padding: 14px 16px;
+  margin-bottom: 18px; display: flex; flex-direction: column; gap: 12px;
+}
+#rec-player-waveform {
+  width: 100%; border-radius: 4px; display: block; cursor: pointer;
+}
+.rec-player-controls {
+  display: flex; align-items: center; gap: 10px;
+}
+.rec-play-pause-btn {
+  width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0;
+  background: var(--accent); border: none; color: #fff; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: opacity 0.15s, transform 0.1s;
+  box-shadow: 0 4px 14px rgba(124,106,255,0.35);
+}
+.rec-play-pause-btn:hover  { opacity: 0.88; }
+.rec-play-pause-btn:active { transform: scale(0.93); }
+
+.rec-scrub-wrap { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+.rec-scrub {
+  width: 100%; height: 4px; accent-color: var(--accent); cursor: pointer;
+  appearance: none; background: var(--border2); border-radius: 2px; outline: none;
+}
+.rec-scrub::-webkit-slider-thumb {
+  appearance: none; width: 12px; height: 12px; border-radius: 50%;
+  background: var(--accent); cursor: pointer; box-shadow: 0 0 6px rgba(124,106,255,0.5);
+}
+.rec-time-row { display: flex; justify-content: space-between; }
+.rec-time-label { font-family: var(--mono); font-size: 0.56rem; color: var(--text-dim); letter-spacing: 0.05em; }
+
+.rec-vol-wrap { display: flex; align-items: center; gap: 6px; width: 80px; flex-shrink: 0; }
+.rec-vol-slider {
+  flex: 1; height: 3px; accent-color: var(--accent); cursor: pointer;
+  appearance: none; background: var(--border2); border-radius: 2px;
+}
+.rec-vol-slider::-webkit-slider-thumb {
+  appearance: none; width: 10px; height: 10px; border-radius: 50%;
+  background: var(--accent); cursor: pointer;
+}
+
+.rec-done-actions { display: flex; flex-direction: column; gap: 8px; }
+
+
 @keyframes fadeIn    { from { opacity: 0; } to { opacity: 1; } }
 @keyframes slideLeft { from { transform: translateX(24px); opacity: 0; } to { transform: none; opacity: 1; } }
 @keyframes popIn     { 0% { transform: scale(0.8); opacity: 0; } 70% { transform: scale(1.04); } 100% { transform: scale(1); opacity: 1; } }
@@ -939,17 +1267,10 @@ header {
         <div class="dot"></div>
         <span id="conn-text">connecting</span>
       </div>
+
     </div>
     <div class="header-right">
       <span class="ping-chip" id="ping-chip" style="display:none"></span>
-      <a href="https://www.youtube.com/@Jeffrey_Creates" target="_blank" rel="noopener" class="btn-ghost yt-link" title="Jeffrey_Creates on YouTube">
-        <svg width="13" height="10" viewBox="0 0 13 10" fill="none" style="vertical-align:middle;margin-right:3px">
-          <rect x="0.5" y="0.5" width="12" height="9" rx="2.5" fill="#ff0000" opacity="0.85"/>
-          <polygon points="5,2.8 5,7.2 9,5" fill="white"/>
-        </svg><span class="yt-label">jeffrey_creates</span>
-      </a>
-      <button class="btn-ghost" id="feedback-btn" title="Send Feedback">feedback</button>
-      <button class="btn-ghost" id="settings-btn" title="Settings">settings</button>
       <button class="btn-ghost" id="install-btn">install</button>
     </div>
   </header>
@@ -974,8 +1295,48 @@ header {
         <div class="ch-create-row">
           <input id="new-ch-input" class="ch-create-input" type="text" maxlength="20"
             placeholder="new channel…" autocomplete="off" spellcheck="false">
+          <label class="ch-privacy-toggle" id="ch-privacy-toggle" title="Toggle public/private">
+            <input type="checkbox" id="ch-private-cb">
+            <span class="ch-privacy-icon" id="ch-privacy-icon">
+              <!-- public icon (globe) -->
+              <svg id="icon-public" width="12" height="12" viewBox="0 0 16 16" fill="none">
+                <circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.4"/>
+                <path d="M8 1.5C8 1.5 5.5 4.5 5.5 8s2.5 6.5 2.5 6.5M8 1.5C8 1.5 10.5 4.5 10.5 8S8 14.5 8 14.5M1.5 8h13" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+              </svg>
+              <!-- private icon (lock) -->
+              <svg id="icon-private" width="12" height="12" viewBox="0 0 16 16" fill="none" style="display:none">
+                <rect x="3" y="7.5" width="10" height="7" rx="1.5" stroke="currentColor" stroke-width="1.4"/>
+                <path d="M5 7.5V5a3 3 0 016 0v2.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+              </svg>
+            </span>
+          </label>
           <button id="new-ch-btn" class="ch-create-btn">+</button>
         </div>
+        <button id="join-random-btn" class="ch-random-btn" title="Join a random public channel">
+          <svg width="11" height="11" viewBox="0 0 16 16" fill="none" style="flex-shrink:0">
+            <path d="M2 4h2l2 8h4l2-8h2M10 2l2 2-2 2M6 14l-2-2 2-2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          random public room
+        </button>
+      </div>
+      <div class="sidebar-footer">
+        <button id="feedback-fab" title="Send Feedback">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+        <button id="record-fab" title="Record Session">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="12" cy="12" r="6" fill="currentColor" opacity="0.85"/>
+            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.6" opacity="0.5"/>
+          </svg>
+        </button>
+        <button id="settings-fab" title="Settings">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
       </div>
     </div>
 
@@ -1161,6 +1522,159 @@ header {
   </div>
 </div>
 
+<!-- Recording overlay -->
+<div id="rec-overlay">
+  <div class="rec-card">
+
+    <!-- Header -->
+    <h3 class="rec-title">
+      <span id="rec-title-text">Session Recording</span>
+      <button class="rec-close-btn" id="rec-close">✕</button>
+    </h3>
+
+    <!-- ── SETUP SCREEN ── -->
+    <div id="rec-setup">
+      <div class="rec-setup-icon">
+        <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+          <circle cx="20" cy="20" r="18" stroke="var(--accent)" stroke-width="1.5" opacity="0.25"/>
+          <circle cx="20" cy="20" r="11" stroke="var(--accent)" stroke-width="1.5" opacity="0.55"/>
+          <circle cx="20" cy="20" r="5"  fill="var(--accent)"/>
+        </svg>
+      </div>
+      <p class="rec-setup-hint">Configure your recording before you start.</p>
+
+      <div class="rec-setup-fields">
+        <div class="field-wrap">
+          <div class="field-label">Filename</div>
+          <input id="rec-filename" class="input-styled" type="text" value="chirp-session"
+            placeholder="chirp-session" autocomplete="off" spellcheck="false"
+            style="font-size:0.85rem;padding:10px 14px;">
+        </div>
+
+        <div class="field-wrap">
+          <div class="field-label">Format</div>
+          <select id="rec-format" class="feedback-select">
+            <option value="webm">WebM (recommended)</option>
+            <option value="ogg">OGG Vorbis</option>
+            <option value="mp4">MP4 / AAC</option>
+          </select>
+        </div>
+
+        <div class="field-wrap">
+          <div class="field-label">Save Location</div>
+          <div class="rec-save-info">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style="flex-shrink:0;color:var(--accent);opacity:0.8">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span>Saved to your browser's <strong>Downloads</strong> folder when you stop.</span>
+          </div>
+        </div>
+      </div>
+
+      <button id="rec-start-btn" class="rec-action-btn rec-action-red">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" fill="currentColor"/></svg>
+        Start Recording
+      </button>
+    </div>
+
+    <!-- ── RECORDING / PAUSED SCREEN ── -->
+    <div id="rec-active" style="display:none">
+      <div class="rec-live-header">
+        <span class="rec-badge" id="rec-badge">● REC</span>
+        <span class="rec-timer" id="rec-timer">00:00:00</span>
+        <span class="rec-size"  id="rec-size">0 KB</span>
+      </div>
+
+      <canvas id="rec-waveform" height="56"></canvas>
+
+      <div class="rec-controls">
+        <button class="rec-ctrl-btn" id="rec-pause-btn" title="Pause / Resume">
+          <!-- Pause icon (default) -->
+          <svg id="rec-pause-icon" width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <rect x="6"  y="4" width="4" height="16" rx="1.5" fill="currentColor"/>
+            <rect x="14" y="4" width="4" height="16" rx="1.5" fill="currentColor"/>
+          </svg>
+          <!-- Play icon (when paused) -->
+          <svg id="rec-play-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" style="display:none">
+            <path d="M6 4l14 8-14 8V4z" fill="currentColor"/>
+          </svg>
+          <span id="rec-pause-label">Pause</span>
+        </button>
+
+        <button class="rec-ctrl-btn rec-stop-btn" id="rec-stop-btn" title="Stop Recording">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <rect x="4" y="4" width="16" height="16" rx="2" fill="currentColor"/>
+          </svg>
+          Stop
+        </button>
+      </div>
+    </div>
+
+    <!-- ── DONE SCREEN ── -->
+    <div id="rec-done" style="display:none">
+      <div class="rec-done-header">
+        <div class="rec-done-icon">
+          <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+            <circle cx="14" cy="14" r="12" stroke="var(--green)" stroke-width="1.6" opacity="0.3"/>
+            <path d="M8 14l4 4 8-8" stroke="var(--green)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div class="rec-done-meta">
+          <span id="rec-done-name" class="rec-done-name"></span>
+          <span id="rec-done-info" class="rec-done-info"></span>
+        </div>
+      </div>
+
+      <!-- Audio player -->
+      <div class="rec-player">
+        <canvas id="rec-player-waveform" height="52"></canvas>
+        <div class="rec-player-controls">
+          <button class="rec-play-pause-btn" id="rec-pp-btn">
+            <svg id="rec-pp-play" width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <path d="M5 3l16 9-16 9V3z" fill="currentColor"/>
+            </svg>
+            <svg id="rec-pp-pause" width="16" height="16" viewBox="0 0 24 24" fill="none" style="display:none">
+              <rect x="5"  y="3" width="5" height="18" rx="1.5" fill="currentColor"/>
+              <rect x="14" y="3" width="5" height="18" rx="1.5" fill="currentColor"/>
+            </svg>
+          </button>
+          <div class="rec-scrub-wrap">
+            <input type="range" id="rec-scrub" min="0" max="1000" value="0" class="rec-scrub">
+            <div class="rec-time-row">
+              <span id="rec-cur-time" class="rec-time-label">0:00</span>
+              <span id="rec-dur-time" class="rec-time-label">0:00</span>
+            </div>
+          </div>
+          <div class="rec-vol-wrap">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style="color:var(--text-dim);flex-shrink:0">
+              <path d="M11 5L6 9H2v6h4l5 4V5z" fill="currentColor" opacity="0.7"/>
+              <path d="M15.54 8.46a5 5 0 0 1 0 7.07" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+            </svg>
+            <input type="range" id="rec-vol" min="0" max="100" value="80" class="rec-vol-slider">
+          </div>
+        </div>
+      </div>
+
+      <div class="rec-done-actions">
+        <button id="rec-download-btn" class="rec-action-btn rec-action-accent">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Download
+        </button>
+        <button id="rec-new-btn" class="rec-action-btn rec-action-ghost">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="6" fill="currentColor" opacity="0.85"/>
+            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.6" opacity="0.5"/>
+          </svg>
+          New Recording
+        </button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
 <!-- Settings panel -->
 <div id="settings-overlay">
   <div class="settings-card">
@@ -1214,6 +1728,90 @@ header {
         <div class="toggle-thumb"></div>
       </label>
     </div>
+
+    <div class="settings-row">
+      <div class="settings-row-label">
+        <span>Noise Suppression</span>
+        <span>Filter background noise from your mic</span>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" id="noise-toggle" checked>
+        <div class="toggle-track"></div>
+        <div class="toggle-thumb"></div>
+      </label>
+    </div>
+
+    <div class="settings-row">
+      <div class="settings-row-label">
+        <span>Echo Cancellation</span>
+        <span>Reduce mic echo from speakers</span>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" id="echo-toggle" checked>
+        <div class="toggle-track"></div>
+        <div class="toggle-thumb"></div>
+      </label>
+    </div>
+
+    <div class="settings-row">
+      <div class="settings-row-label">
+        <span>Show Ping</span>
+        <span>Display latency in the header bar</span>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" id="ping-toggle" checked>
+        <div class="toggle-track"></div>
+        <div class="toggle-thumb"></div>
+      </label>
+    </div>
+
+    <div class="settings-row">
+      <div class="settings-row-label">
+        <span>Auto-Rejoin Last Channel</span>
+        <span>Reconnect to your last channel on startup</span>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" id="autojoin-toggle">
+        <div class="toggle-track"></div>
+        <div class="toggle-thumb"></div>
+      </label>
+    </div>
+
+    <div class="settings-row" style="align-items:flex-start;flex-direction:column;gap:10px;">
+      <div class="settings-row-label">
+        <span>PTT Keyboard Shortcut</span>
+        <span>Key to hold for push-to-talk</span>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;">
+        <label class="ptt-key-option">
+          <input type="radio" name="ptt-key" value="Space" id="ptt-key-space" checked>
+          <span>Space</span>
+        </label>
+        <label class="ptt-key-option">
+          <input type="radio" name="ptt-key" value="KeyT" id="ptt-key-t">
+          <span>T</span>
+        </label>
+        <label class="ptt-key-option">
+          <input type="radio" name="ptt-key" value="KeyV" id="ptt-key-v">
+          <span>V</span>
+        </label>
+        <label class="ptt-key-option">
+          <input type="radio" name="ptt-key" value="AltLeft" id="ptt-key-alt">
+          <span>Alt</span>
+        </label>
+      </div>
+    </div>
+
+    <div class="settings-row" style="align-items:flex-start;flex-direction:column;gap:10px;">
+      <div class="settings-row-label">
+        <span>Output Volume</span>
+        <span>Incoming voice volume level</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;width:100%;">
+        <input type="range" id="output-volume" min="0" max="100" value="100" style="flex:1;accent-color:var(--accent);">
+        <span id="output-volume-val" style="font-family:var(--mono);font-size:0.6rem;color:var(--text-dim);width:28px;text-align:right;">100%</span>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -1227,6 +1825,36 @@ header {
   </div>
 </div>
 
+<!-- Host moderation menu --><div id="mod-menu">
+  <div class="mod-menu-header">
+    <div class="mod-menu-name" id="mod-menu-name">—</div>
+    Member
+  </div>
+  <button class="mod-btn" id="mod-mute-btn">
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+      <rect x="5" y="2" width="6" height="10" rx="3" stroke="currentColor" stroke-width="1.4"/>
+      <path d="M3 8c0 2.761 2.239 5 5 5s5-2.239 5-5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+      <line x1="2" y1="2" x2="14" y2="14" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+    </svg>
+    <span id="mod-mute-label">Mute</span>
+  </button>
+  <button class="mod-btn danger" id="mod-kick-btn">
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+      <path d="M10 5L5 10M5 5l5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      <path d="M8 1.5A6.5 6.5 0 118 14.5 6.5 6.5 0 018 1.5z" stroke="currentColor" stroke-width="1.4"/>
+    </svg>
+    Kick from channel
+  </button>
+  <button class="mod-btn promote" id="mod-promote-btn">
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+      <path d="M8 2l1.5 3.5L13 6l-2.5 2.5.5 3.5L8 10.5 5 12l.5-3.5L3 6l3.5-.5L8 2z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>
+    </svg>
+    Make host
+  </button>
+</div>
+
+<!-- Settings FAB -->
+
 <div id="toast"></div>
 
 <!-- ═══════════════════════════════════════════
@@ -1235,13 +1863,30 @@ header {
 <script>
 // setConnUI declared early so PeerJS loader IIFE can call it safely
 var _pendingConnUI = null;
+var _connOnlineTimer = null;
 function setConnUI(st, text) {
   const pill = document.getElementById('conn-pill');
   const span = document.getElementById('conn-text');
   if (!pill || !span) { _pendingConnUI = [st, text]; return; }
   _pendingConnUI = null;
-  pill.className = 'conn-pill' + (st === 'online' ? ' online' : st === 'error' ? ' error' : '');
-  span.textContent = text;
+  clearTimeout(_connOnlineTimer);
+
+  if (st === 'online') {
+    // Show "connected" briefly, then hide
+    pill.classList.remove('hidden', 'error');
+    pill.classList.add('online');
+    span.textContent = 'connected';
+    _connOnlineTimer = setTimeout(() => { pill.classList.add('hidden'); }, 2800);
+  } else if (st === 'error') {
+    pill.classList.remove('hidden', 'online');
+    pill.classList.add('error');
+    span.textContent = 'offline';
+  } else {
+    // connecting state — show normally
+    pill.classList.remove('hidden', 'online', 'error');
+    span.textContent = text || 'connecting';
+  }
+
   if (typeof BROKERS !== 'undefined' && typeof brokerIdx !== 'undefined') {
     pill.setAttribute('data-tip', st === 'online'
       ? BROKERS[brokerIdx % BROKERS.length].host
@@ -1278,6 +1923,7 @@ const BROKERS   = [{ host: '0.peerjs.com', port: 443, path: '/', secure: true }]
 
 let brokerIdx = 0;
 const liveChannels = new Set();
+const channelVisibility = {}; // ch -> 'public' | 'private'
 // Channels that should never be auto-created or received from lobby
 const BLOCKED_DEFAULTS = new Set(['ops', 'general', 'lounge']);
 
@@ -1313,6 +1959,10 @@ const state = {
   reconnectAttempts: 0,
   pingInterval: null, pingTimes: {},
   myJoinTime: null,
+  // Host moderation
+  isChannelHost: false,
+  channelHostId: null,
+  mutedPeers: new Set(),
   // VAD
   vadEnabled: false,
   vadThreshold: 50,
@@ -1376,6 +2026,7 @@ function startApp() {
   setupInstallPrompt();
   setupChannelCreate();
   setupJoinRequestUI();
+  setupModMenu();
   setupMobileNav();
 }
 
@@ -1499,7 +2150,7 @@ const SFX = (() => {
 ═══════════════════════════════════════════ */
 function setupSettings() {
   const overlay    = document.getElementById('settings-overlay');
-  const btn        = document.getElementById('settings-btn');
+  const btn        = document.getElementById('settings-fab');
   const closeBtn   = document.getElementById('settings-close');
   const vadToggle  = document.getElementById('vad-toggle');
   const vadSlider  = document.getElementById('vad-threshold');
@@ -1556,6 +2207,97 @@ function setupSettings() {
     SFX.setMuted(!sfxToggle.checked);
     toast(sfxToggle.checked ? 'Sounds on' : 'Sounds off');
   });
+
+  // Noise suppression toggle (applied on next mic request)
+  const noiseToggle = document.getElementById('noise-toggle');
+  if (noiseToggle) {
+    const saved = localStorage.getItem('chirp_noise');
+    noiseToggle.checked = saved === null ? true : saved === '1';
+    noiseToggle.addEventListener('change', () => {
+      localStorage.setItem('chirp_noise', noiseToggle.checked ? '1' : '0');
+      toast(noiseToggle.checked ? 'Noise suppression on' : 'Noise suppression off');
+    });
+  }
+
+  // Echo cancellation toggle
+  const echoToggle = document.getElementById('echo-toggle');
+  if (echoToggle) {
+    const saved = localStorage.getItem('chirp_echo');
+    echoToggle.checked = saved === null ? true : saved === '1';
+    echoToggle.addEventListener('change', () => {
+      localStorage.setItem('chirp_echo', echoToggle.checked ? '1' : '0');
+      toast(echoToggle.checked ? 'Echo cancellation on' : 'Echo cancellation off');
+    });
+  }
+
+  // Show ping toggle
+  const pingToggle = document.getElementById('ping-toggle');
+  if (pingToggle) {
+    const saved = localStorage.getItem('chirp_showping');
+    pingToggle.checked = saved === null ? true : saved === '1';
+    const chip = document.getElementById('ping-chip');
+    if (chip && !pingToggle.checked) chip.style.display = 'none';
+    pingToggle.addEventListener('change', () => {
+      localStorage.setItem('chirp_showping', pingToggle.checked ? '1' : '0');
+      if (!pingToggle.checked && chip) chip.style.display = 'none';
+      else updatePingDisplay();
+    });
+  }
+
+  // Auto-rejoin last channel toggle
+  const autojoinToggle = document.getElementById('autojoin-toggle');
+  if (autojoinToggle) {
+    autojoinToggle.checked = localStorage.getItem('chirp_autojoin') === '1';
+    autojoinToggle.addEventListener('change', () => {
+      localStorage.setItem('chirp_autojoin', autojoinToggle.checked ? '1' : '0');
+      toast(autojoinToggle.checked ? 'Auto-rejoin enabled' : 'Auto-rejoin off');
+    });
+  }
+
+  // PTT key selector
+  const pttKeyInputs = document.querySelectorAll('input[name="ptt-key"]');
+  if (pttKeyInputs.length) {
+    const savedKey = localStorage.getItem('chirp_pttkey') || 'Space';
+    pttKeyInputs.forEach(r => { if (r.value === savedKey) r.checked = true; });
+    // Update label
+    const kbdEl = document.getElementById('space-kbd');
+    if (kbdEl) kbdEl.textContent = savedKey === 'Space' ? 'Space' : savedKey.replace('Key','').replace('AltLeft','Alt');
+    pttKeyInputs.forEach(r => r.addEventListener('change', () => {
+      if (r.checked) {
+        localStorage.setItem('chirp_pttkey', r.value);
+        state.pttKey = r.value;
+        const lbl = r.value === 'Space' ? 'Space' : r.value.replace('Key','').replace('AltLeft','Alt');
+        if (kbdEl) kbdEl.textContent = lbl;
+        toast(`PTT key: ${lbl}`);
+      }
+    }));
+  }
+
+  // Output volume slider
+  const volSlider = document.getElementById('output-volume');
+  const volVal    = document.getElementById('output-volume-val');
+  if (volSlider && volVal) {
+    const savedVol = parseInt(localStorage.getItem('chirp_volume') || '100');
+    volSlider.value = savedVol;
+    volVal.textContent = `${savedVol}%`;
+    state.outputVolume = savedVol / 100;
+    volSlider.addEventListener('input', () => {
+      const v = parseInt(volSlider.value);
+      volVal.textContent = `${v}%`;
+      state.outputVolume = v / 100;
+      localStorage.setItem('chirp_volume', v);
+      // Apply to all remote audio elements
+      document.querySelectorAll('audio[data-peer]').forEach(a => { a.volume = state.outputVolume; });
+    });
+  }
+
+  // Wire feedback-fab to open the feedback modal
+  const feedbackFab = document.getElementById('feedback-fab');
+  feedbackFab?.addEventListener('click', () => {
+    overlay.classList.remove('show'); // close settings first
+    document.getElementById('feedback-overlay')?.classList.add('show');
+    setTimeout(() => document.getElementById('feedback-text')?.focus(), 120);
+  });
 }
 
 function updatePttLabel() {
@@ -1580,19 +2322,44 @@ function setupChannelCreate() {
   const input       = document.getElementById('new-ch-input');
   const btn         = document.getElementById('new-ch-btn');
   const searchInput = document.getElementById('ch-search-input');
+  const privateCb   = document.getElementById('ch-private-cb');
+  const iconPublic  = document.getElementById('icon-public');
+  const iconPrivate = document.getElementById('icon-private');
+  const randomBtn   = document.getElementById('join-random-btn');
+
+  // Update icon on privacy toggle
+  if (privateCb) {
+    privateCb.addEventListener('change', () => {
+      const isPrivate = privateCb.checked;
+      if (iconPublic)  iconPublic.style.display  = isPrivate ? 'none' : '';
+      if (iconPrivate) iconPrivate.style.display = isPrivate ? '' : 'none';
+    });
+  }
 
   function sanitize(v) { return v.trim().toLowerCase().replace(/[^a-z0-9_-]/g,'').slice(0,20); }
 
   function createChannel(raw) {
     if (!raw) { input.focus(); return; }
+    const isPrivate = privateCb?.checked || false;
     input.value = '';
     searchInput.value = '';
+    channelVisibility[raw] = isPrivate ? 'private' : 'public';
     addChannel(raw);
     joinChannel(raw);
   }
 
   btn.addEventListener('click', () => createChannel(sanitize(input.value)));
   input.addEventListener('keydown', e => { if (e.key === 'Enter') createChannel(sanitize(input.value)); });
+
+  // Join random public channel
+  if (randomBtn) {
+    randomBtn.addEventListener('click', () => {
+      const publicChannels = [...liveChannels].filter(ch => channelVisibility[ch] !== 'private' && ch !== state.currentChannel);
+      if (publicChannels.length === 0) { toast('No public channels available', 'red'); return; }
+      const pick = publicChannels[Math.floor(Math.random() * publicChannels.length)];
+      requestJoinChannel(pick);
+    });
+  }
 
   searchInput.addEventListener('input',   () => renderChannels(searchInput.value.trim().toLowerCase()));
   searchInput.addEventListener('keydown', e => {
@@ -1638,8 +2405,9 @@ function renderChannels(filter) {
     const el = document.createElement('div');
     el.className = `channel-item${state.currentChannel === ch ? ' active' : ''}`;
     const cnt = counts[ch] || 0;
+    const isPrivate = channelVisibility[ch] === 'private';
     el.innerHTML = `
-      <span class="ch-hash">#</span>
+      <span class="ch-hash">${isPrivate ? '🔒' : '#'}</span>
       <span class="ch-name">${ch}</span>
       <span class="ch-count" id="count-${ch}">${cnt || ''}</span>
     `;
@@ -1944,7 +2712,13 @@ function setupDataConn(conn) {
   } else {
     state.connections[conn.peer].conn = conn;
   }
-  conn.on('open',  () => conn.send({ type: 'hello', name: state.myName, channel: state.currentChannel, joinTime: state.myJoinTime || Date.now(), channels: [...liveChannels] }));
+  conn.on('open',  () => {
+    conn.send({ type: 'hello', name: state.myName, channel: state.currentChannel, joinTime: state.myJoinTime || Date.now(), channels: [...liveChannels] });
+    // If we're the host, tell new peer
+    if (state.isChannelHost) {
+      try { conn.send({ type: 'host-changed', newHostId: state.myId }); } catch {}
+    }
+  });
   conn.on('data',  data => handleData(conn.peer, data));
   conn.on('close', () => removePeer(conn.peer));
   conn.on('error', () => removePeer(conn.peer));
@@ -2005,6 +2779,51 @@ function handleData(peerId, data) {
 
     case 'leave': removePeer(peerId); break;
     case 'ping':  try { state.connections[peerId]?.conn.send({ type: 'pong', t: data.t }); } catch {} break;
+
+    case 'mod-mute':
+      toast('You were muted by the host', 'red');
+      if (!state.isMuted) {
+        state.isMuted = true;
+        if (state.audioTrack) state.audioTrack.enabled = false;
+        stopTalking();
+        document.getElementById('mute-btn')?.classList.add('muted');
+        document.getElementById('mute-label') && (document.getElementById('mute-label').textContent = 'mic off');
+        renderMembers();
+      }
+      break;
+
+    case 'mod-unmute':
+      toast('You were unmuted by the host', 'info');
+      state.isMuted = false;
+      document.getElementById('mute-btn')?.classList.remove('muted');
+      document.getElementById('mute-label') && (document.getElementById('mute-label').textContent = 'mic on');
+      renderMembers();
+      break;
+
+    case 'mod-kick':
+      toast('You were kicked from the channel', 'red');
+      leaveChannel();
+      break;
+
+    case 'mod-promote':
+      if (data.newHostId === state.myId) {
+        state.isChannelHost = true;
+        state.channelHostId = state.myId;
+        toast('You are now the host 👑', 'green');
+      }
+      renderMembers();
+      break;
+
+    case 'host-changed':
+      state.channelHostId = data.newHostId;
+      if (data.newHostId === state.myId) {
+        state.isChannelHost = true;
+        toast('You are now the host 👑', 'green');
+      } else {
+        state.isChannelHost = false;
+      }
+      renderMembers();
+      break;
     case 'pong':
       if (state.pingTimes[peerId]) {
         if (state.connections[peerId]) state.connections[peerId].ping = Date.now() - data.t;
@@ -2065,6 +2884,13 @@ async function joinChannel(ch) {
   state.myJoinTime = Date.now();
   safeAddChannel(ch);
 
+  // Become host if no one else is in the channel
+  const peersInCh = getPeersInChannel(ch);
+  if (peersInCh.length === 0) {
+    state.isChannelHost = true;
+    state.channelHostId = state.myId;
+  }
+
   document.getElementById('channel-name-display').textContent = ch;
   document.getElementById('no-channel').style.display  = 'none';
   document.getElementById('ptt-section').classList.add('visible');
@@ -2095,6 +2921,9 @@ async function leaveChannel() {
   });
 
   state.currentChannel = null;
+  state.isChannelHost = false;
+  state.channelHostId = null;
+  state.mutedPeers.clear();
   lobbyAnnounce();
   document.querySelectorAll('.channel-item').forEach(el => el.classList.remove('active'));
   document.getElementById('member-list').innerHTML = '';
@@ -2129,12 +2958,15 @@ function renderMembers() {
   list.innerHTML = '';
   if (!state.currentChannel) return;
 
+  const amHost = state.isChannelHost;
+
+  // Self entry
   const selfEl = document.createElement('div');
   selfEl.className = `member-item member-self${state.isTalking ? ' talking' : ''}`;
   selfEl.innerHTML = `
     <div class="member-avatar" data-letter="${state.myName.charAt(0).toLowerCase()}">${state.myName.charAt(0)}</div>
     <div class="member-info">
-      <div class="member-name">${state.myName} <span style="font-family:var(--mono);font-size:0.5rem;color:var(--text-dim);font-weight:400">(you)</span></div>
+      <div class="member-name">${state.myName}${amHost ? ' <span class="member-host-badge" title="You are host">👑</span>' : ''} <span style="font-family:var(--mono);font-size:0.5rem;color:var(--text-dim);font-weight:400">(you)</span></div>
     </div>
   `;
   list.appendChild(selfEl);
@@ -2142,20 +2974,106 @@ function renderMembers() {
   Object.entries(state.connections).forEach(([peerId, info]) => {
     if (info.channel !== state.currentChannel) return;
     const el = document.createElement('div');
-    el.className = `member-item${info.talking ? ' talking' : ''}`;
+    const isMuted = state.mutedPeers?.has(peerId);
+    el.className = `member-item${info.talking ? ' talking' : ''}${amHost ? ' clickable' : ''}`;
     const pingStr = info.ping != null ? `${info.ping}ms` : '';
+    const isHost = state.channelHostId === peerId;
     el.innerHTML = `
       <div class="member-avatar" data-letter="${(info.name||'?').charAt(0).toLowerCase()}">${(info.name||'?').charAt(0)}</div>
       <div class="member-info">
-        <div class="member-name">${info.name}</div>
+        <div class="member-name">${info.name}${isHost ? ' <span class="member-host-badge" title="Channel host">👑</span>' : ''}${isMuted ? ' <span style="font-size:0.6rem;opacity:0.5" title="Muted by host">🔇</span>' : ''}</div>
         ${pingStr ? `<div class="member-sub">${pingStr}</div>` : ''}
       </div>
     `;
+    if (amHost) {
+      el.addEventListener('click', e => showModMenu(e, peerId, info.name));
+    }
     list.appendChild(el);
   });
 
   const total = 1 + Object.values(state.connections).filter(i => i.channel === state.currentChannel).length;
   document.getElementById('member-count-badge').textContent = total;
+}
+
+/* ═══════════════════════════════════════════
+   HOST MODERATION
+═══════════════════════════════════════════ */
+function setupModMenu() {
+  const menu = document.getElementById('mod-menu');
+  if (!menu) return;
+
+  // Close on outside click
+  document.addEventListener('click', e => {
+    if (!menu.contains(e.target)) hideModMenu();
+  });
+
+  document.getElementById('mod-mute-btn').addEventListener('click', () => {
+    const { peerId } = menu._target || {};
+    if (!peerId) return;
+    hideModMenu();
+    if (!state.mutedPeers) state.mutedPeers = new Set();
+    if (state.mutedPeers.has(peerId)) {
+      state.mutedPeers.delete(peerId);
+      try { state.connections[peerId]?.conn.send({ type: 'mod-unmute' }); } catch {}
+      toast(`Unmuted ${state.connections[peerId]?.name || peerId}`);
+    } else {
+      state.mutedPeers.add(peerId);
+      try { state.connections[peerId]?.conn.send({ type: 'mod-mute' }); } catch {}
+      toast(`Muted ${state.connections[peerId]?.name || peerId}`);
+    }
+    renderMembers();
+  });
+
+  document.getElementById('mod-kick-btn').addEventListener('click', () => {
+    const { peerId } = menu._target || {};
+    if (!peerId) return;
+    const name = state.connections[peerId]?.name || peerId;
+    hideModMenu();
+    try { state.connections[peerId]?.conn.send({ type: 'mod-kick' }); } catch {}
+    // Give message time to send, then remove
+    setTimeout(() => removePeer(peerId), 200);
+    toast(`Kicked ${name}`, 'red');
+  });
+
+  document.getElementById('mod-promote-btn').addEventListener('click', () => {
+    const { peerId } = menu._target || {};
+    if (!peerId) return;
+    const name = state.connections[peerId]?.name || peerId;
+    hideModMenu();
+    // Transfer host to this peer
+    state.isChannelHost = false;
+    state.channelHostId = peerId;
+    try { state.connections[peerId]?.conn.send({ type: 'mod-promote', newHostId: peerId }); } catch {}
+    broadcastAll({ type: 'host-changed', newHostId: peerId });
+    toast(`${name} is now host`, 'info');
+    renderMembers();
+  });
+}
+
+function showModMenu(e, peerId, name) {
+  e.stopPropagation();
+  const menu = document.getElementById('mod-menu');
+  if (!menu) return;
+  menu._target = { peerId, name };
+  document.getElementById('mod-menu-name').textContent = name;
+
+  // Update mute label
+  const isMuted = state.mutedPeers?.has(peerId);
+  document.getElementById('mod-mute-label').textContent = isMuted ? 'Unmute' : 'Mute';
+
+  // Position near click but keep on screen
+  menu.classList.add('show');
+  const vw = window.innerWidth, vh = window.innerHeight;
+  const mw = menu.offsetWidth || 190, mh = menu.offsetHeight || 150;
+  let x = e.clientX + 8, y = e.clientY + 8;
+  if (x + mw > vw - 8) x = e.clientX - mw - 8;
+  if (y + mh > vh - 8) y = e.clientY - mh - 8;
+  menu.style.left = `${Math.max(8, x)}px`;
+  menu.style.top  = `${Math.max(8, y)}px`;
+}
+
+function hideModMenu() {
+  document.getElementById('mod-menu')?.classList.remove('show');
 }
 
 function updatePingDisplay() {
@@ -2183,16 +3101,17 @@ function setupPTT() {
   btn.addEventListener('mouseup',     e => { if (!state.vadEnabled) { e.preventDefault(); stopTalking(); } });
   btn.addEventListener('mouseleave',  () => { if (!state.vadEnabled && state.isTalking) stopTalking(); });
 
-  // Spacebar
+  // Spacebar / configurable key
   let spaceHeld = false;
+  if (!state.pttKey) state.pttKey = localStorage.getItem('chirp_pttkey') || 'Space';
   document.addEventListener('keydown', e => {
-    if (e.code === 'Space' && !spaceHeld && !e.repeat && state.currentChannel && !state.vadEnabled) {
+    if (e.code === state.pttKey && !spaceHeld && !e.repeat && state.currentChannel && !state.vadEnabled) {
       e.preventDefault(); spaceHeld = true; startTalking();
       document.getElementById('space-kbd')?.classList.add('pressed');
     }
   });
   document.addEventListener('keyup', e => {
-    if (e.code === 'Space') {
+    if (e.code === state.pttKey) {
       spaceHeld = false; stopTalking();
       document.getElementById('space-kbd')?.classList.remove('pressed');
     }
@@ -2449,8 +3368,22 @@ function setupMobileNav() {
     const pill = document.getElementById('conn-pill');
     const span = document.getElementById('conn-text');
     if (!pill || !span) return;
-    pill.className = 'conn-pill' + (st === 'online' ? ' online' : st === 'error' ? ' error' : '');
-    span.textContent = text;
+    clearTimeout(_connOnlineTimer);
+
+    if (st === 'online') {
+      pill.classList.remove('hidden', 'error');
+      pill.classList.add('online');
+      span.textContent = 'connected';
+      _connOnlineTimer = setTimeout(() => { pill.classList.add('hidden'); }, 2800);
+    } else if (st === 'error') {
+      pill.classList.remove('hidden', 'online');
+      pill.classList.add('error');
+      span.textContent = 'offline';
+    } else {
+      pill.classList.remove('hidden', 'online', 'error');
+      span.textContent = text || 'connecting';
+    }
+
     pill.setAttribute('data-tip', st === 'online'
       ? BROKERS[brokerIdx % BROKERS.length].host
       : st === 'error' ? 'check your network' : 'finding server…');
@@ -2472,14 +3405,14 @@ function setupMobileNav() {
 ═══════════════════════════════════════════ */
 (function setupFeedback() {
   // ↓ Paste your EmailJS credentials here
-  const EMAILJS_PUBLIC_KEY  = 'YOUR_PUBLIC_KEY';   // ← from emailjs.com → Account
-  const EMAILJS_SERVICE_ID  = 'YOUR_SERVICE_ID';   // ← from Email Services
-  const EMAILJS_TEMPLATE_ID = 'YOUR_TEMPLATE_ID';  // ← from Email Templates
+  const EMAILJS_PUBLIC_KEY  = '2gn3Wt4jXxkkwP8iX';
+  const EMAILJS_SERVICE_ID  = 'service_v6c1q3p';
+  const EMAILJS_TEMPLATE_ID = 'template_90sz08f';
 
   const keysConfigured = !EMAILJS_PUBLIC_KEY.startsWith('YOUR_');
 
   const overlay   = document.getElementById('feedback-overlay');
-  const openBtn   = document.getElementById('feedback-btn');
+  const openBtn   = document.getElementById('feedback-fab');
   const closeBtn  = document.getElementById('feedback-close');
   const cancelBtn = document.getElementById('feedback-cancel');
   const sendBtn   = document.getElementById('feedback-send');
@@ -2537,21 +3470,23 @@ function setupMobileNav() {
     }
 
     try {
-      if (!window.emailjs) {
-        await new Promise((res, rej) => {
-          const s = document.createElement('script');
-          s.src = 'https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js';
-          s.onload = res; s.onerror = rej;
-          document.head.appendChild(s);
-        });
-        emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY });
-      }
-
-      await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
-        from_type: typeEl.options[typeEl.selectedIndex].text,
-        message:   msg,
-        sent_at:   new Date().toLocaleString()
+      // Use the EmailJS REST API directly — avoids SDK cross-origin issues
+      const res = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
+        method : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body   : JSON.stringify({
+          service_id  : EMAILJS_SERVICE_ID,
+          template_id : EMAILJS_TEMPLATE_ID,
+          user_id     : EMAILJS_PUBLIC_KEY,
+          template_params: {
+            from_type: typeEl.options[typeEl.selectedIndex].text,
+            message  : msg,
+            sent_at  : new Date().toLocaleString()
+          }
+        })
       });
+
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
       successEl.querySelector('p').textContent = 'Message sent — thanks!';
       successEl.classList.add('show');
@@ -2563,9 +3498,440 @@ function setupMobileNav() {
       sendBtn.textContent = 'Error — retry?';
       sendBtn.disabled = false;
       cancelBtn.disabled = false;
-      toast('Saved locally — EmailJS send failed', 'red');
+      toast('Saved locally — email send failed', 'red');
     }
   });
+})();
+/* ═══════════════════════════════════════════
+   SESSION RECORDER
+═══════════════════════════════════════════ */
+(function setupRecorder() {
+
+  // ── State ──────────────────────────────────
+  const rec = {
+    mediaRecorder : null,
+    chunks        : [],
+    blob          : null,
+    audioEl       : null,          // HTMLAudioElement for playback
+    startTime     : 0,
+    pausedAt      : 0,
+    timerInterval : null,
+    waveAnimId    : null,
+    playerAnimId  : null,
+    dirHandle     : null,          // reserved — not used in iframe context
+    format        : 'webm',
+    mimeType      : '',
+    audioCtx      : null,
+    destNode      : null,
+    gainNode      : null,
+  };
+
+  const setupDiv   = document.getElementById('rec-setup');
+  const activeDiv  = document.getElementById('rec-active');
+  const doneDiv    = document.getElementById('rec-done');
+
+  const filenameEl = document.getElementById('rec-filename');
+  const formatEl   = document.getElementById('rec-format');
+  const startBtn   = document.getElementById('rec-start-btn');
+
+  const badge      = document.getElementById('rec-badge');
+  const timerEl    = document.getElementById('rec-timer');
+  const sizeEl     = document.getElementById('rec-size');
+  const waveCanvas = document.getElementById('rec-waveform');
+  const pauseBtn   = document.getElementById('rec-pause-btn');
+  const pauseIcon  = document.getElementById('rec-pause-icon');
+  const playIcon   = document.getElementById('rec-play-icon');
+  const pauseLabel = document.getElementById('rec-pause-label');
+  const stopBtn    = document.getElementById('rec-stop-btn');
+
+  const doneName   = document.getElementById('rec-done-name');
+  const doneInfo   = document.getElementById('rec-done-info');
+  const playerWave = document.getElementById('rec-player-waveform');
+  const ppBtn      = document.getElementById('rec-pp-btn');
+  const ppPlay     = document.getElementById('rec-pp-play');
+  const ppPause    = document.getElementById('rec-pp-pause');
+  const scrub      = document.getElementById('rec-scrub');
+  const curTime    = document.getElementById('rec-cur-time');
+  const durTime    = document.getElementById('rec-dur-time');
+  const volSlider  = document.getElementById('rec-vol');
+  const dlBtn      = document.getElementById('rec-download-btn');
+  const newBtn     = document.getElementById('rec-new-btn');
+
+  if (!fab || !overlay) return;
+
+  // ── Helpers ───────────────────────────────
+  function fmtTime(sec) {
+    const h = Math.floor(sec / 3600);
+    const m = Math.floor((sec % 3600) / 60);
+    const s = Math.floor(sec % 60);
+    return h > 0
+      ? `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`
+      : `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  }
+
+  function fmtBytes(b) {
+    if (b < 1024) return `${b} B`;
+    if (b < 1048576) return `${(b/1024).toFixed(1)} KB`;
+    return `${(b/1048576).toFixed(2)} MB`;
+  }
+
+  function pickMime(fmt) {
+    const candidates = {
+      webm: ['audio/webm;codecs=opus','audio/webm'],
+      ogg:  ['audio/ogg;codecs=opus','audio/ogg'],
+      mp4:  ['audio/mp4;codecs=mp4a.40.2','audio/mp4','audio/aac'],
+    };
+    return (candidates[fmt] || candidates.webm).find(m => MediaRecorder.isTypeSupported(m)) || '';
+  }
+
+  function ext(mime) {
+    if (mime.includes('ogg'))  return 'ogg';
+    if (mime.includes('mp4') || mime.includes('aac')) return 'mp4';
+    return 'webm';
+  }
+
+  function showScreen(name) {
+    setupDiv.style.display  = name === 'setup'  ? '' : 'none';
+    activeDiv.style.display = name === 'active' ? '' : 'none';
+    doneDiv.style.display   = name === 'done'   ? '' : 'none';
+  }
+
+  // ── Build combined audio stream ────────────
+  function buildCombinedStream() {
+    try {
+      rec.audioCtx  = new (window.AudioContext || window.webkitAudioContext)();
+      rec.destNode  = rec.audioCtx.createMediaStreamDestination();
+      rec.gainNode  = rec.audioCtx.createGain();
+      rec.gainNode.connect(rec.destNode);
+
+      // Local mic
+      if (state.localStream) {
+        const micSrc = rec.audioCtx.createMediaStreamSource(state.localStream);
+        micSrc.connect(rec.gainNode);
+      }
+
+      // Remote peers — find all <audio> elements rendered by the app
+      document.querySelectorAll('audio[data-peer]').forEach(a => {
+        try {
+          const peerSrc = rec.audioCtx.createMediaElementSource(a);
+          peerSrc.connect(rec.gainNode);
+          // Re-route to speakers too
+          peerSrc.connect(rec.audioCtx.destination);
+        } catch {}
+      });
+
+      return rec.destNode.stream;
+    } catch (e) {
+      console.warn('Chirp Recorder: failed to build combined stream', e);
+      // Fallback: mic only
+      return state.localStream || null;
+    }
+  }
+
+  // ── Live waveform (during recording) ──────
+  let recAnalyser = null;
+  function startRecWaveform(stream) {
+    if (!stream) return;
+    try {
+      const ctx  = rec.audioCtx || new AudioContext();
+      recAnalyser = ctx.createAnalyser();
+      recAnalyser.fftSize = 256;
+      const src  = ctx.createMediaStreamSource(stream);
+      src.connect(recAnalyser);
+    } catch {}
+    const canvas = waveCanvas;
+    const ctx2d  = canvas.getContext('2d');
+    const data   = new Uint8Array(recAnalyser ? recAnalyser.frequencyBinCount : 64);
+
+    function draw() {
+      rec.waveAnimId = requestAnimationFrame(draw);
+      canvas.width   = canvas.offsetWidth  * (devicePixelRatio || 1);
+      canvas.height  = canvas.offsetHeight * (devicePixelRatio || 1);
+      if (recAnalyser) recAnalyser.getByteFrequencyData(data);
+
+      ctx2d.clearRect(0, 0, canvas.width, canvas.height);
+      const barW = canvas.width / data.length * 0.55;
+      const gap  = canvas.width / data.length * 0.45;
+      data.forEach((v, i) => {
+        const h = Math.max((v / 255) * canvas.height * 0.85, 2);
+        const x = i * (barW + gap);
+        const alpha = 0.25 + (v / 255) * 0.75;
+        ctx2d.fillStyle = `rgba(248,113,113,${alpha})`;
+        ctx2d.beginPath();
+        ctx2d.roundRect(x, (canvas.height - h) / 2, barW, h, 2);
+        ctx2d.fill();
+      });
+    }
+    draw();
+  }
+
+  function stopRecWaveform() {
+    if (rec.waveAnimId) { cancelAnimationFrame(rec.waveAnimId); rec.waveAnimId = null; }
+    recAnalyser = null;
+  }
+
+  // ── Player waveform (after recording) ─────
+  function drawPlayerWaveform(audioBuffer) {
+    const canvas = playerWave;
+    const ctx    = canvas.getContext('2d');
+    canvas.width  = canvas.offsetWidth  * (devicePixelRatio || 1);
+    canvas.height = canvas.offsetHeight * (devicePixelRatio || 1);
+
+    const data    = audioBuffer.getChannelData(0);
+    const step    = Math.ceil(data.length / canvas.width);
+    const barW    = 2;
+    const gap     = 1;
+    const cols    = Math.floor(canvas.width / (barW + gap));
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    for (let i = 0; i < cols; i++) {
+      let max = 0;
+      const off = Math.floor(i * data.length / cols);
+      for (let j = 0; j < step; j++) max = Math.max(max, Math.abs(data[off + j] || 0));
+      const h = Math.max(max * canvas.height * 0.9, 2);
+      const x = i * (barW + gap);
+      ctx.fillStyle = `rgba(124,106,255,0.55)`;
+      ctx.beginPath();
+      ctx.roundRect(x, (canvas.height - h) / 2, barW, h, 1);
+      ctx.fill();
+    }
+  }
+
+  function animatePlayerProgress() {
+    if (!rec.audioEl) return;
+    function frame() {
+      rec.playerAnimId = requestAnimationFrame(frame);
+      if (!rec.audioEl || rec.audioEl.paused) return;
+      const pct = rec.audioEl.duration ? rec.audioEl.currentTime / rec.audioEl.duration : 0;
+      scrub.value = Math.round(pct * 1000);
+      curTime.textContent = fmtTime(rec.audioEl.currentTime);
+
+      // Draw progress overlay on waveform
+      const canvas = playerWave;
+      const ctx    = canvas.getContext('2d');
+      const pw     = canvas.width * pct;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      // Re-draw full (dim) — just update with a progress line
+      ctx.fillStyle = 'rgba(124,106,255,0.22)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = 'rgba(124,106,255,0.5)';
+      ctx.fillRect(0, 0, pw, canvas.height);
+      // playhead
+      ctx.fillStyle = 'var(--accent)';
+      ctx.fillRect(pw - 1, 0, 2, canvas.height);
+    }
+    frame();
+  }
+
+  // ── Open / close overlay ─────────────────
+  fab.addEventListener('click', () => {
+    if (rec.mediaRecorder && rec.mediaRecorder.state !== 'inactive') {
+      // Already recording — jump straight to active screen
+      showScreen('active');
+    } else if (rec.blob) {
+      showScreen('done');
+    } else {
+      showScreen('setup');
+    }
+    overlay.classList.add('show');
+  });
+
+  function closeOverlay() {
+    overlay.classList.remove('show');
+    if (rec.playerAnimId) { cancelAnimationFrame(rec.playerAnimId); rec.playerAnimId = null; }
+  }
+
+  closeBtn.addEventListener('click', closeOverlay);
+  overlay.addEventListener('click', e => { if (e.target === overlay) closeOverlay(); });
+
+  // ── Start recording ───────────────────────
+  startBtn.addEventListener('click', async () => {
+    if (!state.localStream) {
+      toast('No microphone available', 'red');
+      return;
+    }
+
+    rec.format   = formatEl.value;
+    rec.mimeType = pickMime(rec.format);
+
+    if (!rec.mimeType) {
+      toast('Format not supported — switching to WebM', 'red');
+      rec.format   = 'webm';
+      rec.mimeType = pickMime('webm') || 'audio/webm';
+    }
+
+    const stream = buildCombinedStream() || state.localStream;
+
+    rec.chunks   = [];
+    rec.blob     = null;
+    rec.startTime = Date.now();
+    rec.pausedAt  = 0;
+
+    try {
+      rec.mediaRecorder = new MediaRecorder(stream, { mimeType: rec.mimeType });
+    } catch {
+      rec.mediaRecorder = new MediaRecorder(stream);
+      rec.mimeType = rec.mediaRecorder.mimeType;
+    }
+
+    rec.mediaRecorder.ondataavailable = e => {
+      if (e.data && e.data.size > 0) rec.chunks.push(e.data);
+      // update size display
+      const total = rec.chunks.reduce((a,c) => a + c.size, 0);
+      if (sizeEl) sizeEl.textContent = fmtBytes(total);
+    };
+
+    rec.mediaRecorder.onstop = finaliseRecording;
+    rec.mediaRecorder.start(1000); // collect every 1s
+
+    // Start timer
+    rec.timerInterval = setInterval(() => {
+      const elapsed = (Date.now() - rec.startTime - rec.pausedAt) / 1000;
+      if (timerEl) timerEl.textContent = fmtTime(elapsed);
+    }, 500);
+
+    startRecWaveform(stream);
+    fab.classList.add('recording');
+    showScreen('active');
+    badge.classList.remove('paused');
+    badge.textContent = '● REC';
+  });
+
+  // ── Pause / Resume ────────────────────────
+  let _pauseStart = 0;
+  pauseBtn.addEventListener('click', () => {
+    if (!rec.mediaRecorder) return;
+    if (rec.mediaRecorder.state === 'recording') {
+      rec.mediaRecorder.pause();
+      _pauseStart = Date.now();
+      pauseIcon.style.display  = 'none';
+      playIcon.style.display   = '';
+      pauseLabel.textContent   = 'Resume';
+      badge.classList.add('paused');
+      badge.textContent        = '❙❙ PAUSED';
+    } else if (rec.mediaRecorder.state === 'paused') {
+      rec.mediaRecorder.resume();
+      rec.pausedAt += Date.now() - _pauseStart;
+      pauseIcon.style.display  = '';
+      playIcon.style.display   = 'none';
+      pauseLabel.textContent   = 'Pause';
+      badge.classList.remove('paused');
+      badge.textContent        = '● REC';
+    }
+  });
+
+  // ── Stop ──────────────────────────────────
+  stopBtn.addEventListener('click', () => {
+    if (!rec.mediaRecorder || rec.mediaRecorder.state === 'inactive') return;
+    rec.mediaRecorder.stop();
+    clearInterval(rec.timerInterval);
+    stopRecWaveform();
+    fab.classList.remove('recording');
+    // Cleanup audio ctx
+    try { if (rec.audioCtx) rec.audioCtx.close(); } catch {}
+    rec.audioCtx = null;
+  });
+
+  // ── Finalise ──────────────────────────────
+  async function finaliseRecording() {
+    rec.blob = new Blob(rec.chunks, { type: rec.mimeType || 'audio/webm' });
+    const extension   = ext(rec.mimeType);
+    const safeName    = (filenameEl.value.trim() || 'chirp-session').replace(/[^\w\-. ]/g, '_');
+    const filename    = `${safeName}.${extension}`;
+    const totalSecs   = (Date.now() - rec.startTime - rec.pausedAt) / 1000;
+
+    // Update done UI
+    doneName.textContent = filename;
+    doneInfo.textContent = `${fmtTime(totalSecs)} · ${fmtBytes(rec.blob.size)} · ${extension.toUpperCase()}`;
+
+    // Set up audio player
+    const url   = URL.createObjectURL(rec.blob);
+    rec.audioEl = new Audio(url);
+    rec.audioEl.volume = (parseInt(volSlider.value) / 100) || 0.8;
+
+    rec.audioEl.addEventListener('loadedmetadata', () => {
+      durTime.textContent = fmtTime(rec.audioEl.duration);
+    });
+    rec.audioEl.addEventListener('ended', () => {
+      ppPlay.style.display  = '';
+      ppPause.style.display = 'none';
+      scrub.value = 0;
+      curTime.textContent = '0:00';
+    });
+
+    // Decode for static waveform
+    try {
+      const ab  = await rec.blob.arrayBuffer();
+      const wCtx = new AudioContext();
+      const buf  = await wCtx.decodeAudioData(ab);
+      drawPlayerWaveform(buf);
+      wCtx.close();
+    } catch {}
+
+    showScreen('done');
+    animatePlayerProgress();
+
+    // Download button
+    dlBtn.onclick = () => {
+      const a = document.createElement('a');
+      a.href     = url;
+      a.download = filename;
+      a.click();
+    };
+  }
+
+  // ── Playback controls ─────────────────────
+  ppBtn.addEventListener('click', () => {
+    if (!rec.audioEl) return;
+    if (rec.audioEl.paused) {
+      rec.audioEl.play();
+      ppPlay.style.display  = 'none';
+      ppPause.style.display = '';
+    } else {
+      rec.audioEl.pause();
+      ppPlay.style.display  = '';
+      ppPause.style.display = 'none';
+    }
+  });
+
+  scrub.addEventListener('input', () => {
+    if (!rec.audioEl || !rec.audioEl.duration) return;
+    rec.audioEl.currentTime = (scrub.value / 1000) * rec.audioEl.duration;
+    curTime.textContent = fmtTime(rec.audioEl.currentTime);
+  });
+
+  volSlider.addEventListener('input', () => {
+    if (rec.audioEl) rec.audioEl.volume = parseInt(volSlider.value) / 100;
+  });
+
+  // ── New recording ─────────────────────────
+  newBtn.addEventListener('click', () => {
+    if (rec.audioEl) { rec.audioEl.pause(); rec.audioEl = null; }
+    if (rec.playerAnimId) { cancelAnimationFrame(rec.playerAnimId); rec.playerAnimId = null; }
+    rec.blob = null; rec.chunks = [];
+    ppPlay.style.display  = '';
+    ppPause.style.display = 'none';
+    scrub.value = 0;
+    curTime.textContent = '0:00';
+    timerEl.textContent = '00:00:00';
+    sizeEl.textContent  = '0 KB';
+    pauseIcon.style.display = '';
+    playIcon.style.display  = 'none';
+    pauseLabel.textContent  = 'Pause';
+    showScreen('setup');
+  });
+
+  // ── Format change → update note ───────────
+  formatEl.addEventListener('change', () => {
+    const supported = !!pickMime(formatEl.value);
+    if (!supported) {
+      formatEl.style.borderColor = 'var(--danger)';
+      toast('Format not supported in this browser — try WebM', 'red');
+    } else {
+      formatEl.style.borderColor = '';
+    }
+  });
+
 })();
 </script>
 </body>
