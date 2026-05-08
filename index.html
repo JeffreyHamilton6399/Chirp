@@ -153,7 +153,7 @@ header {
   background: rgba(12,12,14,0.95); backdrop-filter: blur(12px);
   flex-shrink: 0; gap: 12px; position: relative; z-index: 10;
 }
-#app.visible header { animation: fadeUp 0.4s 0.05s ease both; }
+#app.visible header { animation: fadeUp 0.3s ease both; }
 
 .header-left { display: flex; align-items: center; gap: 10px; }
 .header-right { display: flex; align-items: center; gap: 8px; }
@@ -213,7 +213,7 @@ header {
   background: var(--bg2); border-right: 1px solid var(--border);
   display: flex; flex-direction: column; overflow: hidden;
 }
-#app.visible .sidebar { animation: fadeIn 0.35s 0.1s ease both; }
+/* sidebar visible immediately — no delay flash */
 
 .sidebar-header {
   padding: 16px 16px 10px;
@@ -285,7 +285,7 @@ header {
 .main-content {
   flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative;
 }
-#app.visible .main-content { animation: fadeIn 0.35s 0.15s ease both; }
+/* main-content visible immediately — no delay flash */
 
 /* Channel bar — minimal: just name + tx state */
 .channel-bar {
@@ -518,6 +518,29 @@ header {
 }
 #vad-threshold { width: 100%; accent-color: var(--accent); }
 
+/* Settings section header */
+.settings-section-header {
+  font-family: var(--mono); font-size: 0.55rem; font-weight: 500;
+  color: var(--text-dim); letter-spacing: 0.2em; text-transform: uppercase;
+  padding: 12px 0 6px; border-bottom: 1px solid var(--border);
+  margin-bottom: 2px;
+}
+
+/* Settings select (mic device dropdown) */
+.settings-select {
+  width: 100%;
+  background: var(--bg3); border: 1px solid var(--border2);
+  border-radius: var(--radius-sm); padding: 9px 32px 9px 12px;
+  font-family: var(--mono); font-size: 0.72rem; color: var(--text);
+  outline: none; cursor: pointer; appearance: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%236b6a80' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 12px center;
+  background-size: 10px;
+}
+.settings-select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+.settings-select option { background: var(--bg3); color: var(--text); }
+
 /* ═══════════════════════════════════════════
    MEMBERS PANEL
 ═══════════════════════════════════════════ */
@@ -526,7 +549,7 @@ header {
   background: var(--bg2); border-left: 1px solid var(--border);
   display: flex; flex-direction: column; overflow: hidden;
 }
-#app.visible .members-panel { animation: fadeIn 0.35s 0.2s ease both; }
+/* members-panel visible immediately — no delay flash */
 
 .members-header {
   padding: 16px 16px 10px;
@@ -1752,6 +1775,9 @@ header {
       <button class="settings-close" id="settings-close">✕</button>
     </h3>
 
+    <!-- ── IDENTITY ── -->
+    <div class="settings-section-header">Identity</div>
+
     <div class="settings-row" style="align-items:flex-start;flex-direction:column;gap:10px;">
       <div class="settings-row-label">
         <span>Callsign</span>
@@ -1764,6 +1790,19 @@ header {
         <button id="callsign-save-btn" class="btn-primary"
           style="padding:0 16px;height:36px;font-size:0.8rem;white-space:nowrap;flex-shrink:0;">Save</button>
       </div>
+    </div>
+
+    <!-- ── AUDIO ── -->
+    <div class="settings-section-header" style="margin-top:6px;">Audio</div>
+
+    <div class="settings-row" style="align-items:flex-start;flex-direction:column;gap:8px;">
+      <div class="settings-row-label">
+        <span>Microphone Input</span>
+        <span>Which device to use for your mic</span>
+      </div>
+      <select id="mic-device-select" class="settings-select">
+        <option value="">Default microphone</option>
+      </select>
     </div>
 
     <div class="settings-row">
@@ -1788,18 +1827,6 @@ header {
 
     <div class="settings-row">
       <div class="settings-row-label">
-        <span>Sound Effects</span>
-        <span>PTT clicks, join tones, peer sounds</span>
-      </div>
-      <label class="toggle">
-        <input type="checkbox" id="sfx-toggle" checked>
-        <div class="toggle-track"></div>
-        <div class="toggle-thumb"></div>
-      </label>
-    </div>
-
-    <div class="settings-row">
-      <div class="settings-row-label">
         <span>Noise Suppression</span>
         <span>Filter background noise from your mic</span>
       </div>
@@ -1817,6 +1844,60 @@ header {
       </div>
       <label class="toggle">
         <input type="checkbox" id="echo-toggle" checked>
+        <div class="toggle-track"></div>
+        <div class="toggle-thumb"></div>
+      </label>
+    </div>
+
+    <div class="settings-row" style="align-items:flex-start;flex-direction:column;gap:10px;">
+      <div class="settings-row-label">
+        <span>Output Volume</span>
+        <span>Incoming voice volume level</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;width:100%;">
+        <input type="range" id="output-volume" min="0" max="100" value="100" style="flex:1;accent-color:var(--accent);">
+        <span id="output-volume-val" style="font-family:var(--mono);font-size:0.6rem;color:var(--text-dim);width:28px;text-align:right;">100%</span>
+      </div>
+    </div>
+
+    <!-- ── CONTROLS ── -->
+    <div class="settings-section-header" style="margin-top:6px;">Controls</div>
+
+    <div class="settings-row" style="align-items:flex-start;flex-direction:column;gap:10px;">
+      <div class="settings-row-label">
+        <span>PTT Keyboard Shortcut</span>
+        <span>Key to hold for push-to-talk</span>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;">
+        <label class="ptt-key-option">
+          <input type="radio" name="ptt-key" value="Space" id="ptt-key-space" checked>
+          <span>Space</span>
+        </label>
+        <label class="ptt-key-option">
+          <input type="radio" name="ptt-key" value="KeyT" id="ptt-key-t">
+          <span>T</span>
+        </label>
+        <label class="ptt-key-option">
+          <input type="radio" name="ptt-key" value="KeyV" id="ptt-key-v">
+          <span>V</span>
+        </label>
+        <label class="ptt-key-option">
+          <input type="radio" name="ptt-key" value="AltLeft" id="ptt-key-alt">
+          <span>Alt</span>
+        </label>
+      </div>
+    </div>
+
+    <!-- ── DISPLAY ── -->
+    <div class="settings-section-header" style="margin-top:6px;">Display & System</div>
+
+    <div class="settings-row">
+      <div class="settings-row-label">
+        <span>Sound Effects</span>
+        <span>PTT clicks, join tones, peer sounds</span>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" id="sfx-toggle" checked>
         <div class="toggle-track"></div>
         <div class="toggle-thumb"></div>
       </label>
@@ -1846,41 +1927,6 @@ header {
       </label>
     </div>
 
-    <div class="settings-row" style="align-items:flex-start;flex-direction:column;gap:10px;">
-      <div class="settings-row-label">
-        <span>PTT Keyboard Shortcut</span>
-        <span>Key to hold for push-to-talk</span>
-      </div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;">
-        <label class="ptt-key-option">
-          <input type="radio" name="ptt-key" value="Space" id="ptt-key-space" checked>
-          <span>Space</span>
-        </label>
-        <label class="ptt-key-option">
-          <input type="radio" name="ptt-key" value="KeyT" id="ptt-key-t">
-          <span>T</span>
-        </label>
-        <label class="ptt-key-option">
-          <input type="radio" name="ptt-key" value="KeyV" id="ptt-key-v">
-          <span>V</span>
-        </label>
-        <label class="ptt-key-option">
-          <input type="radio" name="ptt-key" value="AltLeft" id="ptt-key-alt">
-          <span>Alt</span>
-        </label>
-      </div>
-    </div>
-
-    <div class="settings-row" style="align-items:flex-start;flex-direction:column;gap:10px;">
-      <div class="settings-row-label">
-        <span>Output Volume</span>
-        <span>Incoming voice volume level</span>
-      </div>
-      <div style="display:flex;align-items:center;gap:10px;width:100%;">
-        <input type="range" id="output-volume" min="0" max="100" value="100" style="flex:1;accent-color:var(--accent);">
-        <span id="output-volume-val" style="font-family:var(--mono);font-size:0.6rem;color:var(--text-dim);width:28px;text-align:right;">100%</span>
-      </div>
-    </div>
   </div>
 </div>
 
@@ -2036,8 +2082,35 @@ const state = {
   // VAD
   vadEnabled: false,
   vadThreshold: 50,
-  vadAnalyser: null, vadCtx: null, vadAnimId: null,
+  vadAnalyser: null, vadCtx: null, vadAnimId: null, vadStream: null,
+  outputVolume: 1,
 };
+
+/* ═══════════════════════════════════════════
+   DOM CACHE — looked up once, reused everywhere
+═══════════════════════════════════════════ */
+const DOM = {};
+function cacheDOM() {
+  [
+    'ptt-btn','tx-pill','tx-label','ptt-label-text',
+    'member-list','member-count-badge',
+    'channel-scroll','conn-pill','conn-text','ping-chip',
+    'mute-btn','mute-label','mute-mic-on','mute-mic-off',
+    'no-channel','ptt-section','space-kbd','channel-name-display',
+    'waiting-overlay','waiting-countdown','ch-search-input',
+    'mod-menu','mod-mute-label',
+  ].forEach(id => { DOM[id] = document.getElementById(id); });
+  DOM.pttHint    = document.querySelector('.ptt-hint');
+  DOM.channelBar = document.querySelector('.channel-bar');
+}
+
+/* Debounced renderChannels — rapid lobby events (many per second) collapse
+   into a single DOM update at most every 50 ms.                            */
+let _rcTimer = null;
+function scheduleRenderChannels(filter) {
+  clearTimeout(_rcTimer);
+  _rcTimer = setTimeout(() => renderChannels(filter), 50);
+}
 
 /* ═══════════════════════════════════════════
    UTILS
@@ -2086,6 +2159,7 @@ function toast(msg, type = '') {
 function startApp() {
   document.getElementById('onboarding').style.display = 'none';
   document.getElementById('app').classList.add('visible');
+  cacheDOM();
 
   loadPersistedChannels();
   renderChannels();
@@ -2443,20 +2517,75 @@ function setupSettings() {
     document.getElementById('feedback-overlay')?.classList.add('show');
     setTimeout(() => document.getElementById('feedback-text')?.focus(), 120);
   });
+
+  // ── Mic device selector ───────────────────────────────────────
+  const micSelect = document.getElementById('mic-device-select');
+  if (micSelect && navigator.mediaDevices?.enumerateDevices) {
+    async function populateMicDevices() {
+      try {
+        // enumerateDevices only returns labels after mic permission is granted.
+        // If we don't have it yet, do a quick permission-request then re-enumerate.
+        let devices = await navigator.mediaDevices.enumerateDevices();
+        const hasLabels = devices.some(d => d.kind === 'audioinput' && d.label);
+        if (!hasLabels) {
+          // Request permission (use existing localStream if available to avoid a new prompt)
+          if (!state.localStream) {
+            try {
+              const tmp = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+              tmp.getTracks().forEach(t => t.stop()); // release immediately
+            } catch { /* permission denied — labels will stay blank, that's fine */ }
+          }
+          devices = await navigator.mediaDevices.enumerateDevices();
+        }
+
+        const mics = devices.filter(d => d.kind === 'audioinput');
+        const savedId = localStorage.getItem('chirp_mic_device') || '';
+        micSelect.innerHTML = '<option value="">Default microphone</option>';
+        mics.forEach(d => {
+          if (!d.label) return; // skip devices with no label (shouldn't happen after permission)
+          const opt = document.createElement('option');
+          opt.value = d.deviceId;
+          opt.textContent = d.label;
+          micSelect.appendChild(opt);
+        });
+        micSelect.value = savedId;
+      } catch {}
+    }
+    // Populate on open (re-run each time settings opens to catch newly plugged-in devices)
+    btn.addEventListener('click', populateMicDevices, { capture: false });
+    populateMicDevices();
+    navigator.mediaDevices.addEventListener('devicechange', populateMicDevices);
+
+    micSelect.addEventListener('change', () => {
+      const id = micSelect.value;
+      localStorage.setItem('chirp_mic_device', id);
+      // Release current stream so next channel join uses the new device
+      if (state.localStream) {
+        state.localStream.getTracks().forEach(t => t.stop());
+        state.localStream = null;
+        state.audioTrack  = null;
+      }
+      // Restart VAD with new device if active
+      if (state.vadEnabled && state.currentChannel) {
+        stopVAD(); startVAD();
+      }
+      const label = micSelect.options[micSelect.selectedIndex]?.text || 'Default';
+      toast(`Mic: ${label}`, 'info');
+    });
+  }
 }
 
 function updatePttLabel() {
-  const label = document.getElementById('ptt-label-text');
-  const btn   = document.getElementById('ptt-btn');
-  const hint  = document.querySelector('.ptt-hint');
+  const label = DOM['ptt-label-text'];
+  const btn   = DOM['ptt-btn'];
   if (state.vadEnabled) {
-    label.textContent = 'listening…';
-    btn.classList.add('vad-mode');
-    if (hint) hint.style.display = 'none';
+    if (label) label.textContent = 'listening…';
+    btn?.classList.add('vad-mode');
+    if (DOM.pttHint) DOM.pttHint.style.display = 'none';
   } else {
-    label.textContent = 'hold to talk';
-    btn.classList.remove('vad-mode');
-    if (hint) hint.style.display = '';
+    if (label) label.textContent = 'hold to talk';
+    btn?.classList.remove('vad-mode');
+    if (DOM.pttHint) DOM.pttHint.style.display = '';
   }
 }
 
@@ -2784,12 +2913,12 @@ function connectToLobby() {
     if (data.type === 'lobby-registry') {
       state.lobbyRegistry = data.registry || {};
       (data.channels || []).forEach(ch => safeAddChannel(ch));
-      renderChannels(); syncChannelPeers();
+      scheduleRenderChannels(); syncChannelPeers();
     }
     if (data.type === 'lobby-update') {
-      if (data.registry) { state.lobbyRegistry = data.registry; renderChannels(); syncChannelPeers(); }
-      if (data.channel)  { safeAddChannel(data.channel); renderChannels(); }
-      if (data.channels) { data.channels.forEach(ch => safeAddChannel(ch)); renderChannels(); }
+      if (data.registry) { state.lobbyRegistry = data.registry; scheduleRenderChannels(); syncChannelPeers(); }
+      if (data.channel)  { safeAddChannel(data.channel); scheduleRenderChannels(); }
+      if (data.channels) { data.channels.forEach(ch => safeAddChannel(ch)); scheduleRenderChannels(); }
     }
   });
   conn.on('close', () => { state.lobbyConn = null; setTimeout(() => { if (!state.isLobbyHost) tryBecomeLobbyHost(); }, 500 + Math.random() * 1000); });
@@ -2812,19 +2941,19 @@ function tryBecomeLobbyHost() {
           state.lobbyRegistry[data.id] = { name: data.name, channel: data.channel || null };
           (data.channels || []).forEach(ch => safeAddChannel(ch));
           lobbyBroadcast({ type: 'lobby-update', registry: state.lobbyRegistry, channels: [...liveChannels] });
-          renderChannels();
+          scheduleRenderChannels();
         }
         if (data.type === 'lobby-announce') {
           state.lobbyRegistry[data.id] = { name: data.name, channel: data.channel || null };
           (data.channels || []).forEach(ch => safeAddChannel(ch));
           if (data.newChannel) safeAddChannel(data.newChannel);
           lobbyBroadcast({ type: 'lobby-update', registry: state.lobbyRegistry, channel: data.newChannel || null, channels: [...liveChannels] });
-          renderChannels();
+          scheduleRenderChannels();
         }
       });
       conn.on('close', () => {
         const id = Object.keys(state.lobbyRegistry).find(k => k === conn.peer);
-        if (id) { delete state.lobbyRegistry[id]; lobbyBroadcast({ type: 'lobby-update', registry: state.lobbyRegistry }); renderChannels(); }
+        if (id) { delete state.lobbyRegistry[id]; lobbyBroadcast({ type: 'lobby-update', registry: state.lobbyRegistry }); scheduleRenderChannels(); }
       });
     });
     lp.on('disconnected', () => { try { lp.reconnect(); } catch {} });
@@ -2847,7 +2976,7 @@ function lobbyAnnounce(newChannel) {
     state.lobbyRegistry[state.myId] = { name: state.myName, channel: state.currentChannel };
     if (newChannel) safeAddChannel(newChannel);
     lobbyBroadcast({ type: 'lobby-update', registry: state.lobbyRegistry, channel: newChannel || null, channels: [...liveChannels] });
-    renderChannels();
+    scheduleRenderChannels();
   } else if (state.lobbyConn?.open) {
     try { state.lobbyConn.send(msg); } catch {}
   }
@@ -3061,6 +3190,12 @@ function playRemoteStream(peerId, stream) {
   audio.dataset.peer = peerId;
   audio.style.display = 'none';
   document.body.appendChild(audio);
+
+  // Store the raw MediaStream so the recorder can tap it with createMediaStreamSource
+  if (state.connections[peerId]) state.connections[peerId].remoteStream = stream;
+
+  // If a recording is already in progress, wire this new peer in immediately
+  if (window._recAddPeerStream) window._recAddPeerStream(peerId, stream);
 }
 
 function removeAudio(peerId) { document.getElementById(`audio-${peerId}`)?.remove(); }
@@ -3074,7 +3209,18 @@ async function joinChannel(ch) {
 
   if (!state.localStream) {
     try {
-      state.localStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, video: false });
+      const noiseSupp = localStorage.getItem('chirp_noise') !== '0';
+      const echoCanc  = localStorage.getItem('chirp_echo')  !== '0';
+      const deviceId  = localStorage.getItem('chirp_mic_device') || '';
+      state.localStream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: echoCanc,
+          noiseSuppression: noiseSupp,
+          autoGainControl: true,
+          ...(deviceId ? { deviceId: { ideal: deviceId } } : {}),
+        },
+        video: false
+      });
       state.audioTrack = state.localStream.getAudioTracks()[0];
       state.audioTrack.enabled = false;
     } catch { toast('Mic permission denied — PTT will not work', 'red'); }
@@ -3155,48 +3301,74 @@ function broadcastAll(data) {
 }
 
 /* ═══════════════════════════════════════════
-   RENDER MEMBERS
+   RENDER MEMBERS — diff-based, no full rebuild
 ═══════════════════════════════════════════ */
 function renderMembers() {
-  const list = document.getElementById('member-list');
-  list.innerHTML = '';
-  if (!state.currentChannel) return;
+  const list = DOM['member-list'];
+  if (!state.currentChannel) { list.innerHTML = ''; return; }
 
   const amHost = state.isChannelHost;
 
-  // Self entry
-  const selfEl = document.createElement('div');
-  selfEl.className = `member-item member-self${state.isTalking ? ' talking' : ''}`;
-  selfEl.innerHTML = `
-    <div class="member-avatar" data-letter="${state.myName.charAt(0).toLowerCase()}">${state.myName.charAt(0)}</div>
-    <div class="member-info">
-      <div class="member-name">${state.myName}${amHost ? ' <span class="member-host-badge" title="You are host">👑</span>' : ''} <span style="font-family:var(--mono);font-size:0.5rem;color:var(--text-dim);font-weight:400">(you)</span></div>
-    </div>
-  `;
-  list.appendChild(selfEl);
+  // ── Self entry: update in-place ──
+  let selfEl = list.querySelector('.member-self');
+  if (!selfEl) {
+    selfEl = document.createElement('div');
+    list.insertBefore(selfEl, list.firstChild);
+  }
+  const selfKey = `${state.myName}|${amHost}|${state.isTalking}`;
+  if (selfEl.dataset.rkey !== selfKey) {
+    selfEl.className = `member-item member-self${state.isTalking ? ' talking' : ''}`;
+    selfEl.innerHTML = `
+      <div class="member-avatar" data-letter="${state.myName.charAt(0).toLowerCase()}">${state.myName.charAt(0)}</div>
+      <div class="member-info">
+        <div class="member-name">${state.myName}${amHost ? ' <span class="member-host-badge" title="You are host">👑</span>' : ''} <span style="font-family:var(--mono);font-size:0.5rem;color:var(--text-dim);font-weight:400">(you)</span></div>
+      </div>`;
+    selfEl.dataset.rkey = selfKey;
+  }
 
-  Object.entries(state.connections).forEach(([peerId, info]) => {
-    if (info.channel !== state.currentChannel) return;
-    const el = document.createElement('div');
+  // ── Peer entries: add/update/remove via data-peer-id ──
+  const activePeerIds = new Set(
+    Object.entries(state.connections)
+      .filter(([, i]) => i.channel === state.currentChannel)
+      .map(([id]) => id)
+  );
+
+  // Remove stale entries
+  list.querySelectorAll('[data-peer-id]').forEach(el => {
+    if (!activePeerIds.has(el.dataset.peerId)) el.remove();
+  });
+
+  // Add / update
+  activePeerIds.forEach(peerId => {
+    const info    = state.connections[peerId];
     const isMuted = state.mutedPeers?.has(peerId);
-    el.className = `member-item${info.talking ? ' talking' : ''}${amHost ? ' clickable' : ''}`;
+    const isHost  = state.channelHostId === peerId;
     const pingStr = info.ping != null ? `${info.ping}ms` : '';
-    const isHost = state.channelHostId === peerId;
+    const key     = `${info.name}|${info.talking}|${isMuted}|${isHost}|${pingStr}|${amHost}`;
+
+    let el = list.querySelector(`[data-peer-id="${peerId}"]`);
+    if (!el) {
+      el = document.createElement('div');
+      el.dataset.peerId = peerId;
+      // Single delegated click — check host state at click time
+      el.addEventListener('click', e => {
+        if (state.isChannelHost) showModMenu(e, peerId, state.connections[peerId]?.name || peerId);
+      });
+      list.appendChild(el);
+    }
+
+    if (el.dataset.rkey === key) return; // nothing changed
+    el.dataset.rkey = key;
+    el.className = `member-item${info.talking ? ' talking' : ''}${amHost ? ' clickable' : ''}`;
     el.innerHTML = `
       <div class="member-avatar" data-letter="${(info.name||'?').charAt(0).toLowerCase()}">${(info.name||'?').charAt(0)}</div>
       <div class="member-info">
         <div class="member-name">${info.name}${isHost ? ' <span class="member-host-badge" title="Channel host">👑</span>' : ''}${isMuted ? ' <span style="font-size:0.6rem;opacity:0.5" title="Muted by host">🔇</span>' : ''}</div>
         ${pingStr ? `<div class="member-sub">${pingStr}</div>` : ''}
-      </div>
-    `;
-    if (amHost) {
-      el.addEventListener('click', e => showModMenu(e, peerId, info.name));
-    }
-    list.appendChild(el);
+      </div>`;
   });
 
-  const total = 1 + Object.values(state.connections).filter(i => i.channel === state.currentChannel).length;
-  document.getElementById('member-count-badge').textContent = total;
+  DOM['member-count-badge'].textContent = 1 + activePeerIds.size;
   updatePrivacyBtn();
 }
 
@@ -3296,16 +3468,12 @@ function setupModMenu() {
 
 function showModMenu(e, peerId, name) {
   e.stopPropagation();
-  const menu = document.getElementById('mod-menu');
+  const menu = DOM['mod-menu'];
   if (!menu) return;
   menu._target = { peerId, name };
   document.getElementById('mod-menu-name').textContent = name;
-
-  // Update mute label
   const isMuted = state.mutedPeers?.has(peerId);
-  document.getElementById('mod-mute-label').textContent = isMuted ? 'Unmute' : 'Mute';
-
-  // Position near click but keep on screen
+  DOM['mod-mute-label'].textContent = isMuted ? 'Unmute' : 'Mute';
   menu.classList.add('show');
   const vw = window.innerWidth, vh = window.innerHeight;
   const mw = menu.offsetWidth || 190, mh = menu.offsetHeight || 150;
@@ -3317,18 +3485,38 @@ function showModMenu(e, peerId, name) {
 }
 
 function hideModMenu() {
-  document.getElementById('mod-menu')?.classList.remove('show');
+  DOM['mod-menu']?.classList.remove('show');
 }
 
 function updatePingDisplay() {
   const pings = Object.values(state.connections).map(c => c.ping).filter(p => p != null);
-  const chip  = document.getElementById('ping-chip');
+  const chip  = DOM['ping-chip'];
+  if (!chip) return;
   if (!pings.length || !state.currentChannel) { chip.style.display = 'none'; return; }
-  const avg = Math.round(pings.reduce((a,b) => a+b,0) / pings.length);
+  const avg = Math.round(pings.reduce((a, b) => a + b, 0) / pings.length);
   chip.textContent = `${avg}ms`;
   chip.style.display = '';
   chip.className = `ping-chip${avg > 200 ? ' bad' : ' good'}`;
-  renderMembers();
+
+  // Surgically update only the ping sub-labels in existing member rows
+  const list = DOM['member-list'];
+  Object.entries(state.connections).forEach(([pid, info]) => {
+    if (info.ping == null) return;
+    const el = list?.querySelector(`[data-peer-id="${pid}"]`);
+    if (!el) return;
+    let sub = el.querySelector('.member-sub');
+    if (!sub) {
+      sub = document.createElement('div');
+      sub.className = 'member-sub';
+      el.querySelector('.member-info')?.appendChild(sub);
+    }
+    const text = `${info.ping}ms`;
+    if (sub.textContent !== text) {
+      sub.textContent = text;
+      // Invalidate the rkey so next renderMembers call re-syncs cleanly
+      delete el.dataset.rkey;
+    }
+  });
 }
 
 /* ═══════════════════════════════════════════
@@ -3351,13 +3539,13 @@ function setupPTT() {
   document.addEventListener('keydown', e => {
     if (e.code === state.pttKey && !spaceHeld && !e.repeat && state.currentChannel && !state.vadEnabled) {
       e.preventDefault(); spaceHeld = true; startTalking();
-      document.getElementById('space-kbd')?.classList.add('pressed');
+      DOM['space-kbd']?.classList.add('pressed');
     }
   });
   document.addEventListener('keyup', e => {
     if (e.code === state.pttKey) {
       spaceHeld = false; stopTalking();
-      document.getElementById('space-kbd')?.classList.remove('pressed');
+      DOM['space-kbd']?.classList.remove('pressed');
     }
   });
 }
@@ -3367,10 +3555,11 @@ async function startTalking() {
   if (!state.localStream) { toast('No microphone — check permissions', 'red'); return; }
   state.isTalking = true;
   if (state.audioTrack) state.audioTrack.enabled = true;
-  document.getElementById('ptt-btn').classList.add('active');
-  document.getElementById('tx-pill').classList.add('transmitting');
-  document.getElementById('tx-label').textContent = 'tx';
-  renderMembers();
+  DOM['ptt-btn'].classList.add('active');
+  DOM['tx-pill'].classList.add('transmitting');
+  DOM['tx-label'].textContent = 'tx';
+  // Update only self member row talking state (no full rebuild)
+  DOM['member-list']?.querySelector('.member-self')?.classList.add('talking');
   broadcastAll({ type: 'talking', value: true });
   startWaveform();
   SFX.pttOn();
@@ -3381,10 +3570,11 @@ function stopTalking() {
   if (!state.isTalking) return;
   state.isTalking = false;
   if (state.audioTrack) state.audioTrack.enabled = false;
-  document.getElementById('ptt-btn').classList.remove('active');
-  document.getElementById('tx-pill').classList.remove('transmitting');
-  document.getElementById('tx-label').textContent = state.vadEnabled ? 'listening' : 'standby';
-  renderMembers();
+  DOM['ptt-btn'].classList.remove('active');
+  DOM['tx-pill'].classList.remove('transmitting');
+  DOM['tx-label'].textContent = state.vadEnabled ? 'listening' : 'standby';
+  // Update only self member row talking state (no full rebuild)
+  DOM['member-list']?.querySelector('.member-self')?.classList.remove('talking');
   broadcastAll({ type: 'talking', value: false });
   stopWaveform();
   SFX.pttOff();
@@ -3394,16 +3584,40 @@ function stopTalking() {
 /* ═══════════════════════════════════════════
    VAD (Voice Activity Detection)
 ═══════════════════════════════════════════ */
-function startVAD() {
-  if (!state.localStream || !state.vadEnabled) return;
+async function startVAD() {
+  if (!state.vadEnabled) return;
   stopVAD();
+
+  // ── Ensure we have a mic stream first ──
+  // We deliberately use a SEPARATE stream for VAD so that disabling
+  // state.audioTrack (muting PTT) doesn't feed silence to the analyser.
+  try {
+    const noiseSupp = localStorage.getItem('chirp_noise') !== '0';
+    const echoCanc  = localStorage.getItem('chirp_echo')  !== '0';
+    const deviceId  = localStorage.getItem('chirp_mic_device') || '';
+    const constraints = {
+      echoCancellation: echoCanc,
+      noiseSuppression: noiseSupp,
+      autoGainControl: true,
+      ...(deviceId ? { deviceId: { ideal: deviceId } } : {}),
+    };
+    state.vadStream = await navigator.mediaDevices.getUserMedia({ audio: constraints, video: false });
+  } catch(e) {
+    console.warn('VAD: could not open dedicated mic stream:', e);
+    // Fallback: try to use state.localStream if available and its track is enabled
+    if (state.localStream) {
+      // Temporarily enable track for analysis only — track is re-disabled after startTalking check
+      state.vadStream = state.localStream;
+    } else {
+      return;
+    }
+  }
 
   try {
     state.vadCtx = new (window.AudioContext || window.webkitAudioContext)();
-    // Resume immediately — may be suspended on mobile until user interaction
     if (state.vadCtx.state === 'suspended') state.vadCtx.resume();
 
-    const src = state.vadCtx.createMediaStreamSource(state.localStream);
+    const src = state.vadCtx.createMediaStreamSource(state.vadStream);
     state.vadAnalyser = state.vadCtx.createAnalyser();
     state.vadAnalyser.fftSize = 512;
     state.vadAnalyser.smoothingTimeConstant = 0.5;
@@ -3418,30 +3632,29 @@ function startVAD() {
 
     const data = new Uint8Array(binCount);
 
-    document.getElementById('tx-pill')?.classList.add('vad-listening');
-    const txLabel = document.getElementById('tx-label');
-    if (txLabel) txLabel.textContent = 'listening';
-    document.getElementById('ptt-btn')?.classList.add('vad-mode');
+    DOM['tx-pill']?.classList.add('vad-listening');
+    if (DOM['tx-label']) DOM['tx-label'].textContent = 'listening';
+    DOM['ptt-btn']?.classList.add('vad-mode');
 
     let silenceTimer = null;
-    const SILENCE_DELAY = 700; // ms of quiet before stopping TX
+    let _vadFrame = 0;
+    const SILENCE_DELAY = 700;
 
     function vadLoop() {
       if (!state.vadEnabled || !state.vadAnalyser) { stopVAD(); return; }
-
-      // Resume if browser suspended context
       if (state.vadCtx && state.vadCtx.state === 'suspended') { state.vadCtx.resume(); }
 
       state.vadAnimId = requestAnimationFrame(vadLoop);
+
+      // Run analysis at ~20fps (every 3rd frame) — audio changes << 60fps
+      if (++_vadFrame % 3 !== 0) return;
+
       state.vadAnalyser.getByteFrequencyData(data);
 
-      // RMS of speech-band only
       let sum = 0;
       const speechBins = speechHigh - speechLow + 1;
       for (let i = speechLow; i <= speechHigh; i++) sum += data[i] * data[i];
       const rms = Math.sqrt(sum / speechBins);
-
-      // Map threshold slider (0-100) → RMS range (4-60)
       const thr = 4 + (state.vadThreshold / 100) * 56;
 
       if (rms > thr) {
@@ -3460,13 +3673,16 @@ function stopVAD() {
   if (state.vadCtx)    { try { state.vadCtx.close(); } catch {} state.vadCtx = null; }
   state.vadAnalyser = null;
 
-  // Reset VAD-specific UI states
-  document.getElementById('tx-pill')?.classList.remove('vad-listening');
-  document.getElementById('ptt-btn')?.classList.remove('vad-mode');
-  if (!state.isTalking) {
-    const txLabel = document.getElementById('tx-label');
-    if (txLabel) txLabel.textContent = 'standby';
+  // Release the dedicated VAD stream (but not if it's the same as localStream)
+  if (state.vadStream && state.vadStream !== state.localStream) {
+    try { state.vadStream.getTracks().forEach(t => t.stop()); } catch {}
   }
+  state.vadStream = null;
+
+  // Reset VAD-specific UI states
+  DOM['tx-pill']?.classList.remove('vad-listening');
+  DOM['ptt-btn']?.classList.remove('vad-mode');
+  if (!state.isTalking && DOM['tx-label']) DOM['tx-label'].textContent = 'standby';
 }
 
 /* ═══════════════════════════════════════════
@@ -3515,8 +3731,14 @@ function stopWaveform() {
 function drawWaveform() {
   const canvas = document.getElementById('waveform-canvas');
   canvas.classList.add('active');
-  canvas.width  = canvas.offsetWidth  * devicePixelRatio;
-  canvas.height = canvas.offsetHeight * devicePixelRatio;
+  // Only resize when needed — avoids layout recalculation every frame
+  const dpr = devicePixelRatio || 1;
+  const cssW = canvas.offsetWidth, cssH = canvas.offsetHeight;
+  const targetW = Math.round(cssW * dpr), targetH = Math.round(cssH * dpr);
+  if (canvas.width !== targetW || canvas.height !== targetH) {
+    canvas.width  = targetW;
+    canvas.height = targetH;
+  }
   const ctx  = canvas.getContext('2d');
   const data = new Uint8Array(waveAnalyser.frequencyBinCount);
 
@@ -3863,28 +4085,42 @@ function setupMobileNav() {
       rec.audioCtx  = new (window.AudioContext || window.webkitAudioContext)();
       rec.destNode  = rec.audioCtx.createMediaStreamDestination();
       rec.gainNode  = rec.audioCtx.createGain();
+      rec.gainNode.gain.value = 1.0;
       rec.gainNode.connect(rec.destNode);
 
-      // Local mic
+      // Local mic — always included
       if (state.localStream) {
-        const micSrc = rec.audioCtx.createMediaStreamSource(state.localStream);
-        micSrc.connect(rec.gainNode);
+        try {
+          const micSrc = rec.audioCtx.createMediaStreamSource(state.localStream);
+          micSrc.connect(rec.gainNode);
+        } catch (e) { console.warn('Recorder: could not add local mic', e); }
       }
 
-      // Remote peers — find all <audio> elements rendered by the app
-      document.querySelectorAll('audio[data-peer]').forEach(a => {
-        try {
-          const peerSrc = rec.audioCtx.createMediaElementSource(a);
-          peerSrc.connect(rec.gainNode);
-          // Re-route to speakers too
-          peerSrc.connect(rec.audioCtx.destination);
-        } catch {}
+      // Remote peers — use createMediaStreamSource on the raw stream (not the <audio> element)
+      // This avoids the "already connected" error from createMediaElementSource
+      Object.entries(state.connections).forEach(([peerId, info]) => {
+        if (info.remoteStream) {
+          try {
+            const peerSrc = rec.audioCtx.createMediaStreamSource(info.remoteStream);
+            peerSrc.connect(rec.gainNode);
+            info._recSrcNode = peerSrc; // keep reference for cleanup
+          } catch (e) { console.warn(`Recorder: could not add peer ${peerId}`, e); }
+        }
       });
+
+      // Expose a hook so peers who join AFTER recording starts get wired in live
+      window._recAddPeerStream = (peerId, stream) => {
+        if (!rec.audioCtx || rec.audioCtx.state === 'closed') return;
+        try {
+          const peerSrc = rec.audioCtx.createMediaStreamSource(stream);
+          peerSrc.connect(rec.gainNode);
+          if (state.connections[peerId]) state.connections[peerId]._recSrcNode = peerSrc;
+        } catch (e) { console.warn(`Recorder: could not add late peer ${peerId}`, e); }
+      };
 
       return rec.destNode.stream;
     } catch (e) {
       console.warn('Chirp Recorder: failed to build combined stream', e);
-      // Fallback: mic only
       return state.localStream || null;
     }
   }
@@ -4109,6 +4345,7 @@ function setupMobileNav() {
     clearInterval(rec.timerInterval);
     stopRecWaveform();
     SFX.recStop();
+    window._recAddPeerStream = null; // remove live-add hook
     fab.classList.remove('recording');
     // Cleanup audio ctx
     try { if (rec.audioCtx) rec.audioCtx.close(); } catch {}
