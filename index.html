@@ -8,6 +8,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="Chirp">
 <link rel="manifest" href="data:application/json,{%22name%22:%22Chirp%22,%22short_name%22:%22Chirp%22,%22start_url%22:%22.%22,%22display%22:%22standalone%22,%22background_color%22:%22%230c0c0e%22,%22theme_color%22:%22%230c0c0e%22,%22icons%22:[{%22src%22:%22data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='40' fill='%230c0c0e'/%3E%3Ccircle cx='96' cy='96' r='56' stroke='%237c6aff' stroke-width='6' opacity='.4'/%3E%3Ccircle cx='96' cy='96' r='32' stroke='%237c6aff' stroke-width='6' opacity='.7'/%3E%3Ccircle cx='96' cy='96' r='12' fill='%237c6aff'/%3E%3C/svg%3E%22,%22sizes%22:%22192x192%22,%22type%22:%22image/svg+xml%22}]}">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230c0c0e'/%3E%3Ccircle cx='16' cy='14' r='4' fill='%237c6aff'/%3E%3Cpath d='M9 14c0-3.866 3.134-7 7-7s7 3.134 7 7' stroke='%237c6aff' stroke-width='1.6' stroke-linecap='round' fill='none' opacity='0.5'/%3E%3Cpath d='M5 14c0-6.075 4.925-11 11-11s11 4.925 11 11' stroke='%237c6aff' stroke-width='1.4' stroke-linecap='round' fill='none' opacity='0.25'/%3E%3Cline x1='16' y1='18' x2='16' y2='22' stroke='%237c6aff' stroke-width='1.6' stroke-linecap='round'/%3E%3Cline x1='12' y1='22' x2='20' y2='22' stroke='%237c6aff' stroke-width='1.6' stroke-linecap='round'/%3E%3C/svg%3E">
 <title>Chirp — Push to Talk</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -647,18 +648,21 @@ header {
 ═══════════════════════════════════════════ */
 .mobile-nav {
   display: none; /* shown by media query */
-  position: fixed; bottom: 0; left: 0; right: 0; height: 64px;
+  position: fixed; bottom: 0; left: 0; right: 0;
+  height: auto; min-height: 60px;
   background: rgba(17,17,20,0.97); border-top: 1px solid var(--border);
   backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-  z-index: 200; padding: 0 8px; padding-bottom: env(safe-area-inset-bottom);
-  align-items: center; justify-content: space-around;
+  z-index: 200;
+  padding: 4px 4px env(safe-area-inset-bottom, 8px);
+  align-items: stretch; justify-content: space-around;
 }
 .nav-tab {
   display: flex; flex-direction: column; align-items: center; gap: 3px;
-  flex: 1; padding: 8px 4px; background: none; border: none; cursor: pointer;
-  color: var(--text-dim); font-family: var(--mono); font-size: 0.55rem;
-  letter-spacing: 0.1em; text-transform: uppercase;
+  flex: 1; min-width: 0; padding: 8px 2px; background: none; border: none; cursor: pointer;
+  color: var(--text-dim); font-family: var(--mono); font-size: 0.52rem;
+  letter-spacing: 0.08em; text-transform: uppercase;
   transition: color 0.2s; -webkit-tap-highlight-color: transparent; position: relative;
+  overflow: hidden;
 }
 .nav-tab svg { transition: transform 0.2s; }
 .nav-tab.active { color: var(--accent); }
@@ -678,11 +682,11 @@ header {
   header { height: 52px; padding: 0 14px; }
   .brand-name { font-size: 1rem; }
   #install-btn { display: none !important; }
-  #toast      { bottom: 80px; }
-  #join-toast { bottom: 80px; right: 12px; left: 12px; max-width: none; }
+  #toast      { bottom: 84px; }
+  #join-toast { bottom: 84px; right: 12px; left: 12px; max-width: none; }
   #waiting-overlay { z-index: 50; }
 
-  .app-body { position: relative; overflow: hidden; padding-bottom: 64px; }
+  .app-body { position: relative; overflow: hidden; padding-bottom: 68px; }
 
   .sidebar, .main-content, .members-panel {
     position: absolute; inset: 0; width: 100%; height: 100%; border: none;
@@ -730,6 +734,17 @@ header {
   .ptt-ring-3     { width: 280px; height: 280px; }
   .center-area    { gap: 28px; }
 
+  /* Ensure create-channel bar stays above mobile nav */
+  .ch-create-wrap {
+    padding: 10px 12px;
+    padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+    flex-shrink: 0;
+    background: var(--bg2);
+  }
+  .ch-create-input { font-size: 0.8rem; padding: 10px 12px; height: 40px; }
+  .ch-create-btn   { width: 40px; height: 40px; font-size: 1.3rem; flex-shrink: 0; }
+  .ch-create-row   { gap: 8px; }
+
   #no-channel .hint::before { content: '↓ tap '; }
 }
 
@@ -766,14 +781,18 @@ header {
 <div id="onboarding">
   <div class="onboard-logo">
     <div class="logo-icon">
-      <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
-        <circle cx="18" cy="18" r="14" stroke="#7c6aff" stroke-width="1.5" opacity="0.4"/>
-        <circle cx="18" cy="18" r="8"  stroke="#7c6aff" stroke-width="1.5" opacity="0.7"/>
-        <circle cx="18" cy="18" r="3"  fill="#7c6aff"/>
-        <line x1="18" y1="4"  x2="18" y2="8"  stroke="#7c6aff" stroke-width="1.5" stroke-linecap="round"/>
-        <line x1="18" y1="28" x2="18" y2="32" stroke="#7c6aff" stroke-width="1.5" stroke-linecap="round"/>
-        <line x1="4"  y1="18" x2="8"  y2="18" stroke="#7c6aff" stroke-width="1.5" stroke-linecap="round"/>
-        <line x1="28" y1="18" x2="32" y2="18" stroke="#7c6aff" stroke-width="1.5" stroke-linecap="round"/>
+      <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <!-- Outer arc -->
+        <path d="M8 24c0-8.837 7.163-16 16-16s16 7.163 16 16" stroke="#7c6aff" stroke-width="2" stroke-linecap="round" opacity="0.28"/>
+        <!-- Mid arc -->
+        <path d="M13 24c0-6.075 4.925-11 11-11s11 4.925 11 11" stroke="#7c6aff" stroke-width="2" stroke-linecap="round" opacity="0.55"/>
+        <!-- Inner arc -->
+        <path d="M18 24c0-3.314 2.686-6 6-6s6 2.686 6 6" stroke="#7c6aff" stroke-width="2" stroke-linecap="round" opacity="0.85"/>
+        <!-- Mic dot -->
+        <circle cx="24" cy="24" r="3.5" fill="#7c6aff"/>
+        <!-- Stem -->
+        <line x1="24" y1="27.5" x2="24" y2="32" stroke="#7c6aff" stroke-width="2" stroke-linecap="round"/>
+        <line x1="19" y1="32" x2="29" y2="32" stroke="#7c6aff" stroke-width="2" stroke-linecap="round"/>
       </svg>
     </div>
     <h1>Chirp</h1>
@@ -796,9 +815,13 @@ header {
   <header>
     <div class="header-left">
       <div class="logo-sm">
-        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-          <circle cx="7" cy="7" r="5" stroke="#7c6aff" stroke-width="1" opacity="0.5"/>
-          <circle cx="7" cy="7" r="2" fill="#7c6aff"/>
+        <svg width="18" height="18" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M8 24c0-8.837 7.163-16 16-16s16 7.163 16 16" stroke="#7c6aff" stroke-width="2" stroke-linecap="round" opacity="0.28"/>
+          <path d="M13 24c0-6.075 4.925-11 11-11s11 4.925 11 11" stroke="#7c6aff" stroke-width="2" stroke-linecap="round" opacity="0.55"/>
+          <path d="M18 24c0-3.314 2.686-6 6-6s6 2.686 6 6" stroke="#7c6aff" stroke-width="2" stroke-linecap="round" opacity="0.85"/>
+          <circle cx="24" cy="24" r="3.5" fill="#7c6aff"/>
+          <line x1="24" y1="27.5" x2="24" y2="32" stroke="#7c6aff" stroke-width="2" stroke-linecap="round"/>
+          <line x1="19" y1="32" x2="29" y2="32" stroke="#7c6aff" stroke-width="2" stroke-linecap="round"/>
         </svg>
       </div>
       <span class="brand-name">Chirp</span>
@@ -810,7 +833,6 @@ header {
     <div class="header-right">
       <span class="ping-chip" id="ping-chip" style="display:none"></span>
       <button class="btn-ghost" id="settings-btn" title="Settings">settings</button>
-      <button class="btn-ghost" id="change-name-btn">callsign</button>
       <button class="btn-ghost" id="install-btn">install</button>
     </div>
   </header>
@@ -980,6 +1002,20 @@ header {
       <button class="settings-close" id="settings-close">✕</button>
     </h3>
 
+    <div class="settings-row" style="align-items:flex-start;flex-direction:column;gap:10px;">
+      <div class="settings-row-label">
+        <span>Callsign</span>
+        <span>Your display name in channels</span>
+      </div>
+      <div style="display:flex;gap:8px;width:100%;">
+        <input id="callsign-input" class="ch-create-input" type="text" maxlength="20"
+          autocomplete="off" spellcheck="false"
+          style="flex:1;font-size:0.85rem;padding:9px 12px;height:36px;">
+        <button id="callsign-save-btn" class="btn-primary"
+          style="padding:0 16px;height:36px;font-size:0.8rem;white-space:nowrap;flex-shrink:0;">Save</button>
+      </div>
+    </div>
+
     <div class="settings-row">
       <div class="settings-row-label">
         <span>Voice Activity Detection</span>
@@ -1075,6 +1111,9 @@ const BROKERS   = [{ host: '0.peerjs.com', port: 443, path: '/', secure: true }]
 
 let brokerIdx = 0;
 const liveChannels = new Set();
+// Channels that should never be auto-created or received from lobby
+const BLOCKED_DEFAULTS = new Set(['ops', 'general', 'lounge']);
+function safeAddChannel(ch) { if (ch && !BLOCKED_DEFAULTS.has(ch)) liveChannels.add(ch); }
 
 const state = {
   myId: null, myName: null, peer: null,
@@ -1153,22 +1192,10 @@ function startApp() {
   setupChannelCreate();
   setupJoinRequestUI();
   setupMobileNav();
-
-  document.getElementById('change-name-btn').addEventListener('click', () => {
-    const n = prompt('New callsign:', state.myName);
-    if (n && n.trim()) {
-      const ch = state.currentChannel;
-      if (ch) leaveChannel();
-      state.myName = n.trim().slice(0,20);
-      localStorage.setItem('chirp_name', state.myName);
-      if (ch) joinChannel(ch);
-      toast(`Callsign: ${state.myName}`, 'green');
-    }
-  });
 }
 
 /* ═══════════════════════════════════════════
-   SOUND ENGINE (Web Audio API — no files)
+   SOUND ENGINE — SUBTLE / PROFESSIONAL
 ═══════════════════════════════════════════ */
 const SFX = (() => {
   let ctx = null;
@@ -1180,15 +1207,19 @@ const SFX = (() => {
     return ctx;
   }
 
-  function tone({ freq = 440, freq2, type = 'sine', gain = 0.4, attack = 0.005,
-                  sustain = 0.08, release = 0.12, when = 0, detune = 0 } = {}) {
+  // Clean sine tone with gentle envelope — the core building block
+  function tone({ freq = 440, gain = 0.06, attack = 0.008, sustain = 0.05,
+                  release = 0.18, when = 0, type = 'sine' } = {}) {
     if (muted) return;
     try {
       const c = getCtx(); const t = c.currentTime + when;
-      const osc = c.createOscillator(); const env = c.createGain();
-      osc.connect(env); env.connect(c.destination);
-      osc.type = type; osc.frequency.setValueAtTime(freq, t); osc.detune.value = detune;
-      if (freq2) osc.frequency.linearRampToValueAtTime(freq2, t + attack + sustain);
+      const osc = c.createOscillator();
+      const env = c.createGain();
+      // Gentle high-shelf cut to remove harshness
+      const shelf = c.createBiquadFilter();
+      shelf.type = 'highshelf'; shelf.frequency.value = 3000; shelf.gain.value = -8;
+      osc.connect(shelf); shelf.connect(env); env.connect(c.destination);
+      osc.type = type; osc.frequency.value = freq;
       env.gain.setValueAtTime(0, t);
       env.gain.linearRampToValueAtTime(gain, t + attack);
       env.gain.setValueAtTime(gain, t + attack + sustain);
@@ -1197,21 +1228,19 @@ const SFX = (() => {
     } catch {}
   }
 
-  function noise({ gain = 0.15, duration = 0.04, when = 0, lpFreq = 2000 } = {}) {
+  // Very short filtered click — for PTT keying
+  function click({ freq = 180, gain = 0.05, decay = 0.04, when = 0 } = {}) {
     if (muted) return;
     try {
       const c = getCtx(); const t = c.currentTime + when;
-      const bufLen = Math.ceil(c.sampleRate * duration);
-      const buf = c.createBuffer(1, bufLen, c.sampleRate);
-      const data = buf.getChannelData(0);
-      for (let i = 0; i < bufLen; i++) data[i] = Math.random() * 2 - 1;
-      const src = c.createBufferSource(); src.buffer = buf;
-      const filt = c.createBiquadFilter(); filt.type = 'lowpass'; filt.frequency.value = lpFreq;
+      const osc = c.createOscillator();
       const env = c.createGain();
-      src.connect(filt); filt.connect(env); env.connect(c.destination);
+      const lp  = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 600;
+      osc.connect(lp); lp.connect(env); env.connect(c.destination);
+      osc.type = 'sine'; osc.frequency.value = freq;
       env.gain.setValueAtTime(gain, t);
-      env.gain.exponentialRampToValueAtTime(0.0001, t + duration);
-      src.start(t); src.stop(t + duration + 0.01);
+      env.gain.exponentialRampToValueAtTime(0.0001, t + decay);
+      osc.start(t); osc.stop(t + decay + 0.02);
     } catch {}
   }
 
@@ -1219,17 +1248,64 @@ const SFX = (() => {
     get muted() { return muted; },
     toggleMute() { muted = !muted; return muted; },
     setMuted(v) { muted = v; },
-    pttOn()    { noise({ gain:0.3, duration:0.025, lpFreq:4000 }); tone({ freq:1200, freq2:900, type:'square', gain:0.08, attack:0.002, sustain:0.03, release:0.04, when:0.01 }); },
-    pttOff()   { noise({ gain:0.2, duration:0.018, lpFreq:3000 }); tone({ freq:800, freq2:500, type:'square', gain:0.06, attack:0.001, sustain:0.02, release:0.03, when:0.005 }); },
-    join()     { tone({ freq:660, gain:0.22, attack:0.01, sustain:0.07, release:0.15 }); tone({ freq:990, gain:0.18, attack:0.01, sustain:0.07, release:0.15, when:0.1 }); },
-    leave()    { tone({ freq:880, gain:0.18, attack:0.01, sustain:0.06, release:0.12 }); tone({ freq:550, gain:0.14, attack:0.01, sustain:0.06, release:0.12, when:0.09 }); },
-    peerJoin() { tone({ freq:523, gain:0.15, attack:0.01, sustain:0.05, release:0.1 }); tone({ freq:659, gain:0.13, attack:0.01, sustain:0.05, release:0.1, when:0.08 }); },
-    peerLeave(){ tone({ freq:659, gain:0.13, attack:0.005, sustain:0.04, release:0.1 }); tone({ freq:494, gain:0.11, attack:0.005, sustain:0.04, release:0.1, when:0.07 }); },
-    rxStart()  { noise({ gain:0.12, duration:0.03, lpFreq:2500 }); tone({ freq:1050, type:'square', gain:0.05, attack:0.002, sustain:0.02, release:0.03, when:0.01 }); },
-    requestIn(){ tone({ freq:880, gain:0.2, attack:0.01, sustain:0.06, release:0.12 }); tone({ freq:1100, gain:0.18, attack:0.01, sustain:0.06, release:0.12, when:0.1 }); tone({ freq:880, gain:0.16, attack:0.01, sustain:0.05, release:0.12, when:0.2 }); },
-    approved() { tone({ freq:523, gain:0.2, attack:0.01, sustain:0.06, release:0.14 }); tone({ freq:659, gain:0.18, attack:0.01, sustain:0.06, release:0.14, when:0.09 }); tone({ freq:784, gain:0.16, attack:0.01, sustain:0.06, release:0.18, when:0.18 }); },
-    denied()   { tone({ freq:330, type:'sawtooth', gain:0.18, attack:0.005, sustain:0.08, release:0.15 }); tone({ freq:280, type:'sawtooth', gain:0.14, attack:0.005, sustain:0.08, release:0.15, when:0.12 }); },
-    online()   { tone({ freq:440, gain:0.14, attack:0.01, sustain:0.05, release:0.1 }); tone({ freq:660, gain:0.12, attack:0.01, sustain:0.05, release:0.1, when:0.08 }); },
+
+    // PTT on — barely-there soft click, like keying a muted mic
+    pttOn()  { click({ freq: 220, gain: 0.055, decay: 0.035 }); },
+
+    // PTT off — slightly lower pitch click
+    pttOff() { click({ freq: 180, gain: 0.042, decay: 0.030 }); },
+
+    // Joined channel — two gentle rising tones (like Discord join)
+    join() {
+      tone({ freq: 660, gain: 0.065, attack: 0.01, sustain: 0.04, release: 0.22 });
+      tone({ freq: 880, gain: 0.050, attack: 0.01, sustain: 0.04, release: 0.24, when: 0.12 });
+    },
+
+    // Left channel — two falling tones
+    leave() {
+      tone({ freq: 880, gain: 0.055, attack: 0.01, sustain: 0.03, release: 0.20 });
+      tone({ freq: 660, gain: 0.042, attack: 0.01, sustain: 0.03, release: 0.20, when: 0.11 });
+    },
+
+    // Peer joined — single soft ding
+    peerJoin() {
+      tone({ freq: 784, gain: 0.052, attack: 0.008, sustain: 0.03, release: 0.26 });
+    },
+
+    // Peer left — single softer lower ding
+    peerLeave() {
+      tone({ freq: 622, gain: 0.042, attack: 0.008, sustain: 0.02, release: 0.22 });
+    },
+
+    // Incoming TX — barely audible blip
+    rxStart() {
+      click({ freq: 260, gain: 0.038, decay: 0.025 });
+    },
+
+    // Join request — three short ascending pings (attention, not alarming)
+    requestIn() {
+      tone({ freq: 660, gain: 0.060, attack: 0.006, sustain: 0.025, release: 0.14 });
+      tone({ freq: 784, gain: 0.055, attack: 0.006, sustain: 0.025, release: 0.14, when: 0.16 });
+      tone({ freq: 880, gain: 0.050, attack: 0.006, sustain: 0.025, release: 0.16, when: 0.32 });
+    },
+
+    // Approved — pleasant three-note chime (C-E-G)
+    approved() {
+      tone({ freq: 523, gain: 0.058, attack: 0.008, sustain: 0.04, release: 0.22 });
+      tone({ freq: 659, gain: 0.050, attack: 0.008, sustain: 0.04, release: 0.22, when: 0.11 });
+      tone({ freq: 784, gain: 0.044, attack: 0.008, sustain: 0.04, release: 0.26, when: 0.22 });
+    },
+
+    // Denied — two descending tones, muted
+    denied() {
+      tone({ freq: 440, gain: 0.055, attack: 0.006, sustain: 0.04, release: 0.18 });
+      tone({ freq: 330, gain: 0.044, attack: 0.006, sustain: 0.04, release: 0.18, when: 0.12 });
+    },
+
+    // Online — single soft confirmation ping
+    online() {
+      tone({ freq: 880, gain: 0.048, attack: 0.01, sustain: 0.03, release: 0.24 });
+    },
   };
 })();
 
@@ -1245,11 +1321,32 @@ function setupSettings() {
   const vadValEl   = document.getElementById('vad-threshold-val');
   const vadRow     = document.getElementById('vad-threshold-row');
   const sfxToggle  = document.getElementById('sfx-toggle');
+  const callsignInput = document.getElementById('callsign-input');
+  const callsignSave  = document.getElementById('callsign-save-btn');
 
-  // Open / close
-  btn.addEventListener('click', () => overlay.classList.add('show'));
+  // Populate callsign field on open
+  btn.addEventListener('click', () => {
+    callsignInput.value = state.myName || '';
+    overlay.classList.add('show');
+  });
   closeBtn.addEventListener('click', () => overlay.classList.remove('show'));
   overlay.addEventListener('click', e => { if (e.target === overlay) overlay.classList.remove('show'); });
+
+  // Save callsign
+  function saveCallsign() {
+    const n = callsignInput.value.trim().slice(0, 20);
+    if (!n) { callsignInput.focus(); return; }
+    if (n === state.myName) { overlay.classList.remove('show'); return; }
+    const ch = state.currentChannel;
+    if (ch) leaveChannel();
+    state.myName = n;
+    localStorage.setItem('chirp_name', n);
+    if (ch) joinChannel(ch);
+    overlay.classList.remove('show');
+    toast(`Callsign: ${state.myName}`, 'green');
+  }
+  callsignSave.addEventListener('click', saveCallsign);
+  callsignInput.addEventListener('keydown', e => { if (e.key === 'Enter') saveCallsign(); });
 
   // VAD toggle — disabled by default
   vadToggle.checked = false;
@@ -1328,10 +1425,11 @@ function setupChannelCreate() {
 
 function addChannel(ch) {
   if (liveChannels.has(ch)) return;
-  liveChannels.add(ch);
+  safeAddChannel(ch);
+  if (!liveChannels.has(ch)) return; // was blocked
   renderChannels();
   broadcastAll({ type: 'channel-announce', channel: ch });
-  lobbyAnnounce();
+  lobbyAnnounce(ch);
 }
 
 function renderChannels(filter) {
@@ -1558,12 +1656,13 @@ function connectToLobby() {
   conn.on('data', data => {
     if (data.type === 'lobby-registry') {
       state.lobbyRegistry = data.registry || {};
-      (data.channels || []).forEach(ch => liveChannels.add(ch));
+      (data.channels || []).forEach(ch => safeAddChannel(ch));
       renderChannels(); syncChannelPeers();
     }
     if (data.type === 'lobby-update') {
       if (data.registry) { state.lobbyRegistry = data.registry; renderChannels(); syncChannelPeers(); }
-      if (data.channel)  { liveChannels.add(data.channel); renderChannels(); }
+      if (data.channel)  { safeAddChannel(data.channel); renderChannels(); }
+      if (data.channels) { data.channels.forEach(ch => safeAddChannel(ch)); renderChannels(); }
     }
   });
   conn.on('close', () => { state.lobbyConn = null; setTimeout(() => { if (!state.isLobbyHost) tryBecomeLobbyHost(); }, 500 + Math.random() * 1000); });
@@ -1584,14 +1683,15 @@ function tryBecomeLobbyHost() {
       conn.on('data', data => {
         if (data.type === 'lobby-hello') {
           state.lobbyRegistry[data.id] = { name: data.name, channel: data.channel || null };
-          (data.channels || []).forEach(ch => liveChannels.add(ch));
-          lobbyBroadcast({ type: 'lobby-update', registry: state.lobbyRegistry });
+          (data.channels || []).forEach(ch => safeAddChannel(ch));
+          lobbyBroadcast({ type: 'lobby-update', registry: state.lobbyRegistry, channels: [...liveChannels] });
           renderChannels();
         }
         if (data.type === 'lobby-announce') {
           state.lobbyRegistry[data.id] = { name: data.name, channel: data.channel || null };
-          if (data.newChannel) liveChannels.add(data.newChannel);
-          lobbyBroadcast({ type: 'lobby-update', registry: state.lobbyRegistry, channel: data.newChannel || null });
+          (data.channels || []).forEach(ch => safeAddChannel(ch));
+          if (data.newChannel) safeAddChannel(data.newChannel);
+          lobbyBroadcast({ type: 'lobby-update', registry: state.lobbyRegistry, channel: data.newChannel || null, channels: [...liveChannels] });
           renderChannels();
         }
       });
@@ -1614,11 +1714,12 @@ function lobbyBroadcast(data) {
   });
 }
 
-function lobbyAnnounce() {
-  const msg = { type: 'lobby-announce', id: state.myId, name: state.myName, channel: state.currentChannel, channels: [...liveChannels] };
+function lobbyAnnounce(newChannel) {
+  const msg = { type: 'lobby-announce', id: state.myId, name: state.myName, channel: state.currentChannel, newChannel: newChannel || null, channels: [...liveChannels] };
   if (state.isLobbyHost) {
     state.lobbyRegistry[state.myId] = { name: state.myName, channel: state.currentChannel };
-    lobbyBroadcast({ type: 'lobby-update', registry: state.lobbyRegistry });
+    if (newChannel) safeAddChannel(newChannel);
+    lobbyBroadcast({ type: 'lobby-update', registry: state.lobbyRegistry, channel: newChannel || null, channels: [...liveChannels] });
     renderChannels();
   } else if (state.lobbyConn?.open) {
     try { state.lobbyConn.send(msg); } catch {}
@@ -1687,7 +1788,7 @@ function handleData(peerId, data) {
         state.connections[peerId].channel  = data.channel;
         state.connections[peerId].joinTime = data.joinTime || Date.now();
       }
-      if (Array.isArray(data.channels)) data.channels.forEach(ch => liveChannels.add(ch));
+      if (Array.isArray(data.channels)) data.channels.forEach(ch => safeAddChannel(ch));
       if (data.channel === state.currentChannel) SFX.peerJoin();
       renderMembers(); renderChannels();
       {
@@ -1705,7 +1806,7 @@ function handleData(peerId, data) {
       break;
 
     case 'channel-announce':
-      liveChannels.add(data.channel); renderChannels();
+      safeAddChannel(data.channel); renderChannels();
       break;
 
     case 'talking':
@@ -1777,7 +1878,7 @@ async function joinChannel(ch) {
 
   state.currentChannel = ch;
   state.myJoinTime = Date.now();
-  liveChannels.add(ch);
+  safeAddChannel(ch);
 
   document.getElementById('channel-name-display').textContent = ch;
   document.getElementById('no-channel').style.display  = 'none';
@@ -1950,31 +2051,52 @@ function startVAD() {
   stopVAD();
 
   try {
-    state.vadCtx = new AudioContext();
+    state.vadCtx = new (window.AudioContext || window.webkitAudioContext)();
+    // Resume immediately — may be suspended on mobile until user interaction
+    if (state.vadCtx.state === 'suspended') state.vadCtx.resume();
+
     const src = state.vadCtx.createMediaStreamSource(state.localStream);
     state.vadAnalyser = state.vadCtx.createAnalyser();
-    state.vadAnalyser.fftSize = 256;
+    state.vadAnalyser.fftSize = 512;
+    state.vadAnalyser.smoothingTimeConstant = 0.5;
     src.connect(state.vadAnalyser);
 
-    const data = new Uint8Array(state.vadAnalyser.frequencyBinCount);
+    // Focus on speech frequencies (85Hz–3400Hz)
+    const sampleRate  = state.vadCtx.sampleRate;
+    const binCount    = state.vadAnalyser.frequencyBinCount; // 256
+    const hzPerBin    = sampleRate / (state.vadAnalyser.fftSize);
+    const speechLow   = Math.floor(85  / hzPerBin);
+    const speechHigh  = Math.min(Math.floor(3400 / hzPerBin), binCount - 1);
 
-    document.getElementById('tx-pill').classList.add('vad-listening');
-    document.getElementById('tx-label').textContent = 'listening';
-    document.getElementById('ptt-btn').classList.add('vad-mode');
+    const data = new Uint8Array(binCount);
+
+    document.getElementById('tx-pill')?.classList.add('vad-listening');
+    const txLabel = document.getElementById('tx-label');
+    if (txLabel) txLabel.textContent = 'listening';
+    document.getElementById('ptt-btn')?.classList.add('vad-mode');
 
     let silenceTimer = null;
-    const SILENCE_DELAY = 600; // ms after going quiet before stopping TX
+    const SILENCE_DELAY = 700; // ms of quiet before stopping TX
 
     function vadLoop() {
-      if (!state.vadEnabled) { stopVAD(); return; }
+      if (!state.vadEnabled || !state.vadAnalyser) { stopVAD(); return; }
+
+      // Resume if browser suspended context
+      if (state.vadCtx && state.vadCtx.state === 'suspended') { state.vadCtx.resume(); }
+
       state.vadAnimId = requestAnimationFrame(vadLoop);
       state.vadAnalyser.getByteFrequencyData(data);
 
-      const avg = data.reduce((s,v) => s+v,0) / data.length;
-      // Map threshold 0-100 to volume level 0-40 (practical range)
-      const thr = (state.vadThreshold / 100) * 40;
+      // RMS of speech-band only
+      let sum = 0;
+      const speechBins = speechHigh - speechLow + 1;
+      for (let i = speechLow; i <= speechHigh; i++) sum += data[i] * data[i];
+      const rms = Math.sqrt(sum / speechBins);
 
-      if (avg > thr) {
+      // Map threshold slider (0-100) → RMS range (4-60)
+      const thr = 4 + (state.vadThreshold / 100) * 56;
+
+      if (rms > thr) {
         clearTimeout(silenceTimer); silenceTimer = null;
         if (!state.isTalking && !state.isMuted) startTalking();
       } else if (state.isTalking) {
@@ -1982,7 +2104,7 @@ function startVAD() {
       }
     }
     vadLoop();
-  } catch {}
+  } catch(e) { console.warn('VAD failed:', e); }
 }
 
 function stopVAD() {
