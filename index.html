@@ -562,6 +562,118 @@ header {
 ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--accent-dim); }
 
+/* ─── HOVER MICRO-INTERACTIONS ───────────────────────── */
+
+/* Channel items: slide-in accent bar + name brightens */
+.channel-item { transition: background 0.15s, padding-left 0.15s; }
+.channel-item:not(.active):hover { background: rgba(255,255,255,0.03); padding-left: 18px; }
+.channel-item:not(.active):hover .ch-name { color: var(--text); }
+.channel-item:not(.active):hover .ch-hash { color: var(--text-dim); }
+
+/* Member items: subtle row highlight */
+.member-item:hover { background: rgba(124,106,255,0.04); }
+.member-item:hover .member-avatar { border-color: var(--accent-dim); }
+.member-item:hover .member-name { color: var(--text); }
+
+/* PTT button: glow ripple on hover (before active) */
+#ptt-btn::before {
+  content: '';
+  position: absolute; inset: -4px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(124,106,255,0.06) 0%, transparent 70%);
+  opacity: 0; transition: opacity 0.3s;
+  pointer-events: none;
+}
+#ptt-btn:hover::before { opacity: 1; }
+#ptt-btn:hover .ptt-label { color: var(--text-mid); }
+#ptt-btn:hover .ptt-icon-wrap svg rect,
+#ptt-btn:hover .ptt-icon-wrap svg path,
+#ptt-btn:hover .ptt-icon-wrap svg line { opacity: 1; }
+
+/* Header buttons: lift effect */
+.btn-ghost { transition: border-color 0.18s, color 0.18s, background 0.18s, transform 0.12s, box-shadow 0.18s; }
+.btn-ghost:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+.btn-ghost:active { transform: translateY(0); box-shadow: none; }
+
+/* Connection pill: tooltip on hover */
+.conn-pill { position: relative; cursor: default; }
+.conn-pill::after {
+  content: attr(data-tip);
+  position: absolute; top: calc(100% + 6px); left: 50%;
+  transform: translateX(-50%) translateY(-4px);
+  background: var(--bg4); border: 1px solid var(--border2);
+  border-radius: 4px; padding: 4px 8px;
+  font-size: 0.55rem; color: var(--text-dim); white-space: nowrap;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.15s, transform 0.15s; z-index: 100;
+}
+.conn-pill:hover::after { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* Channel count: animate on change */
+.ch-count { transition: background 0.3s, color 0.3s; }
+.ch-count.bump { animation: countBump 0.35s ease; }
+@keyframes countBump {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.4); }
+  100% { transform: scale(1); }
+}
+
+/* Channel create input: glow on focus */
+.ch-create-input:focus { box-shadow: 0 0 0 2px var(--accent-glow); }
+
+/* Mute btn hover */
+#mute-btn:hover .mute-dot { animation: pulse-dot 0.6s ease infinite; }
+
+/* Join toast: entrance animation */
+#join-toast.show { animation: slideUp 0.25s cubic-bezier(0.34,1.56,0.64,1); }
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(16px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Accept/deny buttons: scale on hover */
+.btn-accept, .btn-deny { transition: opacity 0.15s, transform 0.12s; }
+.btn-accept:hover, .btn-deny:hover { transform: scale(1.02); }
+.btn-accept:active, .btn-deny:active { transform: scale(0.98); }
+
+/* Member avatar: initial color per letter */
+.member-avatar[data-letter="a"],.member-avatar[data-letter="b"] { background: rgba(124,106,255,0.15); }
+.member-avatar[data-letter="c"],.member-avatar[data-letter="d"] { background: rgba(34,211,165,0.12); }
+.member-avatar[data-letter="e"],.member-avatar[data-letter="f"] { background: rgba(248,113,113,0.12); }
+
+/* Waveform canvas: subtle shadow when active */
+#waveform-canvas.active { filter: drop-shadow(0 0 8px rgba(124,106,255,0.3)); }
+
+/* Sidebar header hover state */
+.sidebar-header { transition: color 0.2s; }
+
+/* Smooth border glow on tx pill transition */
+.tx-pill { transition: border-color 0.25s, color 0.25s, background 0.25s, box-shadow 0.25s; }
+.tx-pill.transmitting { box-shadow: 0 0 12px rgba(34,211,165,0.15); }
+
+/* Channel bar: subtle bottom shadow when in channel */
+.channel-bar { transition: box-shadow 0.3s; }
+.channel-bar.in-channel { box-shadow: 0 1px 0 var(--border), 0 4px 12px rgba(0,0,0,0.2); }
+
+/* No-channel icon: breathe animation */
+#no-channel svg { animation: breathe 4s ease-in-out infinite; }
+@keyframes breathe {
+  0%, 100% { opacity: 0.15; transform: scale(1); }
+  50%       { opacity: 0.22; transform: scale(1.04); }
+}
+
+/* PTT hint kbd: subtle flicker on keypress of space */
+.ptt-hint kbd { transition: background 0.1s, border-color 0.1s; }
+.ptt-hint kbd.pressed { background: var(--accent-dim); border-color: var(--accent); color: var(--text); }
+
+/* Ping chip: fade in */
+.ping-chip { transition: color 0.4s, border-color 0.4s, opacity 0.4s; animation: fadeIn 0.3s ease; }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+/* Online dot: gentle pulse when online */
+.conn-pill.online .dot { animation: pulse-dot 2.5s ease-in-out infinite; }
+
+
 /* ─── PING INDICATOR ──────────────────────────────────── */
 .ping-chip {
   font-family: var(--mono); font-size: 0.58rem; color: var(--text-dim);
@@ -738,6 +850,25 @@ header {
 
 <!-- ─── PeerJS ──────────────────────────────────────────── -->
 <script>
+/* setConnUI defined early so the PeerJS loader IIFE can call it safely */
+var _pendingConnUI = null;
+function setConnUI(st, text) {
+  const pill = document.getElementById('conn-pill');
+  const span = document.getElementById('conn-text');
+  if (!pill || !span) { _pendingConnUI = [st, text]; return; }
+  _pendingConnUI = null;
+  pill.className = 'conn-pill' + (st === 'online' ? ' online' : st === 'error' ? ' error' : '');
+  span.textContent = text;
+  if (typeof BROKERS !== 'undefined' && typeof brokerIdx !== 'undefined') {
+    if (st === 'online') {
+      pill.setAttribute('data-tip', BROKERS[brokerIdx % BROKERS.length].host);
+    } else {
+      pill.setAttribute('data-tip', st === 'error' ? 'check your network' : 'finding server…');
+    }
+  }
+}
+</script>
+<script>
 (function() {
   const cdns = [
     'https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js',
@@ -759,42 +890,58 @@ header {
 
 <script>
 /* ══════════════════════════════════════════
-   CONFIG
+   ALL TOP-LEVEL DECLARATIONS FIRST
+   (no const/let used before declaration —
+   fixes temporal dead zone crash)
 ══════════════════════════════════════════ */
-const CONFIG = {
-  appName:     'Chirp',
-  joinTimeout: 20,
-};
 
-/* ══════════════════════════════════════════
-   STATE
-══════════════════════════════════════════ */
+const CONFIG = { appName: 'Chirp', joinTimeout: 20 };
+
+// Channels — declared before anything calls renderChannels()
+const liveChannels = new Set(['general', 'ops', 'lounge']);
+
+// PeerJS broker list — declared before initPeer()
+// Only 0.peerjs.com is the real PeerJS cloud server.
+// 1.peerjs.com does NOT exist — having it as a fallback caused an
+// infinite timeout loop where every other attempt would hang forever.
+const BROKERS = [
+  { host: '0.peerjs.com', port: 443, path: '/', secure: true },
+];
+let brokerIdx = 0;
+
 const state = {
-  myId:             null,
-  myName:           null,
-  peer:             null,
-  currentChannel:   null,
-  connections:      {},   // peerId → { conn, name, talking, joinTime, volume }
-  localStream:      null,
-  audioTrack:       null,
-  calls:            {},
-  inboundCalls:     {},
-  isTalking:        false,
-  isMuted:          false,
-  wakeLock:         null,
-  hostPeer:         null,
-  isHost:           false,
-  pendingJoin:      null,
-  joinRequestConn:  null,
-  joinTimeout:      null,
-  myJoinTime:       null,
-  reconnectAttempts: 0,
-  pingInterval:     null,
-  pingTimes:        {},
+  myId: null, myName: null, peer: null,
+  currentChannel: null,
+  connections: {}, localStream: null, audioTrack: null,
+  calls: {}, inboundCalls: {},
+  isTalking: false, isMuted: false, wakeLock: null,
+  hostPeer: null, isHost: false,
+  pendingJoin: null, joinRequestConn: null, joinTimeout: null,
+  myJoinTime: null, reconnectAttempts: 0,
+  pingInterval: null, pingTimes: {},
 };
 
 /* ══════════════════════════════════════════
-   ONBOARDING
+   HELPERS (used by onboarding IIFE below)
+══════════════════════════════════════════ */
+function loadOrCreate(key, factory) {
+  let v = localStorage.getItem(key);
+  if (!v) { v = factory(); localStorage.setItem(key, v); }
+  return v;
+}
+
+let toastTimer;
+function toast(msg, type = '') {
+  const el = document.getElementById('toast');
+  if (!el) return;
+  el.textContent = msg;
+  el.className = `show${type ? ' ' + type : ''}`;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.className = type; }, 3500);
+}
+
+/* ══════════════════════════════════════════
+   ONBOARDING — runs after all declarations
 ══════════════════════════════════════════ */
 (function init() {
   state.myId   = loadOrCreate('chirp_peer_id', () => crypto.randomUUID().replace(/-/g,'').slice(0,16));
@@ -815,12 +962,6 @@ const state = {
     startApp();
   }
 })();
-
-function loadOrCreate(key, factory) {
-  let v = localStorage.getItem(key);
-  if (!v) { v = factory(); localStorage.setItem(key, v); }
-  return v;
-}
 
 /* ══════════════════════════════════════════
    START APP
@@ -849,11 +990,6 @@ function startApp() {
 
   document.getElementById('waiting-cancel-btn').addEventListener('click', cancelJoinRequest);
 }
-
-/* ══════════════════════════════════════════
-   CHANNELS
-══════════════════════════════════════════ */
-const liveChannels = new Set(['general', 'ops', 'lounge']);
 
 function setupChannelCreate() {
   const input = document.getElementById('new-ch-input');
@@ -894,15 +1030,19 @@ function renderChannels() {
 /* ══════════════════════════════════════════
    PEER JS — ROBUST INIT
 ══════════════════════════════════════════ */
-function makePeerConfig() {
-  // Use PeerJS's own cloud broker — most reliable option
+function makePeerConfig(brokerOverride) {
+  const broker = brokerOverride || BROKERS[brokerIdx % BROKERS.length];
   return {
-    // No host/port/path = uses peerjs.com cloud (most reliable)
-    debug: 0,
+    host:   broker.host,
+    port:   broker.port,
+    path:   broker.path,
+    secure: broker.secure,
+    debug:  0,
     config: {
       iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
         { urls: 'stun:stun1.l.google.com:19302' },
+        { urls: 'stun:stun2.l.google.com:19302' },
         { urls: 'stun:global.stun.twilio.com:3478' },
       ]
     }
@@ -913,47 +1053,67 @@ function initPeer() {
   if (typeof Peer === 'undefined') { setTimeout(initPeer, 200); return; }
 
   setConnUI('connecting', 'connecting');
-  try {
-    state.peer = new Peer(state.myId, makePeerConfig());
-  } catch(e) {
-    state.peer = new Peer(undefined, makePeerConfig());
-  }
+
+  // Clean up old peer
+  if (state.peer) { try { state.peer.destroy(); } catch {} state.peer = null; }
+
+  const cfg = makePeerConfig();
+  console.log('Connecting to broker:', cfg.host);
+
+  try { state.peer = new Peer(state.myId, cfg); }
+  catch(e) { state.peer = new Peer(undefined, cfg); }
+
+  // Hard timeout: if no 'open' in 15s, retry (peerjs.com can be slow on cold start)
+  const connectTimeout = setTimeout(() => {
+    if (state.peer && !state.peer.open) {
+      console.warn('Broker timed out, retrying…');
+      // don't increment brokerIdx -- only one real broker exists
+      try { state.peer.destroy(); } catch {}
+      state.peer = null;
+      scheduleReconnect();
+    }
+  }, 15000);
 
   state.peer.on('open', id => {
+    clearTimeout(connectTimeout);
     state.myId = id;
-    state.reconnectAttempts = 0;
+    state.reconnectAttempts = 0; // reset so future disconnects get a full retry budget
+    brokerIdx = brokerIdx % BROKERS.length; // keep index sane after cycling
     setConnUI('online', 'online');
     toast(`Online as ${state.myName}`, 'green');
     startPing();
   });
 
   state.peer.on('error', err => {
+    clearTimeout(connectTimeout);
     console.warn('Peer error:', err.type, err.message);
 
     if (err.type === 'unavailable-id') {
-      // Regenerate ID and retry
       state.myId = crypto.randomUUID().replace(/-/g,'').slice(0,16);
       localStorage.setItem('chirp_peer_id', state.myId);
-      setTimeout(initPeer, 500);
+      setTimeout(initPeer, 400);
       return;
     }
-    if (err.type === 'peer-unavailable') return; // normal
+    if (err.type === 'peer-unavailable') return;
 
-    if (['network','server-error','socket-error','socket-closed'].includes(err.type)) {
+    if (['network','server-error','socket-error','socket-closed','browser-incompatible'].includes(err.type)) {
       setConnUI('connecting', 'reconnecting');
+      // don't increment brokerIdx -- only one real broker exists // try next broker on hard errors
       scheduleReconnect();
       return;
     }
 
-    console.error('Peer error:', err.type, err.message);
+    console.error('Unhandled peer error:', err.type, err.message);
   });
 
   state.peer.on('disconnected', () => {
+    clearTimeout(connectTimeout);
     setConnUI('connecting', 'reconnecting');
     scheduleReconnect();
   });
 
   state.peer.on('close', () => {
+    clearTimeout(connectTimeout);
     setConnUI('error', 'offline');
   });
 
@@ -973,14 +1133,20 @@ function initPeer() {
   });
 }
 
+const MAX_RECONNECT_ATTEMPTS = 8;
+
 function scheduleReconnect() {
-  const delay = Math.min(1000 * Math.pow(1.6, state.reconnectAttempts), 15000);
+  if (state.reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+    setConnUI('error', 'offline');
+    toast('Could not reach server — refresh to retry', 'red');
+    return;
+  }
+  const delay = Math.min(1000 * Math.pow(1.5, state.reconnectAttempts), 12000);
   state.reconnectAttempts++;
   setTimeout(() => {
-    if (state.peer && !state.peer.destroyed) {
+    if (state.peer && !state.peer.destroyed && state.peer.disconnected) {
       try { state.peer.reconnect(); return; } catch {}
     }
-    // Full reinit
     try { state.peer?.destroy(); } catch {}
     state.peer = null;
     initPeer();
@@ -1098,6 +1264,7 @@ function exitChannel() {
 ══════════════════════════════════════════ */
 function connectToPeer(peerId, initiateCall, joinTime) {
   if (state.connections[peerId] || peerId === state.myId) return;
+  if (!state.peer || !state.peer.open) return; // peer not ready — skip silently
   const conn = state.peer.connect(peerId, { reliable: true });
   state.connections[peerId] = { conn, name: peerId, talking: false, joinTime: joinTime || Date.now(), volume: 1, ping: null };
   setupDataConn(conn);
@@ -1156,6 +1323,7 @@ async function joinChannel(ch) {
   document.getElementById('no-channel').style.display = 'none';
   document.getElementById('ptt-section').classList.add('visible');
   document.getElementById('mute-btn').style.display = '';
+  document.querySelector('.channel-bar')?.classList.add('in-channel');
   renderMembers();
 
   const rendezvousId = 'chirpch--' + ch;
@@ -1168,7 +1336,7 @@ async function joinChannel(ch) {
 function tryBecomeHost(ch, rendezvousId) {
   if (state.currentChannel !== ch) return;
 
-  const hp = new Peer(rendezvousId, makePeerConfig());
+  const hp = new Peer(rendezvousId, makePeerConfig(BROKERS[brokerIdx % BROKERS.length]));
 
   hp.on('open', () => {
     state.hostPeer = hp;
@@ -1201,6 +1369,11 @@ function tryBecomeHost(ch, rendezvousId) {
 
 function sendJoinRequest(ch, rendezvousId) {
   if (state.currentChannel !== ch) return;
+  if (!state.peer || !state.peer.open) {
+    // Peer not ready yet — wait and retry
+    setTimeout(() => { if (state.currentChannel === ch) sendJoinRequest(ch, rendezvousId); }, 500);
+    return;
+  }
   showWaitingOverlay();
 
   const conn = state.peer.connect(rendezvousId, { reliable: true });
@@ -1307,7 +1480,7 @@ function promoteToHost(ch) {
   if (state.isHost || !ch) return;
   state.isHost = true;
   const rendezvousId = 'chirpch--' + ch;
-  const hp = new Peer(rendezvousId, makePeerConfig());
+  const hp = new Peer(rendezvousId, makePeerConfig(BROKERS[brokerIdx % BROKERS.length]));
   hp.on('open', () => {
     state.hostPeer = hp;
     toast(`You are now host of #${ch}`, 'info');
@@ -1358,6 +1531,7 @@ async function leaveChannel() {
   document.getElementById('ptt-section').classList.remove('visible');
   document.getElementById('no-channel').style.display = '';
   document.getElementById('mute-btn').style.display = 'none';
+  document.querySelector('.channel-bar')?.classList.remove('in-channel');
   updateChannelCount();
   maybeRemoveChannel(ch);
 }
@@ -1386,7 +1560,7 @@ function broadcast(data) {
 function maybeRemoveChannel(ch) {
   if (ch && ch !== state.currentChannel && !['general','ops','lounge'].includes(ch)) {
     const countEl = document.getElementById(`count-${ch}`);
-    if (!countEl || countEl.textContent === '0') {
+    if (!countEl || parseInt(countEl.textContent, 10) === 0) {
       liveChannels.delete(ch);
       renderChannels();
     }
@@ -1405,7 +1579,7 @@ function renderMembers() {
   const selfEl = document.createElement('div');
   selfEl.className = `member-item member-self${state.isTalking ? ' talking' : ''}`;
   selfEl.innerHTML = `
-    <div class="member-avatar">${state.myName.charAt(0)}</div>
+    <div class="member-avatar" data-letter="${state.myName.charAt(0).toLowerCase()}">${state.myName.charAt(0)}</div>
     <div class="member-info">
       <div class="member-name">${state.myName} <span style="font-family:var(--mono);font-size:0.5rem;color:var(--text-dim);font-weight:400">(you)</span></div>
       ${state.isHost ? '<div class="member-sub"><span class="host-badge">host</span></div>' : ''}
@@ -1418,7 +1592,7 @@ function renderMembers() {
     el.className = `member-item${info.talking ? ' talking' : ''}`;
     const pingStr = info.ping != null ? `${info.ping}ms` : '';
     el.innerHTML = `
-      <div class="member-avatar">${info.name.charAt(0)}</div>
+      <div class="member-avatar" data-letter="${info.name.charAt(0).toLowerCase()}">${info.name.charAt(0)}</div>
       <div class="member-info">
         <div class="member-name">${info.name}</div>
         ${pingStr ? `<div class="member-sub">${pingStr}</div>` : ''}
@@ -1467,10 +1641,14 @@ function setupPTT() {
   document.addEventListener('keydown', e => {
     if (e.code === 'Space' && !spaceHeld && !e.repeat && state.currentChannel) {
       e.preventDefault(); spaceHeld = true; startTalking();
+      document.querySelector('.ptt-hint kbd')?.classList.add('pressed');
     }
   });
   document.addEventListener('keyup', e => {
-    if (e.code === 'Space') { spaceHeld = false; stopTalking(); }
+    if (e.code === 'Space') {
+      spaceHeld = false; stopTalking();
+      document.querySelector('.ptt-hint kbd')?.classList.remove('pressed');
+    }
   });
 }
 
@@ -1574,21 +1752,27 @@ function drawWaveform() {
 /* ══════════════════════════════════════════
    UI HELPERS
 ══════════════════════════════════════════ */
-function setConnUI(state, text) {
-  const pill = document.getElementById('conn-pill');
-  const span = document.getElementById('conn-text');
-  pill.className = 'conn-pill' + (state === 'online' ? ' online' : state === 'error' ? ' error' : '');
-  span.textContent = text;
-}
-
-let toastTimer;
-function toast(msg, type = '') {
-  const el = document.getElementById('toast');
-  el.textContent = msg;
-  el.className = `show${type ? ' ' + type : ''}`;
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => { el.className = type; }, 3500);
-}
+// Upgrade setConnUI now that BROKERS / brokerIdx are in scope.
+// The early stub (above the PeerJS loader) handles any calls that
+// arrive before this script tag executes.
+(function _upgradeSetConnUI() {
+  setConnUI = function(st, text) {
+    const pill = document.getElementById('conn-pill');
+    const span = document.getElementById('conn-text');
+    if (!pill || !span) return;
+    pill.className = 'conn-pill' + (st === 'online' ? ' online' : st === 'error' ? ' error' : '');
+    span.textContent = text;
+    if (st === 'online') {
+      pill.setAttribute('data-tip', BROKERS[brokerIdx % BROKERS.length].host);
+    } else {
+      pill.setAttribute('data-tip', st === 'error' ? 'check your network' : 'finding server\u2026');
+    }
+  };
+  // Replay any deferred call from the loader stub
+  if (typeof _pendingConnUI !== 'undefined' && _pendingConnUI) {
+    setConnUI(..._pendingConnUI); _pendingConnUI = null;
+  }
+})();
 
 /* ══════════════════════════════════════════
    PWA
