@@ -2103,12 +2103,57 @@ function setConnUI(st, text) {
 ═══════════════════════════════════════════ */
 const CONFIG    = { appName: 'Chirp' };
 const LOBBY_ID  = 'chirp-lobby-0001';
-const BROKERS   = [
-  { name: 'PeerJS cloud', host: '0.peerjs.com', port: 443, path: '/', secure: true, key: 'peerjs' },
-  { name: 'PeerJS default cloud' },
-];
 const PRESENCE_TTL = 45000;
 const ACTIVITY_TTL = 6000;
+
+function isPrivateNetworkHost(host) {
+  const h = String(host || '').toLowerCase();
+  return h === 'localhost' || h === '127.0.0.1' || h === '::1' ||
+    h.endsWith('.local') || /^10\./.test(h) || /^192\.168\./.test(h) ||
+    /^172\.(1[6-9]|2\d|3[0-1])\./.test(h);
+}
+
+function configuredPeerBrokers() {
+  const params = new URLSearchParams(location.search);
+  const explicitHost = params.get('peerHost') || localStorage.getItem('chirp_peer_host');
+  const explicitPort = params.get('peerPort') || localStorage.getItem('chirp_peer_port');
+  const explicitPath = params.get('peerPath') || localStorage.getItem('chirp_peer_path');
+  const secureSetting = params.get('peerSecure') || localStorage.getItem('chirp_peer_secure');
+  const secure = secureSetting == null
+    ? location.protocol === 'https:'
+    : ['1', 'true', 'yes'].includes(String(secureSetting).toLowerCase());
+  const brokers = [];
+
+  if (explicitHost) {
+    brokers.push({
+      name: 'Custom Chirp server',
+      host: explicitHost,
+      port: Number(explicitPort || (secure ? 443 : 80)),
+      path: explicitPath || '/peerjs',
+      secure,
+      key: 'peerjs',
+    });
+  }
+
+  if (/^https?:$/.test(location.protocol) && location.hostname) {
+    brokers.push({
+      name: isPrivateNetworkHost(location.hostname) ? 'Chirp local server' : 'Chirp hosted server',
+      host: location.hostname,
+      port: Number(location.port || (location.protocol === 'https:' ? 443 : 80)),
+      path: '/peerjs',
+      secure: location.protocol === 'https:',
+      key: 'peerjs',
+    });
+  }
+
+  brokers.push(
+    { name: 'PeerJS cloud', host: '0.peerjs.com', port: 443, path: '/', secure: true, key: 'peerjs' },
+    { name: 'PeerJS default cloud' },
+  );
+  return brokers;
+}
+
+const BROKERS = configuredPeerBrokers();
 
 let brokerIdx = 0;
 const liveChannels = new Set();
