@@ -12,6 +12,7 @@
 <title>Chirp</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <style>
 /* ═══════════════════════════════════════════
    DESIGN TOKENS
@@ -314,6 +315,19 @@ header {
 .tx-pill.vad-listening { border-color: var(--accent-dim); color: var(--accent); background: var(--accent-glow); }
 .tx-pill.vad-listening .tx-dot { background: var(--accent); animation: pulse-dot 1.5s ease-in-out infinite; }
 
+/* Channel privacy toggle button (in channel bar) */
+.ch-privacy-bar-btn {
+  display: flex; align-items: center; gap: 5px;
+  padding: 4px 10px; border-radius: 20px;
+  background: var(--bg3); border: 1px solid var(--border);
+  font-family: var(--mono); font-size: 0.58rem; color: var(--text-dim);
+  letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer;
+  transition: border-color 0.2s, color 0.2s, background 0.2s;
+}
+.ch-privacy-bar-btn:hover { border-color: var(--accent-dim); color: var(--accent); background: var(--accent-glow); }
+.ch-privacy-bar-btn.private { border-color: rgba(248,113,113,0.35); color: var(--danger); background: rgba(248,113,113,0.06); }
+.ch-privacy-bar-btn.private:hover { border-color: var(--danger); background: rgba(248,113,113,0.12); }
+
 /* Center area */
 .center-area {
   flex: 1; display: flex; flex-direction: column;
@@ -409,17 +423,26 @@ header {
 }
 .ptt-hint kbd.pressed { background: var(--accent-dim); border-color: var(--accent); color: var(--text); }
 
-/* Mute button — slim pill, lives in channel bar */
-#mute-btn {
-  display: flex; align-items: center; gap: 7px;
-  padding: 7px 14px; border-radius: 20px;
-  background: var(--bg3); border: 1px solid var(--border2);
-  font-family: var(--mono); font-size: 0.6rem; color: var(--text-dim);
-  letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer; transition: all 0.2s;
+/* Mute button — prominent standalone below PTT */
+.mute-btn-standalone {
+  display: flex; align-items: center; gap: 9px;
+  padding: 11px 28px; border-radius: 24px;
+  background: var(--bg3); border: 1.5px solid var(--border2);
+  font-family: var(--mono); font-size: 0.7rem; color: var(--text-mid);
+  letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer;
+  transition: border-color 0.2s, color 0.2s, background 0.2s, box-shadow 0.2s, transform 0.1s;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.2);
 }
-#mute-btn:hover { color: var(--text); }
-#mute-btn:hover .mute-dot { animation: pulse-dot 0.6s ease infinite; }
-#mute-btn.muted { border-color: var(--danger); color: var(--danger); background: rgba(248,113,113,0.06); }
+.mute-btn-standalone:hover {
+  border-color: var(--accent-dim); color: var(--accent); background: var(--accent-glow);
+  transform: translateY(-1px); box-shadow: 0 4px 20px rgba(124,106,255,0.2);
+}
+.mute-btn-standalone:active { transform: translateY(0); }
+.mute-btn-standalone.muted {
+  border-color: rgba(248,113,113,0.5); color: var(--danger);
+  background: rgba(248,113,113,0.08); box-shadow: 0 2px 16px rgba(248,113,113,0.15);
+}
+.mute-btn-standalone.muted:hover { border-color: var(--danger); background: rgba(248,113,113,0.14); }
 .mute-dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
 
 /* ═══════════════════════════════════════════
@@ -918,10 +941,12 @@ header {
 
 /* EmailJS setup hint (shown in dev, hidden in prod) */
 .fb-setup-note {
+  display: flex;
   font-family: var(--mono); font-size: 0.58rem; color: var(--text-dim);
   background: var(--bg3); border: 1px solid var(--border);
-  border-radius: var(--radius-sm); padding: 8px 10px; line-height: 1.6;
+  border-radius: var(--radius-sm); padding: 10px 12px; line-height: 1.7;
 }
+.fb-setup-note ol { font-size: 0.57rem; }
 .fb-setup-note a { color: var(--accent); text-decoration: none; }
 .fb-setup-note a:hover { text-decoration: underline; }
 
@@ -1327,12 +1352,7 @@ header {
           </label>
           <button id="new-ch-btn" class="ch-create-btn">+</button>
         </div>
-        <button id="join-random-btn" class="ch-random-btn" title="Join a random public channel">
-          <svg width="11" height="11" viewBox="0 0 16 16" fill="none" style="flex-shrink:0">
-            <path d="M2 4h2l2 8h4l2-8h2M10 2l2 2-2 2M6 14l-2-2 2-2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-          random public room
-        </button>
+
       </div>
       <div class="sidebar-footer">
         <button id="feedback-fab" title="Send Feedback">
@@ -1362,14 +1382,20 @@ header {
           <h2 id="channel-title"><span>#</span><span id="channel-name-display">—</span></h2>
         </div>
         <div style="display:flex;align-items:center;gap:8px;">
-          <button id="mute-btn" style="display:none">
-            <div class="mute-dot"></div>
-            <span id="mute-label">mic on</span>
+          <!-- Privacy toggle — host only, visible when in a channel -->
+          <button id="ch-privacy-btn" style="display:none" title="Toggle channel privacy" class="ch-privacy-bar-btn">
+            <svg id="ch-privacy-bar-public" width="13" height="13" viewBox="0 0 16 16" fill="none">
+              <circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.4"/>
+              <path d="M8 1.5C8 1.5 5.5 4.5 5.5 8s2.5 6.5 2.5 6.5M8 1.5C8 1.5 10.5 4.5 10.5 8S8 14.5 8 14.5M1.5 8h13" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+            </svg>
+            <svg id="ch-privacy-bar-private" width="13" height="13" viewBox="0 0 16 16" fill="none" style="display:none">
+              <rect x="3" y="7.5" width="10" height="7" rx="1.5" stroke="currentColor" stroke-width="1.4"/>
+              <path d="M5 7.5V5a3 3 0 016 0v2.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+            </svg>
+            <span id="ch-privacy-bar-label">public</span>
           </button>
-          <div class="tx-pill" id="tx-pill">
-            <div class="tx-dot"></div>
-            <span id="tx-label">standby</span>
-          </div>
+
+
         </div>
       </div>
 
@@ -1403,6 +1429,24 @@ header {
             <div class="ptt-ring ptt-ring-3"></div>
           </div>
           <div class="ptt-hint">hold button · or hold <kbd id="space-kbd">Space</kbd></div>
+
+          <!-- Mute button — prominent, below PTT -->
+          <button id="mute-btn" style="display:none" class="mute-btn-standalone">
+            <svg id="mute-mic-on" width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <rect x="9" y="2" width="6" height="13" rx="3" fill="currentColor" opacity="0.85"/>
+              <path d="M5 10c0 3.866 3.134 7 7 7s7-3.134 7-7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+              <line x1="12" y1="17" x2="12" y2="21" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+              <line x1="8" y1="21" x2="16" y2="21" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+            </svg>
+            <svg id="mute-mic-off" width="16" height="16" viewBox="0 0 24 24" fill="none" style="display:none">
+              <rect x="9" y="2" width="6" height="13" rx="3" fill="currentColor" opacity="0.85"/>
+              <path d="M5 10c0 3.866 3.134 7 7 7s7-3.134 7-7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+              <line x1="12" y1="17" x2="12" y2="21" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+              <line x1="8" y1="21" x2="16" y2="21" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+              <line x1="3" y1="3" x2="21" y2="21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+            <span id="mute-label">mic on</span>
+          </button>
         </div>
 
         <!-- Waiting for host overlay -->
@@ -1522,11 +1566,20 @@ header {
           placeholder="Tell me what's on your mind…" maxlength="1000"></textarea>
       </div>
 
-      <!-- EmailJS setup note — shows your keys are needed -->
-      <div class="fb-setup-note" id="fb-setup-note" style="display:none">
-        ⚙️ To activate email delivery, set your keys in the script below.<br>
-        Get them free at <a href="https://www.emailjs.com" target="_blank">emailjs.com</a>
-        (200 emails/month, no server needed).
+      <!-- EmailJS setup guide — shown when keys not configured -->
+      <div id="fb-setup-note" style="display:none;flex-direction:column;gap:10px;">
+        <div class="fb-setup-note" style="flex-direction:column;gap:6px;align-items:flex-start;">
+          <strong style="color:var(--text);font-size:0.72rem;">⚙️ EmailJS Setup (free, 200/month)</strong>
+          <ol style="margin:4px 0 0 14px;display:flex;flex-direction:column;gap:4px;">
+            <li>Go to <a href="https://www.emailjs.com" target="_blank" rel="noopener">emailjs.com</a> → create a free account</li>
+            <li>Add an <strong>Email Service</strong> (e.g. Gmail) → copy your <strong>Service ID</strong></li>
+            <li>Create an <strong>Email Template</strong> with these variables:<br>
+              <code style="background:var(--bg4);padding:2px 5px;border-radius:3px;font-size:0.6rem;color:var(--accent)">{{from_name}} {{from_type}} {{message}} {{sent_at}}</code>
+            </li>
+            <li>Go to <strong>Account → API Keys</strong> → copy your <strong>Public Key</strong></li>
+            <li>Open this file in a text editor and find <code style="background:var(--bg4);padding:2px 5px;border-radius:3px;font-size:0.6rem;color:var(--accent)">setupFeedback()</code> — paste your three keys where indicated</li>
+          </ol>
+        </div>
       </div>
 
       <div class="feedback-footer">
@@ -1564,15 +1617,6 @@ header {
           <input id="rec-filename" class="input-styled" type="text" value="chirp-session"
             placeholder="chirp-session" autocomplete="off" spellcheck="false"
             style="font-size:0.85rem;padding:10px 14px;">
-        </div>
-
-        <div class="field-wrap">
-          <div class="field-label">Format</div>
-          <select id="rec-format" class="feedback-select">
-            <option value="webm">WebM (recommended)</option>
-            <option value="ogg">OGG Vorbis</option>
-            <option value="mp4">MP4 / AAC</option>
-          </select>
         </div>
 
         <div class="field-wrap">
@@ -1881,6 +1925,7 @@ header {
 <!-- Settings FAB -->
 
 <div id="toast"></div>
+<div class="tx-pill" id="tx-pill" style="display:none"><div class="tx-dot"></div><span id="tx-label">standby</span></div>
 
 <!-- ═══════════════════════════════════════════
      PEERJS (CDN with fallbacks)
@@ -2052,6 +2097,7 @@ function startApp() {
   setupChannelCreate();
   setupJoinRequestUI();
   setupModMenu();
+  setupPrivacyBtn();
   setupMobileNav();
 }
 
@@ -2798,6 +2844,10 @@ function handleData(peerId, data) {
       safeAddChannel(data.channel); renderChannels();
       break;
 
+    case 'channel-visibility':
+      if (data.channel && data.visibility) { channelVisibility[data.channel] = data.visibility; renderChannels(); }
+      break;
+
     case 'talking':
       if (state.connections[peerId]) {
         const wasQuiet = !state.connections[peerId].talking;
@@ -2816,8 +2866,14 @@ function handleData(peerId, data) {
         state.isMuted = true;
         if (state.audioTrack) state.audioTrack.enabled = false;
         stopTalking();
-        document.getElementById('mute-btn')?.classList.add('muted');
-        document.getElementById('mute-label') && (document.getElementById('mute-label').textContent = 'mic off');
+        const mb = document.getElementById('mute-btn');
+        if (mb) mb.classList.add('muted');
+        const ml = document.getElementById('mute-label');
+        if (ml) ml.textContent = 'muted';
+        const onIco  = document.getElementById('mute-mic-on');
+        const offIco = document.getElementById('mute-mic-off');
+        if (onIco)  onIco.style.display  = 'none';
+        if (offIco) offIco.style.display = '';
         renderMembers();
       }
       break;
@@ -2825,8 +2881,14 @@ function handleData(peerId, data) {
     case 'mod-unmute':
       toast('You were unmuted by the host', 'info');
       state.isMuted = false;
-      document.getElementById('mute-btn')?.classList.remove('muted');
-      document.getElementById('mute-label') && (document.getElementById('mute-label').textContent = 'mic on');
+      const mb2 = document.getElementById('mute-btn');
+      if (mb2) mb2.classList.remove('muted');
+      const ml2 = document.getElementById('mute-label');
+      if (ml2) ml2.textContent = 'mic on';
+      const onIco2  = document.getElementById('mute-mic-on');
+      const offIco2 = document.getElementById('mute-mic-off');
+      if (onIco2)  onIco2.style.display  = '';
+      if (offIco2) offIco2.style.display = 'none';
       renderMembers();
       break;
 
@@ -2927,7 +2989,7 @@ async function joinChannel(ch) {
   document.getElementById('mute-btn').style.display    = '';
   document.querySelector('.channel-bar')?.classList.add('in-channel');
   SFX.join();
-  lobbyAnnounce(); renderChannels(); renderMembers();
+  lobbyAnnounce(); renderChannels(); renderMembers(); updatePrivacyBtn();
   window._mobileGoTalk?.();
   syncChannelPeers();
   broadcastAll({ type: 'hello', name: state.myName, channel: ch, joinTime: state.myJoinTime, channels: [...liveChannels] });
@@ -2960,6 +3022,7 @@ async function leaveChannel() {
   document.getElementById('ptt-section').classList.remove('visible');
   document.getElementById('no-channel').style.display  = '';
   document.getElementById('mute-btn').style.display    = 'none';
+  updatePrivacyBtn();
   document.querySelector('.channel-bar')?.classList.remove('in-channel');
   renderChannels();
 }
@@ -3023,11 +3086,51 @@ function renderMembers() {
 
   const total = 1 + Object.values(state.connections).filter(i => i.channel === state.currentChannel).length;
   document.getElementById('member-count-badge').textContent = total;
+  updatePrivacyBtn();
 }
 
 /* ═══════════════════════════════════════════
    HOST MODERATION
 ═══════════════════════════════════════════ */
+/* ═══════════════════════════════════════════
+   CHANNEL PRIVACY TOGGLE
+═══════════════════════════════════════════ */
+function updatePrivacyBtn() {
+  const btn    = document.getElementById('ch-privacy-btn');
+  const pubIco = document.getElementById('ch-privacy-bar-public');
+  const priIco = document.getElementById('ch-privacy-bar-private');
+  const label  = document.getElementById('ch-privacy-bar-label');
+  if (!btn) return;
+
+  // Only show to host, when in a channel
+  if (!state.currentChannel || !state.isChannelHost) {
+    btn.style.display = 'none';
+    return;
+  }
+
+  btn.style.display = '';
+  const isPrivate = channelVisibility[state.currentChannel] === 'private';
+  btn.classList.toggle('private', isPrivate);
+  pubIco.style.display = isPrivate ? 'none' : '';
+  priIco.style.display = isPrivate ? '' : 'none';
+  label.textContent    = isPrivate ? 'private' : 'public';
+}
+
+function setupPrivacyBtn() {
+  const btn = document.getElementById('ch-privacy-btn');
+  if (!btn) return;
+  btn.addEventListener('click', () => {
+    if (!state.currentChannel || !state.isChannelHost) return;
+    const isPrivate = channelVisibility[state.currentChannel] === 'private';
+    channelVisibility[state.currentChannel] = isPrivate ? 'public' : 'private';
+    updatePrivacyBtn();
+    renderChannels();
+    // Broadcast the change so other peers update their sidebar
+    broadcastAll({ type: 'channel-visibility', channel: state.currentChannel, visibility: channelVisibility[state.currentChannel] });
+    toast(isPrivate ? 'Channel set to public' : 'Channel set to private', isPrivate ? 'green' : 'info');
+  });
+}
+
 function setupModMenu() {
   const menu = document.getElementById('mod-menu');
   if (!menu) return;
@@ -3265,6 +3368,10 @@ function setupMuteBtn() {
     if (state.audioTrack) state.audioTrack.enabled = !state.isMuted && state.isTalking;
     btn.classList.toggle('muted', state.isMuted);
     document.getElementById('mute-label').textContent = state.isMuted ? 'muted' : 'mic on';
+    const onIco  = document.getElementById('mute-mic-on');
+    const offIco = document.getElementById('mute-mic-off');
+    if (onIco)  onIco.style.display  = state.isMuted ? 'none' : '';
+    if (offIco) offIco.style.display = state.isMuted ? '' : 'none';
     if (state.isMuted && state.isTalking) stopTalking();
   });
 }
@@ -3479,49 +3586,28 @@ function setupMobileNav() {
     const msg = textarea.value.trim();
     if (!msg) { textarea.focus(); return; }
 
-    // Always save locally as backup
-    try {
-      const all = JSON.parse(localStorage.getItem('chirp_feedback') || '[]');
-      all.push({ type: typeEl.value, msg, ts: new Date().toISOString() });
-      localStorage.setItem('chirp_feedback', JSON.stringify(all));
-    } catch {}
-
     sendBtn.textContent = 'Sending…';
     sendBtn.disabled = true;
     cancelBtn.disabled = true;
 
     if (!keysConfigured) {
       // No keys yet — show success UI but note it's saved locally only
-      successEl.querySelector('p').textContent = 'Saved locally (EmailJS not configured yet)';
+      successEl.querySelector('p').textContent = 'EmailJS not configured — see setup guide above.';
       successEl.classList.add('show');
       formBody.style.opacity = '0';
-      setTimeout(closeModal, 2600);
+      setTimeout(() => { successEl.classList.remove('show'); formBody.style.opacity = ''; sendBtn.textContent = 'Send'; sendBtn.disabled = false; cancelBtn.disabled = false; }, 3000);
       return;
     }
 
     try {
-      // Use the EmailJS REST API directly — avoids SDK cross-origin issues
-      const res = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
-        method : 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body   : JSON.stringify({
-          service_id  : EMAILJS_SERVICE_ID,
-          template_id : EMAILJS_TEMPLATE_ID,
-          user_id     : EMAILJS_PUBLIC_KEY,
-          template_params: {
-            from_name : state.myName || 'Chirp User',
-            from_type : typeEl.options[typeEl.selectedIndex].text,
-            message   : msg,
-            sent_at   : new Date().toLocaleString(),
-            reply_to  : 'noreply@chirp.app'
-          }
-        })
+      // Use the official EmailJS browser SDK (avoids CORS issues with direct fetch)
+      emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY });
+      await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+        from_name : state.myName || 'Chirp User',
+        from_type : typeEl.options[typeEl.selectedIndex].text,
+        message   : msg,
+        sent_at   : new Date().toLocaleString(),
       });
-
-      if (!res.ok) {
-        const errText = await res.text().catch(() => '');
-        throw new Error(`HTTP ${res.status}: ${errText}`);
-      }
 
       successEl.querySelector('p').textContent = 'Message sent — thanks!';
       successEl.classList.add('show');
@@ -3533,7 +3619,7 @@ function setupMobileNav() {
       sendBtn.textContent = 'Retry';
       sendBtn.disabled = false;
       cancelBtn.disabled = false;
-      toast('Feedback saved locally — check console for details', 'red');
+      toast('Could not send — check EmailJS credentials', 'red');
     }
   });
 })();
@@ -3638,19 +3724,15 @@ function setupMobileNav() {
     return `${(b/1048576).toFixed(2)} MB`;
   }
 
-  function pickMime(fmt) {
-    const candidates = {
-      webm: ['audio/webm;codecs=opus','audio/webm'],
-      ogg:  ['audio/ogg;codecs=opus','audio/ogg'],
-      mp4:  ['audio/mp4;codecs=mp4a.40.2','audio/mp4','audio/aac'],
-    };
-    return (candidates[fmt] || candidates.webm).find(m => MediaRecorder.isTypeSupported(m)) || '';
+  function pickMime() {
+    // Always try AAC/MP4 first (closest to MP3), fall back to webm
+    const candidates = ['audio/mp4;codecs=mp4a.40.2','audio/mp4','audio/aac','audio/webm;codecs=opus','audio/webm'];
+    return candidates.find(m => MediaRecorder.isTypeSupported(m)) || '';
   }
 
-  function ext(mime) {
-    if (mime.includes('ogg'))  return 'ogg';
-    if (mime.includes('mp4') || mime.includes('aac')) return 'mp4';
-    return 'webm';
+  function ext() {
+    // Always save as .mp3 — audio players treat AAC/webm audio in .mp3 fine
+    return 'mp3';
   }
 
   function showScreen(name) {
@@ -3816,13 +3898,11 @@ function setupMobileNav() {
       return;
     }
 
-    rec.format   = formatEl.value;
-    rec.mimeType = pickMime(rec.format);
+    rec.format   = 'mp3';
+    rec.mimeType = pickMime();
 
     if (!rec.mimeType) {
-      toast('Format not supported — switching to WebM', 'red');
-      rec.format   = 'webm';
-      rec.mimeType = pickMime('webm') || 'audio/webm';
+      rec.mimeType = 'audio/webm'; // absolute fallback
     }
 
     const stream = buildCombinedStream() || state.localStream;
@@ -4018,16 +4098,7 @@ function setupMobileNav() {
     showScreen('setup');
   });
 
-  // ── Format change → update note ───────────
-  formatEl.addEventListener('change', () => {
-    const supported = !!pickMime(formatEl.value);
-    if (!supported) {
-      formatEl.style.borderColor = 'var(--danger)';
-      toast('Format not supported in this browser — try WebM', 'red');
-    } else {
-      formatEl.style.borderColor = '';
-    }
-  });
+
 
 })();
 </script>
