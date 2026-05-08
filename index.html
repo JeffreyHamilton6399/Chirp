@@ -2145,7 +2145,7 @@ function safeAddChannel(ch) {
 const state = {
   myId: null, myName: null, peer: null,
   currentChannel: null,
-  connections: {},    // peerId -> { conn, name, channel, talking, ping, joinTime, volume }
+  connections: {},    // peerId -> { conn, incoming, name, channel, talking, ping, joinTime, volume }
   lobbyConn: null,
   lobbyPeer: null,
   isLobbyHost: false,
@@ -2174,6 +2174,7 @@ function makePeerInfo(conn, opts = {}) {
   const peerId = opts.peerId || conn?.peer || '';
   return {
     conn,
+    incoming: Boolean(opts.incoming),
     name: opts.name || peerId,
     channel: opts.channel ?? null,
     talking: false,
@@ -2181,6 +2182,17 @@ function makePeerInfo(conn, opts = {}) {
     volume: opts.volume ?? 1,
     ping: null,
   };
+}
+
+function isCurrentDataConn(peerId, conn) {
+  return Boolean(peerId && conn && state.connections[peerId]?.conn === conn);
+}
+
+function shouldUseNewDataConn(peerId, incoming, currentIncoming) {
+  if (currentIncoming === undefined || currentIncoming === incoming) return true;
+  if (!state.myId || !peerId) return true;
+  const preferIncoming = state.myId > peerId;
+  return incoming === preferIncoming;
 }
 
 function normalizeChannelName(value) {
@@ -3013,9 +3025,14 @@ function requestJoinChannel(ch) {
   } else {
     const conn = state.peer.connect(targetId, { reliable: true });
     state.connections[targetId] = makePeerInfo(conn, { peerId: targetId });
-    conn.on('open',  () => { conn.send({ type: 'hello', name: state.myName, channel: null, joinTime: Date.now(), channels: [...liveChannels], topics: channelTopics }); sendJoinRequest(ch, targetId, conn); });
-    conn.on('data',  data => handleData(targetId, data));
-    conn.on('error', () => { delete state.connections[targetId]; cancelPendingJoin('Could not reach channel member'); });
+    setupDataConn(conn);
+    conn.on('open', () => {
+      if (isCurrentDataConn(targetId, conn)) sendJoinRequest(ch, targetId, conn);
+    });
+    conn.on('error', () => {
+      if (isCurrentDataConn(targetId, conn)) delete state.connections[targetId];
+      cancelPendingJoin('Could not reach channel member');
+    });
   }
 }
 
@@ -3153,7 +3170,7 @@ function initPeer() {
 
   state.peer.on('disconnected', () => { clearTimeout(connectTimeout); setConnUI('connecting', 'reconnecting'); scheduleReconnect(); });
   state.peer.on('close',        () => { clearTimeout(connectTimeout); setConnUI('error', 'offline'); });
-  state.peer.on('connection',   conn => setupDataConn(conn));
+  state.peer.on('connection',   conn => setupDataConn(conn, true));
   state.peer.on('call',         call => {
     if (!state.localStream) { call.close(); return; }
     call.answer(state.localStream);
@@ -3288,22 +3305,39 @@ function startPing() {
 /* ═══════════════════════════════════════════
    DATA CONNECTIONS
 ═══════════════════════════════════════════ */
-function setupDataConn(conn) {
-  if (!state.connections[conn.peer]) {
-    state.connections[conn.peer] = makePeerInfo(conn);
+function setupDataConn(conn, incoming = false) {
+  const peerId = conn.peer;
+  const current = state.connections[peerId];
+
+  if (!current) {
+    state.connections[peerId] = makePeerInfo(conn, { incoming });
+  } else if (current.conn !== conn) {
+    if (current.incoming === incoming && current.conn?.open) {
+      try { conn.close(); } catch {}
+      return;
+    }
+    if (!shouldUseNewDataConn(peerId, incoming, current.incoming)) {
+      try { conn.close(); } catch {}
+      return;
+    }
+    const oldConn = current.conn;
+    current.conn = conn;
+    current.incoming = incoming;
+    try { oldConn?.close(); } catch {}
   } else {
-    state.connections[conn.peer].conn = conn;
+    current.incoming = incoming;
   }
   conn.on('open',  () => {
+    if (!isCurrentDataConn(peerId, conn)) return;
     conn.send({ type: 'hello', name: state.myName, channel: state.currentChannel, joinTime: state.myJoinTime || Date.now(), channels: [...liveChannels], topics: channelTopics });
     // If we're the host, tell new peer
     if (state.isChannelHost) {
       try { conn.send({ type: 'host-changed', newHostId: state.myId }); } catch {}
     }
   });
-  conn.on('data',  data => handleData(conn.peer, data));
-  conn.on('close', () => removePeer(conn.peer));
-  conn.on('error', () => removePeer(conn.peer));
+  conn.on('data',  data => { if (isCurrentDataConn(peerId, conn)) handleData(peerId, data); });
+  conn.on('close', () => { if (isCurrentDataConn(peerId, conn)) removePeer(peerId); });
+  conn.on('error', () => { if (isCurrentDataConn(peerId, conn)) removePeer(peerId); });
 }
 
 function handleData(peerId, data) {
@@ -3333,6 +3367,7 @@ function handleData(peerId, data) {
       break;
 
     case 'hello':
+      const wasInCurrentChannel = state.connections[peerId]?.channel === state.currentChannel;
       if (state.connections[peerId]) {
         state.connections[peerId].name     = data.name;
         state.connections[peerId].channel  = data.channel;
@@ -3341,7 +3376,7 @@ function handleData(peerId, data) {
       setLobbyChannel(peerId, data.channel, data.name);
       if (Array.isArray(data.channels)) data.channels.forEach(ch => safeAddChannel(ch));
       if (data.topics && typeof data.topics === 'object') { Object.assign(channelTopics, data.topics); persistChannelTopics(); }
-      if (data.channel === state.currentChannel) SFX.peerJoin();
+      if (data.channel === state.currentChannel && !wasInCurrentChannel) SFX.peerJoin();
       renderMembers(); renderChannels(); updateChannelControls();
       {
         const peerList = Object.keys(state.connections)
@@ -3617,15 +3652,18 @@ function removePeer(peerId) {
   const name = info.name || peerId;
   const wasInChannel = info.channel === state.currentChannel;
   const wasHost = state.channelHostId === peerId;
+  const conn = info.conn;
+  const call = state.calls[peerId];
+  const inboundCall = state.inboundCalls[peerId];
 
   if (wasInChannel || state.lobbyRegistry[peerId]?.channel === state.currentChannel) {
     setLobbyChannel(peerId, null, name);
   }
 
-  try { state.connections[peerId]?.conn.close(); } catch {}
-  try { state.calls[peerId]?.close(); } catch {}
-  try { state.inboundCalls[peerId]?.close(); } catch {}
   delete state.connections[peerId]; delete state.calls[peerId]; delete state.inboundCalls[peerId];
+  try { conn?.close(); } catch {}
+  try { call?.close(); } catch {}
+  try { inboundCall?.close(); } catch {}
   removeAudio(peerId);
   if (wasHost) ensureChannelHost();
   if (state.isLobbyHost) lobbyBroadcast({ type: 'lobby-update', registry: state.lobbyRegistry, channels: [...liveChannels] });
