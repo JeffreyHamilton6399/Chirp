@@ -913,15 +913,16 @@ function setConnUI(st, text) {
    fixes temporal dead zone crash)
 ══════════════════════════════════════════ */
 
-const CONFIG = { appName: 'Chirp', joinTimeout: 20 };
+const CONFIG = { appName: 'Chirp' };
 
-// Channels — declared before anything calls renderChannels()
-const liveChannels = new Set(['general', 'ops', 'lounge']);
+// Well-known lobby peer ID — whoever claims it becomes the directory node.
+// Everyone connects to this on startup to get the peer registry.
+const LOBBY_ID = 'chirp-lobby-0001';
 
-// PeerJS broker list — declared before initPeer()
-// Only 0.peerjs.com is the real PeerJS cloud server.
-// 1.peerjs.com does NOT exist — having it as a fallback caused an
-// infinite timeout loop where every other attempt would hang forever.
+// Default channels always present
+const DEFAULT_CHANNELS = ['general', 'ops', 'lounge'];
+const liveChannels = new Set(DEFAULT_CHANNELS);
+
 const BROKERS = [
   { host: '0.peerjs.com', port: 443, path: '/', secure: true },
 ];
@@ -930,17 +931,21 @@ let brokerIdx = 0;
 const state = {
   myId: null, myName: null, peer: null,
   currentChannel: null,
-  connections: {}, localStream: null, audioTrack: null,
+  connections: {},      // peerId -> { conn, name, channel, talking, ping, joinTime, volume }
+  lobbyConn: null,      // our connection TO the lobby host (if we're not the host)
+  lobbyPeer: null,      // the Peer object for the lobby host role (if we ARE the host)
+  isLobbyHost: false,
+  lobbyRegistry: {},    // peerId -> { name, channel }  (maintained by lobby host, synced to all)
+  localStream: null, audioTrack: null,
   calls: {}, inboundCalls: {},
   isTalking: false, isMuted: false, wakeLock: null,
-  hostPeer: null, isHost: false,
-  pendingJoin: null, joinRequestConn: null, joinTimeout: null,
-  myJoinTime: null, reconnectAttempts: 0,
+  reconnectAttempts: 0,
   pingInterval: null, pingTimes: {},
+  myJoinTime: null,
 };
 
 /* ══════════════════════════════════════════
-   HELPERS (used by onboarding IIFE below)
+   HELPERS
 ══════════════════════════════════════════ */
 function loadOrCreate(key, factory) {
   let v = localStorage.getItem(key);
@@ -959,7 +964,7 @@ function toast(msg, type = '') {
 }
 
 /* ══════════════════════════════════════════
-   ONBOARDING — runs after all declarations
+   ONBOARDING
 ══════════════════════════════════════════ */
 (function init() {
   state.myId   = loadOrCreate('chirp_peer_id', () => crypto.randomUUID().replace(/-/g,'').slice(0,16));
@@ -1005,10 +1010,11 @@ function startApp() {
       toast(`Callsign: ${state.myName}`, 'green');
     }
   });
-
-  document.getElementById('waiting-cancel-btn').addEventListener('click', cancelJoinRequest);
 }
 
+/* ══════════════════════════════════════════
+   CHANNEL UI
+══════════════════════════════════════════ */
 function setupChannelCreate() {
   const input = document.getElementById('new-ch-input');
   const btn   = document.getElementById('new-ch-btn');
@@ -1016,41 +1022,48 @@ function setupChannelCreate() {
     const raw = input.value.trim().toLowerCase().replace(/[^a-z0-9_-]/g,'').slice(0,20);
     if (!raw) { input.focus(); return; }
     input.value = '';
-    liveChannels.add(raw);
-    renderChannels();
-    // Tell all connected peers about the new channel so their sidebar updates
-    broadcast({ type: 'channel-list', channels: [...liveChannels] });
+    addChannel(raw);
     joinChannel(raw);
   }
   btn.addEventListener('click', create);
   input.addEventListener('keydown', e => { if (e.key === 'Enter') create(); });
 
-  // Search / join-by-name input
   const searchInput = document.getElementById('ch-search-input');
-  searchInput.addEventListener('input', () => {
-    const q = searchInput.value.trim().toLowerCase();
-    renderChannels(q);
-  });
+  searchInput.addEventListener('input', () => renderChannels(searchInput.value.trim().toLowerCase()));
   searchInput.addEventListener('keydown', e => {
     if (e.key === 'Enter') {
       const raw = searchInput.value.trim().toLowerCase().replace(/[^a-z0-9_-]/g,'').slice(0,20);
       if (!raw) return;
       searchInput.value = '';
       renderChannels('');
-      // Join existing or create new
-      liveChannels.add(raw);
-      renderChannels();
-      broadcast({ type: 'channel-list', channels: [...liveChannels] });
+      addChannel(raw);
       joinChannel(raw);
     }
     if (e.key === 'Escape') { searchInput.value = ''; renderChannels(''); }
   });
 }
 
+function addChannel(ch) {
+  if (liveChannels.has(ch)) return;
+  liveChannels.add(ch);
+  renderChannels();
+  // Announce to all direct connections and to lobby
+  broadcastAll({ type: 'channel-announce', channel: ch });
+  lobbyAnnounce();
+}
+
 function renderChannels(filter) {
-  const q = (filter !== undefined ? filter : (document.getElementById('ch-search-input')?.value.trim().toLowerCase() || ''));
+  const q = filter !== undefined ? filter : (document.getElementById('ch-search-input')?.value.trim().toLowerCase() || '');
   const scroll = document.getElementById('channel-scroll');
   scroll.innerHTML = '';
+
+  // Build channel -> member count from registry
+  const counts = {};
+  Object.values(state.lobbyRegistry).forEach(info => {
+    if (info.channel) counts[info.channel] = (counts[info.channel] || 0) + 1;
+  });
+  if (state.currentChannel) counts[state.currentChannel] = (counts[state.currentChannel] || 0); // ensure exists
+
   const channels = [...liveChannels].filter(ch => !q || ch.includes(q));
   if (channels.length === 0) {
     scroll.innerHTML = `<div style="padding:12px 16px;font-family:var(--mono);font-size:0.6rem;color:var(--text-dim)">${q ? 'no match — press Enter to create' : 'no channels yet'}</div>`;
@@ -1059,58 +1072,44 @@ function renderChannels(filter) {
   channels.forEach(ch => {
     const el = document.createElement('div');
     el.className = `channel-item${state.currentChannel === ch ? ' active' : ''}`;
-    const count = ch === state.currentChannel ? 1 + Object.keys(state.connections).length : 0;
+    const cnt = counts[ch] || 0;
     el.innerHTML = `
       <span class="ch-hash">#</span>
       <span class="ch-name">${ch}</span>
-      <span class="ch-count" id="count-${ch}">${count}</span>
+      <span class="ch-count" id="count-${ch}">${cnt || ''}</span>
     `;
     el.addEventListener('click', () => { if (state.currentChannel !== ch) joinChannel(ch); });
     scroll.appendChild(el);
   });
 }
 
+function updateChannelCount() { renderChannels(); }
+
 /* ══════════════════════════════════════════
-   PEER JS — ROBUST INIT
+   PEERJS INIT
 ══════════════════════════════════════════ */
-function makePeerConfig(brokerOverride) {
-  const broker = brokerOverride || BROKERS[brokerIdx % BROKERS.length];
+function makePeerConfig() {
+  const broker = BROKERS[brokerIdx % BROKERS.length];
   return {
-    host:   broker.host,
-    port:   broker.port,
-    path:   broker.path,
-    secure: broker.secure,
-    debug:  0,
-    config: {
-      iceServers: [
-        { urls: 'stun:stun.l.google.com:19302' },
-        { urls: 'stun:stun1.l.google.com:19302' },
-        { urls: 'stun:stun2.l.google.com:19302' },
-        { urls: 'stun:global.stun.twilio.com:3478' },
-      ]
-    }
+    host: broker.host, port: broker.port, path: broker.path, secure: broker.secure, debug: 0,
+    config: { iceServers: [
+      { urls: 'stun:stun.l.google.com:19302' },
+      { urls: 'stun:stun1.l.google.com:19302' },
+      { urls: 'stun:global.stun.twilio.com:3478' },
+    ]}
   };
 }
 
 function initPeer() {
   if (typeof Peer === 'undefined') { setTimeout(initPeer, 200); return; }
-
   setConnUI('connecting', 'connecting');
-
-  // Clean up old peer
   if (state.peer) { try { state.peer.destroy(); } catch {} state.peer = null; }
 
-  const cfg = makePeerConfig();
-  console.log('Connecting to broker:', cfg.host);
+  try { state.peer = new Peer(state.myId, makePeerConfig()); }
+  catch(e) { state.peer = new Peer(undefined, makePeerConfig()); }
 
-  try { state.peer = new Peer(state.myId, cfg); }
-  catch(e) { state.peer = new Peer(undefined, cfg); }
-
-  // Hard timeout: if no 'open' in 15s, retry (peerjs.com can be slow on cold start)
   const connectTimeout = setTimeout(() => {
     if (state.peer && !state.peer.open) {
-      console.warn('Broker timed out, retrying…');
-      // don't increment brokerIdx -- only one real broker exists
       try { state.peer.destroy(); } catch {}
       state.peer = null;
       scheduleReconnect();
@@ -1120,33 +1119,29 @@ function initPeer() {
   state.peer.on('open', id => {
     clearTimeout(connectTimeout);
     state.myId = id;
-    state.reconnectAttempts = 0; // reset so future disconnects get a full retry budget
-    brokerIdx = brokerIdx % BROKERS.length; // keep index sane after cycling
+    state.reconnectAttempts = 0;
     setConnUI('online', 'online');
     toast(`Online as ${state.myName}`, 'green');
     startPing();
+    connectToLobby(); // Join the global lobby to discover peers & channels
   });
 
   state.peer.on('error', err => {
     clearTimeout(connectTimeout);
-    console.warn('Peer error:', err.type, err.message);
-
     if (err.type === 'unavailable-id') {
       state.myId = crypto.randomUUID().replace(/-/g,'').slice(0,16);
       localStorage.setItem('chirp_peer_id', state.myId);
-      setTimeout(initPeer, 400);
+      setTimeout(initPeer, 400); return;
+    }
+    if (err.type === 'peer-unavailable') {
+      // Lobby host is gone — we should try to become lobby host
+      if (!state.isLobbyHost) tryBecomeLobbyHost();
       return;
     }
-    if (err.type === 'peer-unavailable') return;
-
     if (['network','server-error','socket-error','socket-closed','browser-incompatible'].includes(err.type)) {
       setConnUI('connecting', 'reconnecting');
-      // don't increment brokerIdx -- only one real broker exists // try next broker on hard errors
-      scheduleReconnect();
-      return;
+      scheduleReconnect(); return;
     }
-
-    console.error('Unhandled peer error:', err.type, err.message);
   });
 
   state.peer.on('disconnected', () => {
@@ -1155,13 +1150,8 @@ function initPeer() {
     scheduleReconnect();
   });
 
-  state.peer.on('close', () => {
-    clearTimeout(connectTimeout);
-    setConnUI('error', 'offline');
-  });
-
-  state.peer.on('connection', conn => setupDataConn(conn));
-
+  state.peer.on('close', () => { clearTimeout(connectTimeout); setConnUI('error', 'offline'); });
+  state.peer.on('connection', conn => onIncomingConn(conn));
   state.peer.on('call', call => {
     if (!state.localStream) { call.close(); return; }
     call.answer(state.localStream);
@@ -1177,12 +1167,10 @@ function initPeer() {
 }
 
 const MAX_RECONNECT_ATTEMPTS = 8;
-
 function scheduleReconnect() {
   if (state.reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
     setConnUI('error', 'offline');
-    toast('Could not reach server — refresh to retry', 'red');
-    return;
+    toast('Could not reach server — refresh to retry', 'red'); return;
   }
   const delay = Math.min(1000 * Math.pow(1.5, state.reconnectAttempts), 12000);
   state.reconnectAttempts++;
@@ -1194,6 +1182,144 @@ function scheduleReconnect() {
     state.peer = null;
     initPeer();
   }, delay);
+}
+
+/* ══════════════════════════════════════════
+   LOBBY — GLOBAL DISCOVERY
+   One peer claims LOBBY_ID. Everyone else
+   connects to it to get the peer registry
+   (who is online + what channel they're in)
+   and the channel list.
+══════════════════════════════════════════ */
+function connectToLobby() {
+  if (state.isLobbyHost) return; // we ARE the lobby
+  if (state.lobbyConn && state.lobbyConn.open) return;
+
+  const conn = state.peer.connect(LOBBY_ID, { reliable: true });
+  state.lobbyConn = conn;
+
+  conn.on('open', () => {
+    // Announce ourselves
+    conn.send({ type: 'lobby-hello', id: state.myId, name: state.myName, channel: state.currentChannel, channels: [...liveChannels] });
+  });
+
+  conn.on('data', data => {
+    if (data.type === 'lobby-registry') {
+      // Full registry snapshot from lobby host
+      state.lobbyRegistry = data.registry || {};
+      // Merge all channels everyone knows about
+      (data.channels || []).forEach(ch => liveChannels.add(ch));
+      renderChannels();
+      // Connect to peers who are in the same channel as us
+      syncChannelPeers();
+    }
+    if (data.type === 'lobby-update') {
+      // Incremental update: a peer joined/left/changed channel
+      if (data.registry) {
+        state.lobbyRegistry = data.registry;
+        renderChannels();
+        syncChannelPeers();
+      }
+      if (data.channel) { liveChannels.add(data.channel); renderChannels(); }
+    }
+  });
+
+  conn.on('close', () => {
+    state.lobbyConn = null;
+    // Lobby host disconnected — try to claim the slot
+    setTimeout(() => { if (!state.isLobbyHost) tryBecomeLobbyHost(); }, 500 + Math.random() * 1000);
+  });
+  conn.on('error', () => {
+    state.lobbyConn = null;
+    setTimeout(() => { if (!state.isLobbyHost) tryBecomeLobbyHost(); }, 500 + Math.random() * 1000);
+  });
+}
+
+function tryBecomeLobbyHost() {
+  if (state.isLobbyHost || !state.peer || !state.peer.open) return;
+  const lp = new Peer(LOBBY_ID, makePeerConfig());
+  lp.on('open', () => {
+    state.lobbyPeer = lp;
+    state.isLobbyHost = true;
+    console.log('Became lobby host');
+    // Add ourselves to the registry
+    state.lobbyRegistry[state.myId] = { name: state.myName, channel: state.currentChannel };
+    renderChannels();
+
+    lp.on('connection', conn => {
+      conn.on('open', () => {
+        // Send full registry snapshot to new peer
+        conn.send({ type: 'lobby-registry', registry: state.lobbyRegistry, channels: [...liveChannels] });
+      });
+      conn.on('data', data => {
+        if (data.type === 'lobby-hello') {
+          // Register this peer
+          state.lobbyRegistry[data.id] = { name: data.name, channel: data.channel || null };
+          // Merge their channels
+          (data.channels || []).forEach(ch => liveChannels.add(ch));
+          // Broadcast updated registry to all lobby connections
+          lobbyBroadcast({ type: 'lobby-update', registry: state.lobbyRegistry });
+          renderChannels();
+        }
+        if (data.type === 'lobby-announce') {
+          state.lobbyRegistry[data.id] = { name: data.name, channel: data.channel || null };
+          if (data.newChannel) liveChannels.add(data.newChannel);
+          lobbyBroadcast({ type: 'lobby-update', registry: state.lobbyRegistry, channel: data.newChannel || null });
+          renderChannels();
+        }
+      });
+      conn.on('close', () => {
+        // Remove disconnected peer from registry
+        const id = Object.keys(state.lobbyRegistry).find(k => {
+          // can't directly map conn.peer to id easily since conn.peer is the peer's main ID
+          return k === conn.peer;
+        });
+        if (id) { delete state.lobbyRegistry[id]; lobbyBroadcast({ type: 'lobby-update', registry: state.lobbyRegistry }); renderChannels(); }
+      });
+    });
+    lp.on('disconnected', () => { try { lp.reconnect(); } catch {} });
+    lp.on('error', () => {});
+  });
+  lp.on('error', err => {
+    if (err.type === 'unavailable-id') {
+      // Someone else already claimed it — connect as a client
+      state.isLobbyHost = false;
+      connectToLobby();
+    }
+  });
+}
+
+function lobbyBroadcast(data) {
+  if (!state.lobbyPeer) return;
+  // Send to all connections on the lobby peer
+  Object.values(state.lobbyPeer._connections || {}).forEach(conns => {
+    conns.forEach(conn => { try { if (conn.open) conn.send(data); } catch {} });
+  });
+}
+
+function lobbyAnnounce() {
+  // Tell lobby host about our current state (channel, new channels)
+  const msg = { type: 'lobby-announce', id: state.myId, name: state.myName, channel: state.currentChannel, channels: [...liveChannels] };
+  if (state.isLobbyHost) {
+    state.lobbyRegistry[state.myId] = { name: state.myName, channel: state.currentChannel };
+    lobbyBroadcast({ type: 'lobby-update', registry: state.lobbyRegistry });
+    renderChannels();
+  } else if (state.lobbyConn && state.lobbyConn.open) {
+    try { state.lobbyConn.send(msg); } catch {}
+  }
+}
+
+/* ══════════════════════════════════════════
+   CHANNEL MESH — connect to peers in same channel
+══════════════════════════════════════════ */
+function syncChannelPeers() {
+  if (!state.currentChannel) return;
+  Object.entries(state.lobbyRegistry).forEach(([pid, info]) => {
+    if (pid === state.myId) return;
+    if (info.channel === state.currentChannel && !state.connections[pid]) {
+      connectToPeer(pid, true);
+    }
+  });
 }
 
 /* ══════════════════════════════════════════
@@ -1210,45 +1336,46 @@ function startPing() {
 }
 
 /* ══════════════════════════════════════════
-   DATA CONNECTIONS
+   DATA CONNECTIONS (channel mesh)
 ══════════════════════════════════════════ */
+function onIncomingConn(conn) {
+  setupDataConn(conn);
+}
+
 function setupDataConn(conn) {
+  if (!state.connections[conn.peer]) {
+    state.connections[conn.peer] = { conn, name: conn.peer, channel: null, talking: false, joinTime: Date.now(), volume: 1, ping: null };
+  } else {
+    state.connections[conn.peer].conn = conn;
+  }
   conn.on('open', () => {
     conn.send({ type: 'hello', name: state.myName, channel: state.currentChannel, joinTime: state.myJoinTime || Date.now(), channels: [...liveChannels] });
-    // Also send channel list immediately so peer's sidebar populates even before channel join
-    conn.send({ type: 'channel-list', channels: [...liveChannels] });
   });
   conn.on('data', data => handleData(conn.peer, data));
   conn.on('close', () => removePeer(conn.peer));
   conn.on('error', () => removePeer(conn.peer));
-  if (!state.connections[conn.peer]) {
-    state.connections[conn.peer] = { conn, name: conn.peer, talking: false, joinTime: Date.now(), volume: 1, ping: null };
-  } else {
-    state.connections[conn.peer].conn = conn;
-  }
 }
 
 function handleData(peerId, data) {
   switch (data.type) {
     case 'hello':
       if (state.connections[peerId]) {
-        state.connections[peerId].name = data.name;
+        state.connections[peerId].name    = data.name;
+        state.connections[peerId].channel = data.channel;
         state.connections[peerId].joinTime = data.joinTime || Date.now();
       }
-      // Merge their known channels into ours so the sidebar stays in sync
+      // Merge their channels
       if (Array.isArray(data.channels)) {
-        let added = false;
-        data.channels.forEach(ch => { if (!liveChannels.has(ch)) { liveChannels.add(ch); added = true; } });
-        if (added) renderChannels();
+        data.channels.forEach(ch => liveChannels.add(ch));
       }
       renderMembers();
-      if (state.currentChannel) {
+      renderChannels();
+      // Send our peer list so they can mesh further
+      {
         const peerList = Object.keys(state.connections)
           .filter(id => id !== peerId)
           .map(id => ({ id, joinTime: state.connections[id].joinTime || 0 }));
         try { state.connections[peerId]?.conn.send({ type: 'peer-list', peers: peerList }); } catch {}
-        // Also send our channel list back so they get ours
-        try { state.connections[peerId]?.conn.send({ type: 'channel-list', channels: [...liveChannels] }); } catch {}
       }
       break;
 
@@ -1256,6 +1383,11 @@ function handleData(peerId, data) {
       data.peers.forEach(({ id: pid, joinTime }) => {
         if (!state.connections[pid] && pid !== state.myId) connectToPeer(pid, true, joinTime);
       });
+      break;
+
+    case 'channel-announce':
+      liveChannels.add(data.channel);
+      renderChannels();
       break;
 
     case 'talking':
@@ -1278,49 +1410,7 @@ function handleData(peerId, data) {
         updatePingDisplay();
       }
       break;
-
-    case 'channel-list':
-      if (Array.isArray(data.channels)) {
-        let added = false;
-        data.channels.forEach(ch => { if (!liveChannels.has(ch)) { liveChannels.add(ch); added = true; } });
-        if (added) renderChannels();
-      }
-      break;
-
-    case 'join-approved':
-      clearTimeout(state.joinTimeout);
-      if (state.joinRequestConn) { try { state.joinRequestConn.close(); } catch {} state.joinRequestConn = null; }
-      // Sync channels from host
-      if (Array.isArray(data.channels)) {
-        data.channels.forEach(ch => liveChannels.add(ch));
-        renderChannels();
-      }
-      // Host will connect to us via connectToPeer — don't double-connect from our side too.
-      // Just toast and wait for the incoming connection event on state.peer.
-      toast(`Joined #${state.currentChannel}`, 'green');
-      if (state.currentChannel) { liveChannels.add(state.currentChannel); renderChannels(); }
-      break;
-
-    case 'join-denied':
-      hideWaitingOverlay();
-      if (state.joinRequestConn) { try { state.joinRequestConn.close(); } catch {} state.joinRequestConn = null; }
-      toast('Join request denied', 'red');
-      exitChannel();
-      break;
-
-    case 'host-transfer':
-      promoteToHost(data.channel);
-      break;
   }
-}
-
-function exitChannel() {
-  state.currentChannel = null;
-  document.querySelectorAll('.channel-item').forEach(el => el.classList.remove('active'));
-  document.getElementById('ptt-section').classList.remove('visible');
-  document.getElementById('no-channel').style.display = '';
-  document.getElementById('mute-btn').style.display = 'none';
-  updateChannelCount();
 }
 
 /* ══════════════════════════════════════════
@@ -1328,9 +1418,9 @@ function exitChannel() {
 ══════════════════════════════════════════ */
 function connectToPeer(peerId, initiateCall, joinTime) {
   if (state.connections[peerId] || peerId === state.myId) return;
-  if (!state.peer || !state.peer.open) return; // peer not ready — skip silently
+  if (!state.peer || !state.peer.open) return;
   const conn = state.peer.connect(peerId, { reliable: true });
-  state.connections[peerId] = { conn, name: peerId, talking: false, joinTime: joinTime || Date.now(), volume: 1, ping: null };
+  state.connections[peerId] = { conn, name: peerId, channel: null, talking: false, joinTime: joinTime || Date.now(), volume: 1, ping: null };
   setupDataConn(conn);
   if (initiateCall && state.localStream) callPeer(peerId);
 }
@@ -1347,248 +1437,51 @@ function callPeer(peerId) {
 function playRemoteStream(peerId, stream) {
   removeAudio(peerId);
   const audio = document.createElement('audio');
-  audio.id = `audio-${peerId}`;
-  audio.srcObject = stream;
-  audio.autoplay = true;
-  audio.volume = state.connections[peerId]?.volume ?? 1;
+  audio.id = `audio-${peerId}`; audio.srcObject = stream;
+  audio.autoplay = true; audio.volume = state.connections[peerId]?.volume ?? 1;
   audio.style.display = 'none';
   document.body.appendChild(audio);
 }
 
-function removeAudio(peerId) {
-  document.getElementById(`audio-${peerId}`)?.remove();
-}
+function removeAudio(peerId) { document.getElementById(`audio-${peerId}`)?.remove(); }
 
 /* ══════════════════════════════════════════
    JOIN CHANNEL
 ══════════════════════════════════════════ */
 async function joinChannel(ch) {
+  if (state.currentChannel === ch) return;
   if (state.currentChannel) await leaveChannel();
 
   if (!state.localStream) {
     try {
       state.localStream = await navigator.mediaDevices.getUserMedia({
-        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
-        video: false
+        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, video: false
       });
       state.audioTrack = state.localStream.getAudioTracks()[0];
       state.audioTrack.enabled = false;
-    } catch {
-      toast('Mic permission denied — PTT will not work', 'red');
-    }
+    } catch { toast('Mic permission denied — PTT will not work', 'red'); }
   }
 
   state.currentChannel = ch;
   state.myJoinTime = Date.now();
   liveChannels.add(ch);
-  renderChannels();
 
   document.getElementById('channel-name-display').textContent = ch;
   document.getElementById('no-channel').style.display = 'none';
   document.getElementById('ptt-section').classList.add('visible');
   document.getElementById('mute-btn').style.display = '';
   document.querySelector('.channel-bar')?.classList.add('in-channel');
+
+  // Tell lobby we're in this channel
+  lobbyAnnounce();
+  renderChannels();
   renderMembers();
 
-  const rendezvousId = 'chirpch--' + ch;
-  tryBecomeHost(ch, rendezvousId);
-}
+  // Connect to all peers already in this channel
+  syncChannelPeers();
 
-/* ══════════════════════════════════════════
-   HOST / RENDEZVOUS
-══════════════════════════════════════════ */
-function tryBecomeHost(ch, rendezvousId) {
-  if (state.currentChannel !== ch) return;
-
-  const hp = new Peer(rendezvousId, makePeerConfig(BROKERS[brokerIdx % BROKERS.length]));
-
-  hp.on('open', () => {
-    state.hostPeer = hp;
-    state.isHost   = true;
-    toast(`You are host of #${ch}`, 'info');
-    renderMembers();
-
-    hp.on('connection', conn => {
-      conn.on('open', () => {
-        // Auto-accept: send approval immediately, no human gate needed
-        try {
-          conn.send({ type: 'join-approved', hostRealId: state.myId, channels: [...liveChannels] });
-        } catch {}
-        // Connect joiner into the real mesh
-        const joinerId = conn.peer;
-        if (joinerId && joinerId !== state.myId && !state.connections[joinerId]) {
-          connectToPeer(joinerId, true);
-        }
-      });
-      conn.on('data', data => {
-        // Still handle join-request data for the name, but approval already sent on open
-        if (data.type === 'join-request' && state.currentChannel === ch) {
-          if (state.connections[conn.peer]) {
-            state.connections[conn.peer].name = data.name;
-            renderMembers();
-          }
-          toast(`${data.name} joined #${ch}`, 'green');
-        }
-      });
-      conn.on('error', () => {});
-    });
-
-    // Reconnect host peer if it drops
-    hp.on('disconnected', () => { try { hp.reconnect(); } catch {} });
-    hp.on('error', () => {});
-  });
-
-  hp.on('error', err => {
-    if (err.type === 'unavailable-id') {
-      // Another host exists — send a join request
-      sendJoinRequest(ch, rendezvousId);
-    }
-    // other errors: ignore, user is still in channel as non-host
-  });
-}
-
-function sendJoinRequest(ch, rendezvousId) {
-  if (state.currentChannel !== ch) return;
-  if (!state.peer || !state.peer.open) {
-    // Peer not ready yet — wait and retry
-    setTimeout(() => { if (state.currentChannel === ch) sendJoinRequest(ch, rendezvousId); }, 500);
-    return;
-  }
-  const conn = state.peer.connect(rendezvousId, { reliable: true });
-  state.joinRequestConn = conn;
-
-  conn.on('open', () => {
-    conn.send({ type: 'join-request', name: state.myName, channel: ch });
-  });
-
-  conn.on('data', data => handleData(conn.peer, data));
-
-  conn.on('error', () => {
-    hideWaitingOverlay();
-    toast('Host unreachable — retrying…');
-    setTimeout(() => {
-      if (state.currentChannel === ch) tryBecomeHost(ch, rendezvousId);
-    }, 800);
-  });
-
-  // Short timeout — auto-accept means this should resolve in < 3s
-  state.joinTimeout = setTimeout(() => {
-    if (state.currentChannel === ch && !state.isHost) {
-      hideWaitingOverlay();
-      toast('Host did not respond — retrying…');
-      // Try to become host ourselves (maybe host left)
-      tryBecomeHost(ch, rendezvousId);
-    }
-  }, 6000);
-}
-
-function cancelJoinRequest() {
-  clearTimeout(state.joinTimeout);
-  hideWaitingOverlay();
-  if (state.joinRequestConn) { try { state.joinRequestConn.close(); } catch {} state.joinRequestConn = null; }
-  const ch = state.currentChannel;
-  exitChannel();
-  if (ch) maybeRemoveChannel(ch);
-}
-
-function showWaitingOverlay() {
-  const overlay = document.getElementById('waiting-overlay');
-  overlay.classList.add('show');
-  let secs = CONFIG.joinTimeout;
-  document.getElementById('waiting-countdown').textContent = `auto-deny in ${secs}s`;
-  clearInterval(overlay._interval);
-  overlay._interval = setInterval(() => {
-    secs--;
-    const el = document.getElementById('waiting-countdown');
-    if (el) el.textContent = secs > 0 ? `auto-deny in ${secs}s` : '';
-    if (secs <= 0) clearInterval(overlay._interval);
-  }, 1000);
-}
-function hideWaitingOverlay() {
-  const overlay = document.getElementById('waiting-overlay');
-  overlay.classList.remove('show');
-  clearInterval(overlay._interval);
-}
-
-/* ══════════════════════════════════════════
-   JOIN REQUEST (HOST SIDE)
-══════════════════════════════════════════ */
-let joinToastTimer, joinToastCountdown;
-
-function showJoinRequest(peerId, name, ch, conn) {
-  if (state.pendingJoin) denyJoin(state.pendingJoin);
-  state.pendingJoin = { peerId, name, ch, conn };
-
-  document.getElementById('join-toast-msg').textContent = `${name} wants to join #${ch}`;
-  let secs = CONFIG.joinTimeout;
-  document.getElementById('join-toast-timer').textContent = `Auto-deny in ${secs}s`;
-  clearInterval(joinToastCountdown); clearTimeout(joinToastTimer);
-
-  document.getElementById('join-toast').classList.add('show');
-  joinToastCountdown = setInterval(() => {
-    secs--;
-    const el = document.getElementById('join-toast-timer');
-    if (el) el.textContent = secs > 0 ? `Auto-deny in ${secs}s` : '';
-    if (secs <= 0) clearInterval(joinToastCountdown);
-  }, 1000);
-  joinToastTimer = setTimeout(() => { if (state.pendingJoin) denyJoin(state.pendingJoin); }, CONFIG.joinTimeout * 1000);
-
-  document.getElementById('join-accept-btn').onclick = () => { clearTimeout(joinToastTimer); clearInterval(joinToastCountdown); acceptJoin(state.pendingJoin); };
-  document.getElementById('join-deny-btn').onclick   = () => { clearTimeout(joinToastTimer); clearInterval(joinToastCountdown); denyJoin(state.pendingJoin); };
-}
-
-function acceptJoin(req) {
-  if (!req) return;
-  document.getElementById('join-toast').classList.remove('show');
-  state.pendingJoin = null;
-  // Send approval so joiner can proceed
-  try { req.conn.send({ type: 'join-approved', hostRealId: state.myId, channels: [...liveChannels] }); } catch {}
-  // Actually connect to the joiner on the real mesh — without this, nobody sees each other
-  if (req.peerId && req.peerId !== state.myId && !state.connections[req.peerId]) {
-    connectToPeer(req.peerId, true);
-  }
-  toast(`${req.name} joined`, 'green');
-}
-
-function denyJoin(req) {
-  if (!req) return;
-  document.getElementById('join-toast').classList.remove('show');
-  state.pendingJoin = null;
-  try { req.conn.send({ type: 'join-denied' }); } catch {}
-}
-
-/* ══════════════════════════════════════════
-   HOST TRANSFER
-══════════════════════════════════════════ */
-function promoteToHost(ch) {
-  if (state.isHost || !ch) return;
-  state.isHost = true;
-  const rendezvousId = 'chirpch--' + ch;
-  const hp = new Peer(rendezvousId, makePeerConfig(BROKERS[brokerIdx % BROKERS.length]));
-  hp.on('open', () => {
-    state.hostPeer = hp;
-    toast(`You are now host of #${ch}`, 'info');
-    renderMembers();
-    hp.on('connection', conn => {
-      conn.on('open', () => {
-        try { conn.send({ type: 'join-approved', hostRealId: state.myId, channels: [...liveChannels] }); } catch {}
-        const joinerId = conn.peer;
-        if (joinerId && joinerId !== state.myId && !state.connections[joinerId]) {
-          connectToPeer(joinerId, true);
-        }
-      });
-      conn.on('data', data => {
-        if (data.type === 'join-request' && state.connections[conn.peer]) {
-          state.connections[conn.peer].name = data.name;
-          renderMembers();
-          toast(`${data.name} joined #${ch}`, 'green');
-        }
-      });
-      conn.on('error', () => {});
-    });
-    hp.on('disconnected', () => { try { hp.reconnect(); } catch {} });
-  });
-  hp.on('error', () => { state.isHost = false; });
+  // Also tell all our existing direct connections we changed channel
+  broadcastAll({ type: 'hello', name: state.myName, channel: ch, joinTime: state.myJoinTime, channels: [...liveChannels] });
 }
 
 /* ══════════════════════════════════════════
@@ -1596,21 +1489,9 @@ function promoteToHost(ch) {
 ══════════════════════════════════════════ */
 async function leaveChannel() {
   if (!state.currentChannel) return;
-  const ch = state.currentChannel;
   stopTalking();
 
-  if (state.isHost && Object.keys(state.connections).length > 0) {
-    const oldest = Object.entries(state.connections).sort((a,b)=>(a[1].joinTime||0)-(b[1].joinTime||0))[0];
-    if (oldest) try { oldest[1].conn.send({ type: 'host-transfer', channel: ch }); } catch {}
-  }
-
-  broadcast({ type: 'leave' });
-
-  if (state.hostPeer) { try { state.hostPeer.destroy(); } catch {} state.hostPeer = null; }
-  state.isHost = false;
-  clearTimeout(state.joinTimeout);
-  hideWaitingOverlay();
-  if (state.joinRequestConn) { try { state.joinRequestConn.close(); } catch {} state.joinRequestConn = null; }
+  broadcastAll({ type: 'leave' });
 
   Object.keys(state.connections).forEach(pid => {
     try { state.connections[pid]?.conn.close(); } catch {}
@@ -1623,14 +1504,15 @@ async function leaveChannel() {
   });
 
   state.currentChannel = null;
+  lobbyAnnounce(); // tell lobby we left
+
   document.querySelectorAll('.channel-item').forEach(el => el.classList.remove('active'));
   document.getElementById('member-list').innerHTML = '';
   document.getElementById('ptt-section').classList.remove('visible');
   document.getElementById('no-channel').style.display = '';
   document.getElementById('mute-btn').style.display = 'none';
   document.querySelector('.channel-bar')?.classList.remove('in-channel');
-  updateChannelCount();
-  maybeRemoveChannel(ch);
+  renderChannels();
 }
 
 function removePeer(peerId) {
@@ -1644,24 +1526,14 @@ function removePeer(peerId) {
   delete state.inboundCalls[peerId];
   removeAudio(peerId);
   renderMembers();
-  toast(`${name} left the channel`);
-  updateChannelCount();
+  toast(`${name} left`);
+  renderChannels();
 }
 
-function broadcast(data) {
+function broadcastAll(data) {
   Object.values(state.connections).forEach(({ conn }) => {
     try { if (conn.open) conn.send(data); } catch {}
   });
-}
-
-function maybeRemoveChannel(ch) {
-  if (ch && ch !== state.currentChannel && !['general','ops','lounge'].includes(ch)) {
-    const countEl = document.getElementById(`count-${ch}`);
-    if (!countEl || parseInt(countEl.textContent, 10) === 0) {
-      liveChannels.delete(ch);
-      renderChannels();
-    }
-  }
 }
 
 /* ══════════════════════════════════════════
@@ -1670,26 +1542,26 @@ function maybeRemoveChannel(ch) {
 function renderMembers() {
   const list = document.getElementById('member-list');
   list.innerHTML = '';
-  if (!state.currentChannel) { updateChannelCount(); return; }
+  if (!state.currentChannel) { return; }
 
-  // Self
   const selfEl = document.createElement('div');
   selfEl.className = `member-item member-self${state.isTalking ? ' talking' : ''}`;
   selfEl.innerHTML = `
     <div class="member-avatar" data-letter="${state.myName.charAt(0).toLowerCase()}">${state.myName.charAt(0)}</div>
     <div class="member-info">
       <div class="member-name">${state.myName} <span style="font-family:var(--mono);font-size:0.5rem;color:var(--text-dim);font-weight:400">(you)</span></div>
-      ${state.isHost ? '<div class="member-sub"><span class="host-badge">host</span></div>' : ''}
     </div>
   `;
   list.appendChild(selfEl);
 
+  // Show peers who are in the same channel
   Object.entries(state.connections).forEach(([peerId, info]) => {
+    if (info.channel !== state.currentChannel) return;
     const el = document.createElement('div');
     el.className = `member-item${info.talking ? ' talking' : ''}`;
     const pingStr = info.ping != null ? `${info.ping}ms` : '';
     el.innerHTML = `
-      <div class="member-avatar" data-letter="${info.name.charAt(0).toLowerCase()}">${info.name.charAt(0)}</div>
+      <div class="member-avatar" data-letter="${(info.name||'?').charAt(0).toLowerCase()}">${(info.name||'?').charAt(0)}</div>
       <div class="member-info">
         <div class="member-name">${info.name}</div>
         ${pingStr ? `<div class="member-sub">${pingStr}</div>` : ''}
@@ -1698,17 +1570,8 @@ function renderMembers() {
     list.appendChild(el);
   });
 
-  const total = 1 + Object.keys(state.connections).length;
+  const total = 1 + Object.entries(state.connections).filter(([,i]) => i.channel === state.currentChannel).length;
   document.getElementById('member-count-badge').textContent = total;
-  updateChannelCount();
-}
-
-function updateChannelCount() {
-  liveChannels.forEach(ch => {
-    const el = document.getElementById(`count-${ch}`);
-    if (!el) return;
-    el.textContent = ch === state.currentChannel ? 1 + Object.keys(state.connections).length : 0;
-  });
 }
 
 function updatePingDisplay() {
@@ -1754,12 +1617,11 @@ async function startTalking() {
   if (!state.localStream) { toast('No microphone — check permissions', 'red'); return; }
   state.isTalking = true;
   state.audioTrack.enabled = true;
-
   document.getElementById('ptt-btn').classList.add('active');
   document.getElementById('tx-pill').classList.add('transmitting');
   document.getElementById('tx-label').textContent = 'tx';
   renderMembers();
-  broadcast({ type: 'talking', value: true });
+  broadcastAll({ type: 'talking', value: true });
   startWaveform();
   try { if ('wakeLock' in navigator) state.wakeLock = await navigator.wakeLock.request('screen'); } catch {}
 }
@@ -1768,12 +1630,11 @@ function stopTalking() {
   if (!state.isTalking) return;
   state.isTalking = false;
   if (state.audioTrack) state.audioTrack.enabled = false;
-
   document.getElementById('ptt-btn').classList.remove('active');
   document.getElementById('tx-pill').classList.remove('transmitting');
   document.getElementById('tx-label').textContent = 'standby';
   renderMembers();
-  broadcast({ type: 'talking', value: false });
+  broadcastAll({ type: 'talking', value: false });
   stopWaveform();
   try { state.wakeLock?.release(); state.wakeLock = null; } catch {}
 }
@@ -1802,10 +1663,8 @@ function startWaveform() {
   try {
     audioCtx = new AudioContext();
     const src = audioCtx.createMediaStreamSource(state.localStream);
-    analyser  = audioCtx.createAnalyser();
-    analyser.fftSize = 64;
-    src.connect(analyser);
-    drawWaveform();
+    analyser  = audioCtx.createAnalyser(); analyser.fftSize = 64;
+    src.connect(analyser); drawWaveform();
   } catch {}
 }
 
@@ -1815,7 +1674,7 @@ function stopWaveform() {
   const canvas = document.getElementById('waveform-canvas');
   const ctx = canvas.getContext('2d');
   if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
-  document.getElementById('waveform-canvas').classList.remove('active');
+  canvas.classList.remove('active');
 }
 
 function drawWaveform() {
@@ -1825,7 +1684,6 @@ function drawWaveform() {
   canvas.height = canvas.offsetHeight * devicePixelRatio;
   const ctx  = canvas.getContext('2d');
   const data = new Uint8Array(analyser.frequencyBinCount);
-
   function frame() {
     animFrameId = requestAnimationFrame(frame);
     analyser.getByteFrequencyData(data);
@@ -1833,14 +1691,11 @@ function drawWaveform() {
     const barW = (canvas.width / data.length) * 0.6;
     const gap  = (canvas.width / data.length) * 0.4;
     data.forEach((v, i) => {
-      const h     = (v / 255) * canvas.height * 0.9;
-      const x     = i * (barW + gap);
-      const alpha = 0.3 + (v / 255) * 0.7;
-      ctx.fillStyle = `rgba(124,106,255,${alpha})`;
+      const h = (v / 255) * canvas.height * 0.9;
+      const x = i * (barW + gap);
+      ctx.fillStyle = `rgba(124,106,255,${0.3 + (v/255)*0.7})`;
       const barH = Math.max(h, 2);
-      ctx.beginPath();
-      ctx.roundRect(x, (canvas.height - barH) / 2, barW, barH, 2);
-      ctx.fill();
+      ctx.beginPath(); ctx.roundRect(x, (canvas.height-barH)/2, barW, barH, 2); ctx.fill();
     });
   }
   frame();
@@ -1850,8 +1705,6 @@ function drawWaveform() {
    UI HELPERS
 ══════════════════════════════════════════ */
 // Upgrade setConnUI now that BROKERS / brokerIdx are in scope.
-// The early stub (above the PeerJS loader) handles any calls that
-// arrive before this script tag executes.
 (function _upgradeSetConnUI() {
   setConnUI = function(st, text) {
     const pill = document.getElementById('conn-pill');
@@ -1865,7 +1718,6 @@ function drawWaveform() {
       pill.setAttribute('data-tip', st === 'error' ? 'check your network' : 'finding server\u2026');
     }
   };
-  // Replay any deferred call from the loader stub
   if (typeof _pendingConnUI !== 'undefined' && _pendingConnUI) {
     setConnUI(..._pendingConnUI); _pendingConnUI = null;
   }
