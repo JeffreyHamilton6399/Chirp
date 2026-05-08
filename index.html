@@ -2071,8 +2071,9 @@ function setConnUI(st, text) {
   }
 
   if (typeof BROKERS !== 'undefined' && typeof brokerIdx !== 'undefined') {
+    const broker = BROKERS[brokerIdx % BROKERS.length] || {};
     pill.setAttribute('data-tip', st === 'online'
-      ? BROKERS[brokerIdx % BROKERS.length].host
+      ? (broker.name || broker.host || 'PeerJS cloud')
       : st === 'error' ? 'check your network' : 'finding server…');
   }
 }
@@ -2080,8 +2081,8 @@ function setConnUI(st, text) {
 <script>
 (function loadPeerJS() {
   const cdns = [
-    'https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js',
-    'https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js',
+    'https://unpkg.com/peerjs@1.5.5/dist/peerjs.min.js',
+    'https://cdn.jsdelivr.net/npm/peerjs@1.5.5/dist/peerjs.min.js',
     'https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.4/peerjs.min.js',
   ];
   let i = 0;
@@ -2102,7 +2103,10 @@ function setConnUI(st, text) {
 ═══════════════════════════════════════════ */
 const CONFIG    = { appName: 'Chirp' };
 const LOBBY_ID  = 'chirp-lobby-0001';
-const BROKERS   = [{ host: '0.peerjs.com', port: 443, path: '/', secure: true }];
+const BROKERS   = [
+  { name: 'PeerJS cloud', host: '0.peerjs.com', port: 443, path: '/', secure: true, key: 'peerjs' },
+  { name: 'PeerJS default cloud' },
+];
 const PRESENCE_TTL = 45000;
 const ACTIVITY_TTL = 6000;
 
@@ -2154,6 +2158,8 @@ const state = {
   calls: {}, inboundCalls: {},
   isTalking: false, isMuted: false, wakeLock: null,
   reconnectAttempts: 0,
+  reconnectTimer: null,
+  lastPeerError: null,
   pingInterval: null, pingTimes: {},
   heartbeatInterval: null,
   myJoinTime: null,
@@ -3097,15 +3103,42 @@ function hideJoinToast() { document.getElementById('join-toast').classList.remov
    PEERJS
 ═══════════════════════════════════════════ */
 function makePeerConfig() {
-  const broker = BROKERS[brokerIdx % BROKERS.length];
-  return {
-    host: broker.host, port: broker.port, path: broker.path, secure: broker.secure, debug: 0,
+  const broker = BROKERS[brokerIdx % BROKERS.length] || {};
+  const cfg = {
+    debug: 0,
     config: { iceServers: [
       { urls: 'stun:stun.l.google.com:19302' },
       { urls: 'stun:stun1.l.google.com:19302' },
       { urls: 'stun:global.stun.twilio.com:3478' },
     ]},
   };
+  ['host', 'port', 'path', 'secure', 'key'].forEach(key => {
+    if (broker[key] !== undefined) cfg[key] = broker[key];
+  });
+  return cfg;
+}
+
+function peerErrorMessage(type) {
+  switch (type) {
+    case 'browser-incompatible':
+      return 'This browser does not support WebRTC';
+    case 'invalid-key':
+    case 'ssl-unavailable':
+      return 'PeerJS server rejected the connection settings';
+    case 'timeout':
+      return 'PeerJS server timed out';
+    case 'network':
+    case 'server-error':
+    case 'socket-error':
+    case 'socket-closed':
+      return 'Could not reach PeerJS server';
+    default:
+      return type ? `PeerJS error: ${type}` : 'Could not reach PeerJS server';
+  }
+}
+
+function shouldRetryPeerError(type) {
+  return ['network', 'server-error', 'socket-error', 'socket-closed', 'timeout'].includes(type);
 }
 
 function initPeer() {
@@ -3117,11 +3150,18 @@ function initPeer() {
   catch  { state.peer = new Peer(undefined, makePeerConfig()); }
 
   const connectTimeout = setTimeout(() => {
-    if (state.peer && !state.peer.open) { try { state.peer.destroy(); } catch {} state.peer = null; scheduleReconnect(); }
+    if (state.peer && !state.peer.open) {
+      state.lastPeerError = 'timeout';
+      try { state.peer.destroy(); } catch {}
+      state.peer = null;
+      scheduleReconnect();
+    }
   }, 15000);
 
   state.peer.on('open', id => {
     clearTimeout(connectTimeout);
+    clearTimeout(state.reconnectTimer);
+    state.reconnectTimer = null;
     state.myId = id;
     state.reconnectAttempts = 0;
     setConnUI('online', 'online');
@@ -3157,19 +3197,25 @@ function initPeer() {
 
   state.peer.on('error', err => {
     clearTimeout(connectTimeout);
+    state.lastPeerError = err.type || 'unknown';
     if (err.type === 'unavailable-id') {
       state.myId = crypto.randomUUID().replace(/-/g,'').slice(0,16);
       localStorage.setItem('chirp_peer_id', state.myId);
       setTimeout(initPeer, 400); return;
     }
     if (err.type === 'peer-unavailable') { if (!state.isLobbyHost) tryBecomeLobbyHost(); return; }
-    if (['network','server-error','socket-error','socket-closed','browser-incompatible'].includes(err.type)) {
+    if (!shouldRetryPeerError(err.type)) {
+      setConnUI('error', 'offline');
+      toast(peerErrorMessage(err.type), 'red');
+      return;
+    }
+    if (shouldRetryPeerError(err.type)) {
       setConnUI('connecting', 'reconnecting'); scheduleReconnect();
     }
   });
 
-  state.peer.on('disconnected', () => { clearTimeout(connectTimeout); setConnUI('connecting', 'reconnecting'); scheduleReconnect(); });
-  state.peer.on('close',        () => { clearTimeout(connectTimeout); setConnUI('error', 'offline'); });
+  state.peer.on('disconnected', () => { clearTimeout(connectTimeout); state.lastPeerError = 'socket-closed'; setConnUI('connecting', 'reconnecting'); scheduleReconnect(); });
+  state.peer.on('close',        () => { clearTimeout(connectTimeout); if (!state.reconnectTimer) setConnUI('error', 'offline'); });
   state.peer.on('connection',   conn => setupDataConn(conn, true));
   state.peer.on('call',         call => {
     if (!state.localStream) { call.close(); return; }
@@ -3182,13 +3228,18 @@ function initPeer() {
 
 const MAX_RECONNECT_ATTEMPTS = 8;
 function scheduleReconnect() {
+  if (state.reconnectTimer) return;
   if (state.reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
-    setConnUI('error', 'offline'); toast('Could not reach server — refresh to retry', 'red'); return;
+    setConnUI('error', 'offline'); toast(`${peerErrorMessage(state.lastPeerError)} — refresh to retry`, 'red'); return;
   }
   const delay = Math.min(1000 * Math.pow(1.5, state.reconnectAttempts), 12000);
   state.reconnectAttempts++;
-  setTimeout(() => {
-    if (state.peer && !state.peer.destroyed && state.peer.disconnected) { try { state.peer.reconnect(); return; } catch {} }
+  brokerIdx = state.reconnectAttempts % BROKERS.length;
+  state.reconnectTimer = setTimeout(() => {
+    state.reconnectTimer = null;
+    if (state.peer && !state.peer.destroyed && state.peer.disconnected && Object.keys(state.connections).length) {
+      try { state.peer.reconnect(); return; } catch {}
+    }
     try { state.peer?.destroy(); } catch {}
     state.peer = null; initPeer();
   }, delay);
@@ -4239,9 +4290,10 @@ function setupMobileNav() {
       span.textContent = text || 'connecting';
     }
 
+    const broker = BROKERS[brokerIdx % BROKERS.length] || {};
     pill.setAttribute('data-tip', st === 'online'
-      ? BROKERS[brokerIdx % BROKERS.length].host
-      : st === 'error' ? 'check your network' : 'finding server…');
+      ? (broker.name || broker.host || 'PeerJS cloud')
+      : st === 'error' ? 'check your network' : `finding ${broker.name || broker.host || 'server'}…`);
   };
   if (typeof _pendingConnUI !== 'undefined' && _pendingConnUI) { setConnUI(..._pendingConnUI); _pendingConnUI = null; }
 })();
