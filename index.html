@@ -250,9 +250,17 @@ header {
 .channel-item.active .ch-name  { color: var(--accent); }
 .channel-item.active .ch-hash  { color: var(--accent); opacity: 0.6; }
 .channel-item.active .ch-count { background: var(--accent-dim); color: #c4b5fd; }
+.channel-item.talking .ch-hash { color: var(--green); opacity: 1; }
+.channel-item.talking .ch-name { color: var(--green); }
+.channel-item.talking .ch-count { background: rgba(34,211,165,0.1); color: var(--green); }
 
 .ch-hash  { font-family: var(--mono); font-size: 0.85rem; color: var(--text-dim); line-height: 1; }
-.ch-name  { font-size: 0.9rem; font-weight: 600; color: var(--text-mid); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ch-name  { font-size: 0.9rem; font-weight: 600; color: var(--text-mid); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ch-activity-dot {
+  width: 6px; height: 6px; border-radius: 50%; margin-left: auto;
+  background: var(--green); box-shadow: 0 0 8px rgba(34,211,165,0.5);
+  animation: pulse-dot 1.2s ease-in-out infinite;
+}
 .ch-count {
   font-family: var(--mono); font-size: 0.58rem; color: var(--text-dim);
   background: var(--bg4); border-radius: 10px; padding: 2px 6px; min-width: 20px; text-align: center;
@@ -297,9 +305,30 @@ header {
   transition: box-shadow 0.3s;
 }
 .channel-bar.in-channel { box-shadow: 0 1px 0 var(--border), 0 4px 12px rgba(0,0,0,0.2); }
-.channel-bar-left { display: flex; align-items: center; gap: 8px; }
+.channel-bar-left { display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1; }
 .channel-bar h2 { font-size: 1rem; font-weight: 700; color: var(--text); }
 .channel-bar h2 span { color: var(--text-dim); margin-right: 2px; font-weight: 400; }
+.channel-topic-input {
+  min-width: 120px; max-width: 320px; flex: 1;
+  background: transparent; border: 1px solid transparent;
+  border-radius: var(--radius-sm); padding: 5px 8px;
+  font-family: var(--mono); font-size: 0.6rem; color: var(--text-mid);
+  outline: none; overflow: hidden; text-overflow: ellipsis;
+}
+.channel-topic-input::placeholder { color: var(--text-dim); }
+.channel-topic-input:not([readonly]):focus { background: var(--bg3); border-color: var(--border2); }
+.channel-topic-input[readonly] { color: var(--text-dim); }
+.channel-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.channel-icon-btn {
+  display: none; align-items: center; justify-content: center;
+  width: 30px; height: 30px; border-radius: var(--radius-sm);
+  background: var(--bg3); border: 1px solid var(--border);
+  color: var(--text-dim); cursor: pointer;
+  transition: border-color 0.2s, color 0.2s, background 0.2s, transform 0.12s;
+}
+.channel-icon-btn:hover { border-color: var(--accent-dim); color: var(--accent); background: var(--accent-glow); }
+.channel-icon-btn:active { transform: scale(0.94); }
+.leave-channel-btn:hover { border-color: rgba(248,113,113,0.45); color: var(--danger); background: rgba(248,113,113,0.08); }
 
 /* TX pill — the main status indicator */
 .tx-pill {
@@ -592,6 +621,11 @@ header {
 .member-name  { font-size: 0.82rem; font-weight: 600; color: var(--text-mid); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; transition: color 0.2s; }
 .member-sub   { font-family: var(--mono); font-size: 0.55rem; color: var(--text-dim); letter-spacing: 0.05em; margin-top: 1px; }
 .member-item.talking .member-name { color: var(--green); }
+.member-volume {
+  display: block; width: 100%; height: 14px; margin-top: 5px;
+  accent-color: var(--accent);
+}
+.member-volume::-webkit-slider-thumb { cursor: pointer; }
 
 /* ═══════════════════════════════════════════
    OVERLAYS / TOASTS
@@ -734,7 +768,7 @@ header {
   }
   header { height: 52px; padding: 0 14px; }
   .header-left, .channel-bar-left { min-width: 0; }
-  .header-right, .tx-pill, .ch-privacy-bar-btn { flex-shrink: 0; }
+  .header-right, .tx-pill, .ch-privacy-bar-btn, .channel-actions { flex-shrink: 0; }
   .brand-name { font-size: 1rem; }
   #install-btn { display: none !important; }
   #toast      { bottom: 84px; }
@@ -783,6 +817,9 @@ header {
 
   .main-content   { background: var(--bg); }
   .channel-bar    { padding: 11px 14px; gap: 10px; min-height: 48px; }
+  .channel-topic-input { display: none !important; }
+  .channel-actions { gap: 6px; }
+  .channel-icon-btn { width: 32px; height: 32px; }
   .channel-bar h2 { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   #ptt-btn        { width: 160px; height: 160px; }
   .ptt-ring-1     { width: 195px; height: 195px; }
@@ -1421,8 +1458,10 @@ header {
       <div class="channel-bar">
         <div class="channel-bar-left">
           <h2 id="channel-title"><span>#</span><span id="channel-name-display">—</span></h2>
+          <input id="channel-topic-input" class="channel-topic-input" maxlength="80"
+            placeholder="set topic..." autocomplete="off" spellcheck="false" style="display:none">
         </div>
-        <div style="display:flex;align-items:center;gap:8px;">
+        <div class="channel-actions">
           <!-- Privacy toggle — host only, visible when in a channel -->
           <button id="ch-privacy-btn" style="display:none" title="Toggle channel privacy" class="ch-privacy-bar-btn">
             <svg id="ch-privacy-bar-public" width="13" height="13" viewBox="0 0 16 16" fill="none">
@@ -1435,8 +1474,18 @@ header {
             </svg>
             <span id="ch-privacy-bar-label">public</span>
           </button>
-
-
+          <button id="share-channel-btn" class="channel-icon-btn" title="Copy invite link" aria-label="Copy invite link">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+              <path d="M10 13a5 5 0 007.07 0l2.12-2.12a5 5 0 00-7.07-7.07L11 4.93" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              <path d="M14 11a5 5 0 00-7.07 0L4.81 13.12a5 5 0 007.07 7.07L13 19.07" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+          </button>
+          <button id="leave-channel-btn" class="channel-icon-btn leave-channel-btn" title="Leave channel" aria-label="Leave channel">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+              <path d="M10 17l5-5-5-5M15 12H3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M14 3h5a2 2 0 012 2v14a2 2 0 01-2 2h-5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+          </button>
         </div>
       </div>
 
@@ -2054,10 +2103,13 @@ function setConnUI(st, text) {
 const CONFIG    = { appName: 'Chirp' };
 const LOBBY_ID  = 'chirp-lobby-0001';
 const BROKERS   = [{ host: '0.peerjs.com', port: 443, path: '/', secure: true }];
+const PRESENCE_TTL = 45000;
+const ACTIVITY_TTL = 6000;
 
 let brokerIdx = 0;
 const liveChannels = new Set();
 const channelVisibility = {}; // ch -> 'public' | 'private'
+const channelTopics = {};     // ch -> short channel topic
 // Channels that should never be auto-created or received from lobby
 const BLOCKED_DEFAULTS = new Set(['ops', 'general', 'lounge']);
 
@@ -2069,6 +2121,17 @@ function loadPersistedChannels() {
   try {
     const saved = JSON.parse(localStorage.getItem('chirp_channels') || '[]');
     if (Array.isArray(saved)) saved.forEach(ch => { if (ch && !BLOCKED_DEFAULTS.has(ch)) liveChannels.add(ch); });
+  } catch {}
+}
+
+function persistChannelTopics() {
+  try { localStorage.setItem('chirp_channel_topics', JSON.stringify(channelTopics)); } catch {}
+}
+
+function loadPersistedChannelTopics() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('chirp_channel_topics') || '{}');
+    if (saved && typeof saved === 'object') Object.assign(channelTopics, saved);
   } catch {}
 }
 
@@ -2086,13 +2149,16 @@ const state = {
   lobbyConn: null,
   lobbyPeer: null,
   isLobbyHost: false,
-  lobbyRegistry: {},  // peerId -> { name, channel }
+  lobbyRegistry: {},  // peerId -> { name, channel, seenAt }
   localStream: null, audioTrack: null,
   calls: {}, inboundCalls: {},
   isTalking: false, isMuted: false, wakeLock: null,
   reconnectAttempts: 0,
   pingInterval: null, pingTimes: {},
+  heartbeatInterval: null,
   myJoinTime: null,
+  channelActivity: {},
+  pendingInviteChannel: null,
   // Host moderation
   isChannelHost: false,
   channelHostId: null,
@@ -2117,12 +2183,17 @@ function makePeerInfo(conn, opts = {}) {
   };
 }
 
+function normalizeChannelName(value) {
+  return String(value || '').trim().toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 20);
+}
+
 function setLobbyChannel(peerId, channel, name) {
   if (!peerId) return;
   const current = state.lobbyRegistry[peerId] || {};
   state.lobbyRegistry[peerId] = {
     name: name || current.name || peerId,
     channel: channel ?? null,
+    seenAt: Date.now(),
   };
 }
 
@@ -2137,6 +2208,7 @@ function cacheDOM() {
     'channel-scroll','conn-pill','conn-text','ping-chip',
     'mute-btn','mute-label','mute-mic-on','mute-mic-off',
     'no-channel','ptt-section','space-kbd','channel-name-display',
+    'channel-topic-input','share-channel-btn','leave-channel-btn',
     'waiting-overlay','waiting-countdown','ch-search-input',
     'mod-menu','mod-mute-label',
   ].forEach(id => { DOM[id] = document.getElementById(id); });
@@ -2176,7 +2248,7 @@ function announceLeavingChannel() {
   broadcastAll({ type: 'leave', channel: state.currentChannel, name: state.myName });
 
   if (state.isLobbyHost) {
-    state.lobbyRegistry[state.myId] = { name: state.myName, channel: null };
+    setLobbyChannel(state.myId, null, state.myName);
     lobbyBroadcast({ type: 'lobby-update', registry: state.lobbyRegistry, channels: [...liveChannels] });
     return;
   }
@@ -2188,6 +2260,7 @@ function announceLeavingChannel() {
       name: state.myName,
       channel: null,
       channels: [...liveChannels],
+      seenAt: Date.now(),
     });
   } catch {}
 }
@@ -2197,6 +2270,132 @@ function setupLeaveCleanup() {
   setupLeaveCleanup.bound = true;
   window.addEventListener('pagehide', announceLeavingChannel);
   window.addEventListener('beforeunload', announceLeavingChannel);
+}
+
+function inviteChannelFromUrl() {
+  const raw = decodeURIComponent((location.hash || '').replace(/^#\/?/, ''));
+  return normalizeChannelName(raw.replace(/^channel[=/]/, ''));
+}
+
+function channelInviteUrl(ch) {
+  const url = new URL(location.href);
+  url.hash = encodeURIComponent(ch);
+  return url.toString();
+}
+
+function syncInviteHash(ch) {
+  if (!ch) {
+    if (location.hash) history.replaceState(null, '', `${location.pathname}${location.search}`);
+    return;
+  }
+  if (inviteChannelFromUrl() !== ch) history.replaceState(null, '', `#${encodeURIComponent(ch)}`);
+}
+
+function joinInviteFromUrl() {
+  const ch = inviteChannelFromUrl();
+  if (!ch || ch === state.currentChannel) return;
+  safeAddChannel(ch);
+  if (state.peer?.open) requestJoinChannel(ch);
+  else state.pendingInviteChannel = ch;
+}
+
+function setupInviteRouting() {
+  joinInviteFromUrl();
+  window.addEventListener('hashchange', joinInviteFromUrl);
+}
+
+function updateChannelControls() {
+  const inChannel = Boolean(state.currentChannel);
+  const topic = DOM['channel-topic-input'];
+  const share = DOM['share-channel-btn'];
+  const leave = DOM['leave-channel-btn'];
+
+  if (share) share.style.display = inChannel ? 'flex' : 'none';
+  if (leave) leave.style.display = inChannel ? 'flex' : 'none';
+  if (!topic) return;
+
+  topic.style.display = inChannel ? '' : 'none';
+  if (!inChannel) { topic.value = ''; return; }
+  topic.readOnly = !state.isChannelHost;
+  topic.placeholder = state.isChannelHost ? 'set topic...' : 'no topic set';
+  if (document.activeElement !== topic) topic.value = channelTopics[state.currentChannel] || '';
+}
+
+function setupChannelControls() {
+  DOM['leave-channel-btn']?.addEventListener('click', () => leaveChannel());
+  DOM['share-channel-btn']?.addEventListener('click', async () => {
+    if (!state.currentChannel) return;
+    const url = channelInviteUrl(state.currentChannel);
+    try {
+      if (navigator.share) await navigator.share({ title: `Join #${state.currentChannel} on Chirp`, url });
+      else await navigator.clipboard.writeText(url);
+      toast('Invite link copied', 'green');
+    } catch {
+      toast('Could not copy invite link', 'red');
+    }
+  });
+
+  const topic = DOM['channel-topic-input'];
+  if (!topic) return;
+  let topicTimer = null;
+  topic.addEventListener('input', () => {
+    if (!state.currentChannel || !state.isChannelHost) return;
+    const ch = state.currentChannel;
+    const value = topic.value.trim().slice(0, 80);
+    channelTopics[ch] = value;
+    persistChannelTopics();
+    clearTimeout(topicTimer);
+    topicTimer = setTimeout(() => {
+      broadcastAll({ type: 'channel-topic', channel: ch, topic: value });
+    }, 250);
+  });
+  topic.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); topic.blur(); }
+    if (e.key === 'Escape') { topic.value = channelTopics[state.currentChannel] || ''; topic.blur(); }
+  });
+}
+
+function normalizeRegistry(registry) {
+  const now = Date.now();
+  return Object.fromEntries(Object.entries(registry || {}).map(([id, info]) => [id, {
+    name: info.name || id,
+    channel: info.channel || null,
+    seenAt: info.seenAt || now,
+  }]));
+}
+
+function pruneLobbyRegistry() {
+  const now = Date.now();
+  let changed = false;
+  Object.entries(state.lobbyRegistry).forEach(([id, info]) => {
+    if (id === state.myId) return;
+    if (info.seenAt && now - info.seenAt > PRESENCE_TTL) {
+      delete state.lobbyRegistry[id];
+      if (state.connections[id]) removePeer(id);
+      delete state.lobbyRegistry[id];
+      changed = true;
+    }
+  });
+  if (changed) {
+    scheduleRenderChannels();
+    renderMembers();
+    if (state.isLobbyHost) lobbyBroadcast({ type: 'lobby-update', registry: state.lobbyRegistry, channels: [...liveChannels] });
+  }
+}
+
+function startPresenceHeartbeat() {
+  clearInterval(state.heartbeatInterval);
+  state.heartbeatInterval = setInterval(() => {
+    lobbyAnnounce();
+    pruneLobbyRegistry();
+  }, 10000);
+}
+
+function markChannelActivity(ch) {
+  if (!ch) return;
+  state.channelActivity[ch] = Date.now();
+  renderChannels();
+  setTimeout(renderChannels, ACTIVITY_TTL + 100);
 }
 
 /* ═══════════════════════════════════════════
@@ -2230,6 +2429,7 @@ function startApp() {
   cacheDOM();
 
   loadPersistedChannels();
+  loadPersistedChannelTopics();
   renderChannels();
   initPeer();
   setupPTT();
@@ -2240,8 +2440,10 @@ function startApp() {
   setupJoinRequestUI();
   setupModMenu();
   setupPrivacyBtn();
+  setupChannelControls();
   setupMobileNav();
   setupLeaveCleanup();
+  setupInviteRouting();
 }
 
 /* ═══════════════════════════════════════════
@@ -2574,8 +2776,7 @@ function setupSettings() {
       volVal.textContent = `${v}%`;
       state.outputVolume = v / 100;
       localStorage.setItem('chirp_volume', v);
-      // Apply to all remote audio elements
-      document.querySelectorAll('audio[data-peer]').forEach(a => { a.volume = state.outputVolume; });
+      Object.keys(state.connections).forEach(applyPeerVolume);
     });
   }
 
@@ -2679,8 +2880,6 @@ function setupChannelCreate() {
     });
   }
 
-  function sanitize(v) { return v.trim().toLowerCase().replace(/[^a-z0-9_-]/g,'').slice(0,20); }
-
   function createChannel(raw) {
     if (!raw) { input.focus(); return; }
     const isPrivate = privateCb?.checked || false;
@@ -2692,8 +2891,8 @@ function setupChannelCreate() {
     SFX.channelCreate();
   }
 
-  btn.addEventListener('click', () => createChannel(sanitize(input.value)));
-  input.addEventListener('keydown', e => { if (e.key === 'Enter') createChannel(sanitize(input.value)); });
+  btn.addEventListener('click', () => createChannel(normalizeChannelName(input.value)));
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') createChannel(normalizeChannelName(input.value)); });
 
   // Join random public channel
   if (randomBtn) {
@@ -2708,7 +2907,7 @@ function setupChannelCreate() {
   searchInput.addEventListener('input',   () => renderChannels(searchInput.value.trim().toLowerCase()));
   searchInput.addEventListener('keydown', e => {
     if (e.key === 'Enter') {
-      const raw = sanitize(searchInput.value);
+      const raw = normalizeChannelName(searchInput.value);
       if (!raw) return;
       searchInput.value = '';
       renderChannels('');
@@ -2752,12 +2951,14 @@ function renderChannels(filter) {
 
   channels.forEach(ch => {
     const el = document.createElement('div');
-    el.className = `channel-item${state.currentChannel === ch ? ' active' : ''}`;
+    const isTalking = Date.now() - (state.channelActivity[ch] || 0) < ACTIVITY_TTL;
+    el.className = `channel-item${state.currentChannel === ch ? ' active' : ''}${isTalking ? ' talking' : ''}`;
     const cnt = counts[ch] || 0;
     const isPrivate = channelVisibility[ch] === 'private';
     el.innerHTML = `
       <span class="ch-hash">${isPrivate ? '🔒' : '#'}</span>
       <span class="ch-name">${ch}</span>
+      ${isTalking ? '<span class="ch-activity-dot"></span>' : ''}
       <span class="ch-count" id="count-${ch}">${cnt || ''}</span>
     `;
     el.addEventListener('click', () => { if (state.currentChannel !== ch) requestJoinChannel(ch); });
@@ -2812,7 +3013,7 @@ function requestJoinChannel(ch) {
   } else {
     const conn = state.peer.connect(targetId, { reliable: true });
     state.connections[targetId] = makePeerInfo(conn, { peerId: targetId });
-    conn.on('open',  () => { conn.send({ type: 'hello', name: state.myName, channel: null, joinTime: Date.now(), channels: [...liveChannels] }); sendJoinRequest(ch, targetId, conn); });
+    conn.on('open',  () => { conn.send({ type: 'hello', name: state.myName, channel: null, joinTime: Date.now(), channels: [...liveChannels], topics: channelTopics }); sendJoinRequest(ch, targetId, conn); });
     conn.on('data',  data => handleData(targetId, data));
     conn.on('error', () => { delete state.connections[targetId]; cancelPendingJoin('Could not reach channel member'); });
   }
@@ -2911,9 +3112,18 @@ function initPeer() {
     SFX.online();
     startPing();
     connectToLobby();
+    startPresenceHeartbeat();
 
-    // Auto-rejoin last channel if enabled
-    if (localStorage.getItem('chirp_autojoin') === '1') {
+    const inviteCh = state.pendingInviteChannel || inviteChannelFromUrl();
+    state.pendingInviteChannel = null;
+    if (inviteCh) {
+      setTimeout(() => {
+        if (!state.currentChannel) {
+          safeAddChannel(inviteCh);
+          requestJoinChannel(inviteCh);
+        }
+      }, 900);
+    } else if (localStorage.getItem('chirp_autojoin') === '1') {
       const lastCh = localStorage.getItem('chirp_last_channel');
       if (lastCh) {
         // Small delay so lobby connects first and channel list populates
@@ -2977,15 +3187,15 @@ function connectToLobby() {
   const conn = state.peer.connect(LOBBY_ID, { reliable: true });
   state.lobbyConn = conn;
 
-  conn.on('open', () => conn.send({ type: 'lobby-hello', id: state.myId, name: state.myName, channel: state.currentChannel, channels: [...liveChannels] }));
+  conn.on('open', () => conn.send({ type: 'lobby-hello', id: state.myId, name: state.myName, channel: state.currentChannel, channels: [...liveChannels], seenAt: Date.now() }));
   conn.on('data', data => {
     if (data.type === 'lobby-registry') {
-      state.lobbyRegistry = data.registry || {};
+      state.lobbyRegistry = normalizeRegistry(data.registry);
       (data.channels || []).forEach(ch => safeAddChannel(ch));
       scheduleRenderChannels(); syncChannelPeers();
     }
     if (data.type === 'lobby-update') {
-      if (data.registry) { state.lobbyRegistry = data.registry; scheduleRenderChannels(); syncChannelPeers(); }
+      if (data.registry) { state.lobbyRegistry = normalizeRegistry(data.registry); scheduleRenderChannels(); syncChannelPeers(); }
       if (data.channel)  { safeAddChannel(data.channel); scheduleRenderChannels(); }
       if (data.channels) { data.channels.forEach(ch => safeAddChannel(ch)); scheduleRenderChannels(); }
     }
@@ -3000,20 +3210,20 @@ function tryBecomeLobbyHost() {
 
   lp.on('open', () => {
     state.lobbyPeer = lp; state.isLobbyHost = true;
-    state.lobbyRegistry[state.myId] = { name: state.myName, channel: state.currentChannel };
+    setLobbyChannel(state.myId, state.currentChannel, state.myName);
     renderChannels();
 
     lp.on('connection', conn => {
       conn.on('open', () => conn.send({ type: 'lobby-registry', registry: state.lobbyRegistry, channels: [...liveChannels] }));
       conn.on('data', data => {
         if (data.type === 'lobby-hello') {
-          state.lobbyRegistry[data.id] = { name: data.name, channel: data.channel || null };
+          setLobbyChannel(data.id, data.channel || null, data.name);
           (data.channels || []).forEach(ch => safeAddChannel(ch));
           lobbyBroadcast({ type: 'lobby-update', registry: state.lobbyRegistry, channels: [...liveChannels] });
           scheduleRenderChannels();
         }
         if (data.type === 'lobby-announce') {
-          state.lobbyRegistry[data.id] = { name: data.name, channel: data.channel || null };
+          setLobbyChannel(data.id, data.channel || null, data.name);
           (data.channels || []).forEach(ch => safeAddChannel(ch));
           if (data.newChannel) safeAddChannel(data.newChannel);
           lobbyBroadcast({ type: 'lobby-update', registry: state.lobbyRegistry, channel: data.newChannel || null, channels: [...liveChannels] });
@@ -3040,9 +3250,9 @@ function lobbyBroadcast(data) {
 }
 
 function lobbyAnnounce(newChannel) {
-  const msg = { type: 'lobby-announce', id: state.myId, name: state.myName, channel: state.currentChannel, newChannel: newChannel || null, channels: [...liveChannels] };
+  const msg = { type: 'lobby-announce', id: state.myId, name: state.myName, channel: state.currentChannel, newChannel: newChannel || null, channels: [...liveChannels], seenAt: Date.now() };
   if (state.isLobbyHost) {
-    state.lobbyRegistry[state.myId] = { name: state.myName, channel: state.currentChannel };
+    setLobbyChannel(state.myId, state.currentChannel, state.myName);
     if (newChannel) safeAddChannel(newChannel);
     lobbyBroadcast({ type: 'lobby-update', registry: state.lobbyRegistry, channel: newChannel || null, channels: [...liveChannels] });
     scheduleRenderChannels();
@@ -3085,7 +3295,7 @@ function setupDataConn(conn) {
     state.connections[conn.peer].conn = conn;
   }
   conn.on('open',  () => {
-    conn.send({ type: 'hello', name: state.myName, channel: state.currentChannel, joinTime: state.myJoinTime || Date.now(), channels: [...liveChannels] });
+    conn.send({ type: 'hello', name: state.myName, channel: state.currentChannel, joinTime: state.myJoinTime || Date.now(), channels: [...liveChannels], topics: channelTopics });
     // If we're the host, tell new peer
     if (state.isChannelHost) {
       try { conn.send({ type: 'host-changed', newHostId: state.myId }); } catch {}
@@ -3130,8 +3340,9 @@ function handleData(peerId, data) {
       }
       setLobbyChannel(peerId, data.channel, data.name);
       if (Array.isArray(data.channels)) data.channels.forEach(ch => safeAddChannel(ch));
+      if (data.topics && typeof data.topics === 'object') { Object.assign(channelTopics, data.topics); persistChannelTopics(); }
       if (data.channel === state.currentChannel) SFX.peerJoin();
-      renderMembers(); renderChannels();
+      renderMembers(); renderChannels(); updateChannelControls();
       {
         const peerList = Object.keys(state.connections)
           .filter(id => id !== peerId)
@@ -3154,10 +3365,19 @@ function handleData(peerId, data) {
       if (data.channel && data.visibility) { channelVisibility[data.channel] = data.visibility; renderChannels(); }
       break;
 
+    case 'channel-topic':
+      if (data.channel) {
+        channelTopics[data.channel] = String(data.topic || '').slice(0, 80);
+        persistChannelTopics();
+        updateChannelControls();
+      }
+      break;
+
     case 'talking':
       if (state.connections[peerId]) {
         const wasQuiet = !state.connections[peerId].talking;
         state.connections[peerId].talking = data.value;
+        if (data.value) markChannelActivity(state.connections[peerId].channel);
         if (data.value && wasQuiet && state.connections[peerId].channel === state.currentChannel) SFX.rxStart();
         renderMembers();
       }
@@ -3212,7 +3432,7 @@ function handleData(peerId, data) {
         state.channelHostId = state.myId;
         toast('You are now the host 👑', 'green');
       }
-      renderMembers();
+      renderMembers(); updateChannelControls();
       break;
 
     case 'host-changed':
@@ -3223,7 +3443,7 @@ function handleData(peerId, data) {
       } else {
         state.isChannelHost = false;
       }
-      renderMembers();
+      renderMembers(); updateChannelControls();
       break;
     case 'pong':
       if (state.pingTimes[peerId]) {
@@ -3259,7 +3479,7 @@ function playRemoteStream(peerId, stream) {
   removeAudio(peerId);
   const audio = document.createElement('audio');
   audio.id = `audio-${peerId}`; audio.srcObject = stream;
-  audio.autoplay = true; audio.volume = state.connections[peerId]?.volume ?? 1;
+  audio.autoplay = true; audio.volume = state.outputVolume * (state.connections[peerId]?.volume ?? 1);
   audio.dataset.peer = peerId;
   audio.style.display = 'none';
   document.body.appendChild(audio);
@@ -3272,6 +3492,17 @@ function playRemoteStream(peerId, stream) {
 }
 
 function removeAudio(peerId) { document.getElementById(`audio-${peerId}`)?.remove(); }
+
+function applyPeerVolume(peerId) {
+  const audio = document.getElementById(`audio-${peerId}`);
+  if (audio) audio.volume = state.outputVolume * (state.connections[peerId]?.volume ?? 1);
+}
+
+function setPeerVolume(peerId, value) {
+  if (!state.connections[peerId]) return;
+  state.connections[peerId].volume = Math.max(0, Math.min(1, value));
+  applyPeerVolume(peerId);
+}
 
 function ensureChannelHost() {
   if (!state.currentChannel) return;
@@ -3287,7 +3518,7 @@ function ensureChannelHost() {
   state.channelHostId = nextHostId;
   state.isChannelHost = nextHostId === state.myId;
   if (changed && state.isChannelHost) broadcastAll({ type: 'host-changed', newHostId: state.myId });
-  updatePrivacyBtn();
+  updatePrivacyBtn(); updateChannelControls();
 }
 
 /* ═══════════════════════════════════════════
@@ -3320,6 +3551,7 @@ async function joinChannel(ch) {
   state.myJoinTime = Date.now();
   safeAddChannel(ch);
   setLobbyChannel(state.myId, ch, state.myName);
+  syncInviteHash(ch);
   localStorage.setItem('chirp_last_channel', ch);
 
   // Become host if no one else is in the channel
@@ -3335,10 +3567,10 @@ async function joinChannel(ch) {
   document.getElementById('mute-btn').style.display    = '';
   document.querySelector('.channel-bar')?.classList.add('in-channel');
   SFX.join();
-  lobbyAnnounce(); renderChannels(); renderMembers(); updatePrivacyBtn();
+  lobbyAnnounce(); renderChannels(); renderMembers(); updatePrivacyBtn(); updateChannelControls();
   window._mobileGoTalk?.();
   syncChannelPeers();
-  broadcastAll({ type: 'hello', name: state.myName, channel: ch, joinTime: state.myJoinTime, channels: [...liveChannels] });
+  broadcastAll({ type: 'hello', name: state.myName, channel: ch, joinTime: state.myJoinTime, channels: [...liveChannels], topics: channelTopics });
 
   // Start VAD if enabled
   if (state.vadEnabled) startVAD();
@@ -3366,12 +3598,15 @@ async function leaveChannel() {
   state.mutedPeers.clear();
   localStorage.removeItem('chirp_last_channel');
   lobbyAnnounce();
+  syncInviteHash(null);
   document.querySelectorAll('.channel-item').forEach(el => el.classList.remove('active'));
   document.getElementById('member-list').innerHTML = '';
+  document.getElementById('member-count-badge').textContent = '0';
+  document.getElementById('channel-name-display').textContent = '—';
   document.getElementById('ptt-section').classList.remove('visible');
   document.getElementById('no-channel').style.display  = '';
   document.getElementById('mute-btn').style.display    = 'none';
-  updatePrivacyBtn();
+  updatePrivacyBtn(); updateChannelControls();
   document.querySelector('.channel-bar')?.classList.remove('in-channel');
   renderChannels();
 }
@@ -3393,6 +3628,7 @@ function removePeer(peerId) {
   delete state.connections[peerId]; delete state.calls[peerId]; delete state.inboundCalls[peerId];
   removeAudio(peerId);
   if (wasHost) ensureChannelHost();
+  if (state.isLobbyHost) lobbyBroadcast({ type: 'lobby-update', registry: state.lobbyRegistry, channels: [...liveChannels] });
   renderMembers(); renderChannels();
   if (wasInChannel) { toast(`${name} left`); SFX.peerLeave(); }
 }
@@ -3406,7 +3642,11 @@ function broadcastAll(data) {
 ═══════════════════════════════════════════ */
 function renderMembers() {
   const list = DOM['member-list'];
-  if (!state.currentChannel) { list.innerHTML = ''; return; }
+  if (!state.currentChannel) {
+    list.innerHTML = '';
+    DOM['member-count-badge'].textContent = '0';
+    return;
+  }
 
   const amHost = state.isChannelHost;
 
@@ -3445,7 +3685,8 @@ function renderMembers() {
     const isMuted = state.mutedPeers?.has(peerId);
     const isHost  = state.channelHostId === peerId;
     const pingStr = info.ping != null ? `${info.ping}ms` : '';
-    const key     = `${info.name}|${info.talking}|${isMuted}|${isHost}|${pingStr}|${amHost}`;
+    const volPct  = Math.round((info.volume ?? 1) * 100);
+    const key     = `${info.name}|${info.talking}|${isMuted}|${isHost}|${pingStr}|${amHost}|${volPct}`;
 
     let el = list.querySelector(`[data-peer-id="${peerId}"]`);
     if (!el) {
@@ -3453,6 +3694,7 @@ function renderMembers() {
       el.dataset.peerId = peerId;
       // Single delegated click — check host state at click time
       el.addEventListener('click', e => {
+        if (e.target.closest('.member-volume')) return;
         if (state.isChannelHost) showModMenu(e, peerId, state.connections[peerId]?.name || peerId);
       });
       list.appendChild(el);
@@ -3466,11 +3708,18 @@ function renderMembers() {
       <div class="member-info">
         <div class="member-name">${info.name}${isHost ? ' <span class="member-host-badge" title="Channel host">👑</span>' : ''}${isMuted ? ' <span style="font-size:0.6rem;opacity:0.5" title="Muted by host">🔇</span>' : ''}</div>
         ${pingStr ? `<div class="member-sub">${pingStr}</div>` : ''}
+        <input class="member-volume" type="range" min="0" max="100" value="${volPct}" title="Volume for ${info.name}">
       </div>`;
+    const slider = el.querySelector('.member-volume');
+    slider?.addEventListener('click', e => e.stopPropagation());
+    slider?.addEventListener('input', e => {
+      e.stopPropagation();
+      setPeerVolume(peerId, Number(e.target.value) / 100);
+    });
   });
 
   DOM['member-count-badge'].textContent = 1 + activePeerIds.size;
-  updatePrivacyBtn();
+  updatePrivacyBtn(); updateChannelControls();
 }
 
 /* ═══════════════════════════════════════════
@@ -3563,7 +3812,7 @@ function setupModMenu() {
     try { state.connections[peerId]?.conn.send({ type: 'mod-promote', newHostId: peerId }); } catch {}
     broadcastAll({ type: 'host-changed', newHostId: peerId });
     toast(`${name} is now host`, 'info');
-    renderMembers();
+    renderMembers(); updateChannelControls();
   });
 }
 
@@ -3659,6 +3908,7 @@ async function startTalking() {
   DOM['ptt-btn'].classList.add('active');
   DOM['tx-pill'].classList.add('transmitting');
   DOM['tx-label'].textContent = 'tx';
+  markChannelActivity(state.currentChannel);
   // Update only self member row talking state (no full rebuild)
   DOM['member-list']?.querySelector('.member-self')?.classList.add('talking');
   broadcastAll({ type: 'talking', value: true });
