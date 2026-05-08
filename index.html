@@ -1070,6 +1070,21 @@ header {
 }
 .rec-save-info strong { color: var(--text); font-weight: 600; }
 
+.rec-pick-dir-btn {
+  width: 100%;
+  background: var(--bg3); border: 1px solid var(--border2);
+  border-radius: var(--radius-sm); padding: 10px 14px;
+  font-family: var(--mono); font-size: 0.68rem; color: var(--text-mid);
+  letter-spacing: 0.05em; cursor: pointer;
+  display: flex; align-items: center; gap: 9px;
+  transition: border-color 0.18s, color 0.18s, background 0.18s;
+  text-align: left;
+}
+.rec-pick-dir-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-glow); }
+.rec-pick-dir-btn.picked { border-color: var(--green-dim); color: var(--green); background: rgba(34,211,165,0.06); }
+.rec-pick-dir-btn span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#record-fab.recording { color: var(--danger) !important; }
+
 /* Action buttons */
 .rec-action-btn {
   width: 100%; border: none; border-radius: var(--radius-sm);
@@ -1562,11 +1577,21 @@ header {
 
         <div class="field-wrap">
           <div class="field-label">Save Location</div>
-          <div class="rec-save-info">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style="flex-shrink:0;color:var(--accent);opacity:0.8">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-            <span>Saved to your browser's <strong>Downloads</strong> folder when you stop.</span>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <button id="rec-pick-dir-btn" class="rec-pick-dir-btn" title="Choose save folder">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style="flex-shrink:0">
+                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <span id="rec-dir-label">Choose folder…</span>
+            </button>
+            <div class="rec-save-info" id="rec-save-note">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" style="flex-shrink:0;color:var(--text-dim)">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5"/>
+                <line x1="12" y1="8" x2="12" y2="12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                <circle cx="12" cy="16" r="1" fill="currentColor"/>
+              </svg>
+              <span id="rec-save-note-text">If no folder is chosen, the file will download automatically when you stop.</span>
+            </div>
           </div>
         </div>
       </div>
@@ -2395,7 +2420,12 @@ function renderChannels(filter) {
     if (info.channel) counts[info.channel] = (counts[info.channel] || 0) + 1;
   });
 
-  const channels = [...liveChannels].filter(ch => !q || ch.includes(q));
+  // Show channel if: it matches the search AND (it's current, OR it has members in it)
+  const channels = [...liveChannels].filter(ch => {
+    if (q && !ch.includes(q)) return false;
+    if (ch === state.currentChannel) return true;
+    return (counts[ch] || 0) > 0;
+  });
   if (channels.length === 0) {
     scroll.innerHTML = `<div style="padding:12px 16px;font-family:var(--mono);font-size:0.6rem;color:var(--text-dim)">${q ? 'no match — press Enter to create' : 'no channels yet'}</div>`;
     return;
@@ -3479,14 +3509,19 @@ function setupMobileNav() {
           template_id : EMAILJS_TEMPLATE_ID,
           user_id     : EMAILJS_PUBLIC_KEY,
           template_params: {
-            from_type: typeEl.options[typeEl.selectedIndex].text,
-            message  : msg,
-            sent_at  : new Date().toLocaleString()
+            from_name : state.myName || 'Chirp User',
+            from_type : typeEl.options[typeEl.selectedIndex].text,
+            message   : msg,
+            sent_at   : new Date().toLocaleString(),
+            reply_to  : 'noreply@chirp.app'
           }
         })
       });
 
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      if (!res.ok) {
+        const errText = await res.text().catch(() => '');
+        throw new Error(`HTTP ${res.status}: ${errText}`);
+      }
 
       successEl.querySelector('p').textContent = 'Message sent — thanks!';
       successEl.classList.add('show');
@@ -3495,10 +3530,10 @@ function setupMobileNav() {
 
     } catch (err) {
       console.error('EmailJS error:', err);
-      sendBtn.textContent = 'Error — retry?';
+      sendBtn.textContent = 'Retry';
       sendBtn.disabled = false;
       cancelBtn.disabled = false;
-      toast('Saved locally — email send failed', 'red');
+      toast('Feedback saved locally — check console for details', 'red');
     }
   });
 })();
@@ -3506,6 +3541,9 @@ function setupMobileNav() {
    SESSION RECORDER
 ═══════════════════════════════════════════ */
 (function setupRecorder() {
+
+  const fab     = document.getElementById('record-fab');
+  const overlay = document.getElementById('rec-overlay');
 
   // ── State ──────────────────────────────────
   const rec = {
@@ -3518,13 +3556,38 @@ function setupMobileNav() {
     timerInterval : null,
     waveAnimId    : null,
     playerAnimId  : null,
-    dirHandle     : null,          // reserved — not used in iframe context
+    dirHandle     : null,          // File System Access API directory handle
+    fileHandle    : null,          // File System Access API file handle
     format        : 'webm',
     mimeType      : '',
     audioCtx      : null,
     destNode      : null,
     gainNode      : null,
   };
+
+  // ── Dir picker ────────────────────────────
+  const pickDirBtn  = document.getElementById('rec-pick-dir-btn');
+  const dirLabel    = document.getElementById('rec-dir-label');
+  const saveNote    = document.getElementById('rec-save-note-text');
+  const hasFSA      = typeof window.showDirectoryPicker === 'function';
+
+  if (!hasFSA && pickDirBtn) {
+    pickDirBtn.style.display = 'none';
+    if (saveNote) saveNote.textContent = 'File will download automatically to your Downloads folder when you stop.';
+  }
+
+  if (pickDirBtn && hasFSA) {
+    pickDirBtn.addEventListener('click', async () => {
+      try {
+        rec.dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+        dirLabel.textContent = rec.dirHandle.name || 'Folder selected';
+        pickDirBtn.classList.add('picked');
+        if (saveNote) saveNote.textContent = 'Saves to: ' + rec.dirHandle.name;
+      } catch (e) {
+        if (e.name !== 'AbortError') toast('Could not access folder', 'red');
+      }
+    });
+  }
 
   const setupDiv   = document.getElementById('rec-setup');
   const activeDiv  = document.getElementById('rec-active');
@@ -3736,6 +3799,8 @@ function setupMobileNav() {
     overlay.classList.add('show');
   });
 
+  const closeBtn = document.getElementById('rec-close');
+
   function closeOverlay() {
     overlay.classList.remove('show');
     if (rec.playerAnimId) { cancelAnimationFrame(rec.playerAnimId); rec.playerAnimId = null; }
@@ -3840,6 +3905,9 @@ function setupMobileNav() {
     const filename    = `${safeName}.${extension}`;
     const totalSecs   = (Date.now() - rec.startTime - rec.pausedAt) / 1000;
 
+    // FAB: stop pulsing
+    fab.classList.remove('recording');
+
     // Update done UI
     doneName.textContent = filename;
     doneInfo.textContent = `${fmtTime(totalSecs)} · ${fmtBytes(rec.blob.size)} · ${extension.toUpperCase()}`;
@@ -3859,6 +3927,21 @@ function setupMobileNav() {
       curTime.textContent = '0:00';
     });
 
+    // Try to save directly to chosen folder (File System Access API)
+    let savedToDir = false;
+    if (rec.dirHandle) {
+      try {
+        const fh = await rec.dirHandle.getFileHandle(filename, { create: true });
+        const writable = await fh.createWritable();
+        await writable.write(rec.blob);
+        await writable.close();
+        savedToDir = true;
+        toast(`Saved: ${filename}`, 'green');
+      } catch (e) {
+        console.warn('Could not save to dir:', e);
+      }
+    }
+
     // Decode for static waveform
     try {
       const ab  = await rec.blob.arrayBuffer();
@@ -3869,15 +3952,29 @@ function setupMobileNav() {
     } catch {}
 
     showScreen('done');
+    overlay.classList.add('show');
     animatePlayerProgress();
 
-    // Download button
+    // Download button — always available even if dir-saved
     dlBtn.onclick = () => {
       const a = document.createElement('a');
       a.href     = url;
       a.download = filename;
       a.click();
+      toast('Downloading…', 'green');
     };
+
+    // If saved to dir, update label
+    if (savedToDir && rec.dirHandle) {
+      const folderNote = doneDiv.querySelector('.rec-dir-saved-note');
+      if (!folderNote) {
+        const note = document.createElement('div');
+        note.className = 'rec-save-info rec-dir-saved-note';
+        note.style.marginBottom = '8px';
+        note.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" style="flex-shrink:0;color:var(--green)"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M22 4L12 14.01l-3-3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span style="color:var(--green)">Saved to <strong>${rec.dirHandle.name}</strong></span>`;
+        doneDiv.querySelector('.rec-done-actions').before(note);
+      }
+    }
   }
 
   // ── Playback controls ─────────────────────
