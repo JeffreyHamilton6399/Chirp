@@ -3288,6 +3288,17 @@ function loadPersistedChannelTopics() {
   } catch {}
 }
 
+function persistChannelVisibility() {
+  try { localStorage.setItem('chirp_channel_visibility', JSON.stringify(channelVisibility)); } catch {}
+}
+
+function loadPersistedChannelVisibility() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('chirp_channel_visibility') || '{}');
+    if (saved && typeof saved === 'object') Object.assign(channelVisibility, saved);
+  } catch {}
+}
+
 function safeAddChannel(ch) {
   if (ch && !BLOCKED_DEFAULTS.has(ch) && !liveChannels.has(ch)) {
     liveChannels.add(ch);
@@ -3834,6 +3845,7 @@ function startApp() {
 
   loadPersistedChannels();
   loadPersistedChannelTopics();
+  loadPersistedChannelVisibility();
   renderProfileSurfaces();
   renderChannels();
   initPeer();
@@ -4638,6 +4650,7 @@ function setupChannelCreate() {
     input.value = '';
     searchInput.value = '';
     channelVisibility[raw] = isPrivate ? 'private' : 'public';
+    persistChannelVisibility();
     addChannel(raw);
     joinChannel(raw);
     SFX.channelCreate();
@@ -4678,6 +4691,7 @@ function setupChannelCreate() {
     joinPrivateInput.value = '';
     // Mark as private locally so it shows the lock and doesn't leak to lobby
     channelVisibility[raw] = 'private';
+    persistChannelVisibility();
     safeAddChannel(raw);
     requestJoinChannel(raw);
     SFX.channelCreate?.();
@@ -4797,7 +4811,7 @@ function setupJoinRequestUI() {
   });
 }
 
-function requestJoinChannel(ch) {
+function requestJoinChannel(ch, _retryCount = 0) {
   // Public channels: join directly without requesting permission
   const visibility = channelVisibility[ch];
   if (!visibility || visibility === 'public') {
@@ -4807,7 +4821,16 @@ function requestJoinChannel(ch) {
 
   // Private channel: request permission from existing members
   const members = getPeersInChannel(ch);
-  if (members.length === 0) { joinChannel(ch); return; }
+  if (members.length === 0) {
+    // Lobby may not have synced yet — retry up to 3 times before assuming we're first in
+    if (_retryCount < 3) {
+      setTimeout(() => requestJoinChannel(ch, _retryCount + 1), 900);
+      return;
+    }
+    // Truly the first member: join directly as host
+    joinChannel(ch);
+    return;
+  }
 
   const targetId = members[0];
   showWaitingOverlay();
@@ -5245,14 +5268,14 @@ function handleData(peerId, data) {
       if (state.currentChannel === data.channel) {
         const reqConn = state.connections[peerId]?.conn;
         if (reqConn) {
-          // Auto-approve if channel is public (or visibility unset)
-          const vis = channelVisibility[data.channel];
-          if (!vis || vis === 'public') {
-            try { reqConn.send({ type: 'join-approved', channel: data.channel }); } catch {}
-          } else {
-            showJoinToast(data.name || peerId, data.channel, reqConn);
-            SFX.requestIn();
+          // A join-request is only ever sent for private channels — always ask the host.
+          // Update our local visibility record in case it was lost (e.g. after page refresh).
+          if (!channelVisibility[data.channel] || channelVisibility[data.channel] === 'public') {
+            channelVisibility[data.channel] = 'private';
+            persistChannelVisibility();
           }
+          showJoinToast(data.name || peerId, data.channel, reqConn);
+          SFX.requestIn();
         }
       }
       break;
@@ -5297,7 +5320,7 @@ function handleData(peerId, data) {
       break;
 
     case 'channel-visibility':
-      if (data.channel && data.visibility) { channelVisibility[data.channel] = data.visibility; renderChannels(); }
+      if (data.channel && data.visibility) { channelVisibility[data.channel] = data.visibility; persistChannelVisibility(); renderChannels(); }
       break;
 
     case 'channel-topic':
@@ -5740,6 +5763,7 @@ function setupPrivacyBtn() {
     channelVisibility[state.currentChannel] = isPrivate ? 'public' : 'private';
     updatePrivacyBtn();
     renderChannels();
+    persistChannelVisibility();
     SFX.privacyToggle();
     // Re-announce so lobby updates its public channel list immediately
     lobbyAnnounce();
@@ -7548,18 +7572,52 @@ function filterProfanity(text) {
 
   // Start sharing
   async function startScreenShare() {
-    if (!navigator.mediaDevices?.getDisplayMedia) {
-      toast('Screen sharing not supported on this browser', 'red'); return;
-    }
     if (!state.currentChannel) {
       toast('Join a channel first to share your screen', 'red'); return;
     }
-    try {
-      myScreenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
-    } catch {
-      toast('Screen share cancelled or denied', 'red'); return;
+
+    let stream = null;
+    const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+    // Try getDisplayMedia first (works on desktop + Android Chrome + iOS 16.4+ Safari)
+    if (navigator.mediaDevices?.getDisplayMedia) {
+      try {
+        stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
+      } catch (e) {
+        // User cancelled — bail out silently
+        if (e.name === 'NotAllowedError' || e.name === 'AbortError') {
+          // On mobile, fall through to camera fallback instead of giving up
+          if (!isMobile) { toast('Screen share cancelled or denied', 'red'); return; }
+        } else if (!isMobile) {
+          toast('Screen share cancelled or denied', 'red'); return;
+        }
+      }
     }
 
+    // Camera fallback for mobile browsers without getDisplayMedia support,
+    // or when getDisplayMedia fails on mobile
+    if (!stream && isMobile) {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
+          audio: false,
+        });
+        toast('Camera share active (screen share not supported on this browser)', 'info');
+      } catch (e) {
+        if (e.name === 'NotAllowedError') {
+          toast('Camera permission denied', 'red');
+        } else {
+          toast('Could not open camera for sharing', 'red');
+        }
+        return;
+      }
+    }
+
+    if (!stream) {
+      toast('Screen sharing not supported on this browser', 'red'); return;
+    }
+
+    myScreenStream = stream;
     ssBtn?.classList.add('sharing');
     stopBtn.style.display = '';
     if (headerDot) headerDot.style.display = '';
