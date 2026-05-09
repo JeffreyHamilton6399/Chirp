@@ -382,22 +382,18 @@ header {
 #header-settings-btn.channel-icon-btn {
   display: flex;
 }
+@media (max-width: 640px) {
+  #header-settings-btn.channel-icon-btn {
+    display: flex !important;
+  }
+}
 .channel-icon-btn:hover { border-color: var(--accent-dim); color: var(--accent); background: var(--accent-glow); }
 .channel-icon-btn:active { transform: scale(0.94); }
 .leave-channel-btn:hover { border-color: rgba(248,113,113,0.45); color: var(--danger); background: rgba(248,113,113,0.08); }
 /* In-channel header actions — share, leave, ··· */
 .header-action-btn { flex-shrink: 0; }
-/* Thin separator before the in-channel group */
-#share-channel-btn.header-action-btn {
-  margin-left: 6px;
-  padding-left: 6px;
-  position: relative;
-}
-#share-channel-btn.header-action-btn::before {
-  content: '';
-  position: absolute; left: -4px; top: 20%; bottom: 20%;
-  width: 1px; background: var(--border2); border-radius: 1px;
-}
+/* Channel bar icon cluster */
+.channel-bar-actions .channel-bar-action { margin-left: 2px; }
 
 /* TX pill — the main status indicator */
 .tx-pill {
@@ -1093,42 +1089,65 @@ body.light header { background: rgba(248,248,252,0.86); }
 .about-feedback-section { display: flex; flex-direction: column; gap: 14px; }
 .about-feedback-title { font-size: 0.9rem; font-weight: 700; color: var(--text); }
 
-/* Info button in sidebar footer */
-#about-btn {
-  width: 28px; height: 28px; border-radius: 7px;
-  background: none; border: 1px solid transparent;
-  display: flex; align-items: center; justify-content: center;
-  cursor: pointer; color: var(--text-dim);
-  transition: border-color 0.18s, color 0.18s, background 0.18s, transform 0.12s;
-  flex-shrink: 0;
-}
-#about-btn:hover { border-color: var(--border2); color: var(--accent); background: var(--accent-glow); transform: scale(1.08); }
-#about-btn:active { transform: scale(0.94); }
+/* About (channel bar — hidden on narrow phones; use ··· menu) */
+.about-bar-btn:hover { border-color: var(--accent-dim); color: var(--accent); background: var(--accent-glow); }
 
 .ptt-toolbar {
   display: none;
   align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  max-width: 460px;
+  justify-content: center;
   flex-wrap: wrap;
-  gap: 14px 20px;
-  padding: 8px 8px 6px;
+  width: 100%;
+  max-width: 520px;
+  gap: 10px 12px;
+  padding: 8px 6px 6px;
   box-sizing: border-box;
 }
 #ptt-section.visible .ptt-toolbar { display: flex; }
-.ptt-toolbar-cluster {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+.ptt-toolbar .ptt-toolbar-mute {
+  padding: 0;
+  width: 40px; height: 40px;
+  min-width: 40px;
+  border-radius: 10px;
+  justify-content: center;
+  gap: 0;
+  box-shadow: none;
+  letter-spacing: 0.04em;
 }
-.ptt-toolbar #about-btn {
-  width: 40px; height: 40px; border-radius: 10px;
-  background: var(--bg3); border: 1px solid var(--border2);
+.ptt-toolbar .ptt-toolbar-mute-label {
+  display: none;
 }
 .ptt-toolbar #record-fab {
   width: 40px; height: 40px; border-radius: 10px;
   background: var(--bg3); border: 1px solid var(--border2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.ptt-toolbar #screen-share-btn,
+.ptt-toolbar .ptt-toolbar-ss {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 40px; height: 40px;
+  border-radius: 10px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s, background 0.2s, transform 0.12s;
+  flex-shrink: 0;
+  padding: 0;
+}
+.ptt-toolbar #screen-share-btn:hover,
+.ptt-toolbar .ptt-toolbar-ss:hover {
+  border-color: var(--accent-dim); color: var(--accent); background: var(--accent-glow);
+}
+.ptt-toolbar #screen-share-btn:active { transform: scale(0.94); }
+.ptt-toolbar #screen-share-btn.sharing {
+  border-color: rgba(248,113,113,0.45); color: var(--danger);
+  background: rgba(248,113,113,0.08);
+  animation: rec-pulse-fab 1.8s ease-in-out infinite;
 }
 .ptt-toolbar .raise-hand-btn-compact {
   width: 40px; height: 40px; border-radius: 10px;
@@ -1139,17 +1158,18 @@ body.light header { background: rgba(248,248,252,0.86); }
   border-radius: 10px;
 }
 @media (max-width: 640px) {
+  .about-bar-btn { display: none !important; }
   .ptt-toolbar {
-    justify-content: center;
     max-width: 100%;
+    gap: 8px 10px;
   }
-  .ptt-toolbar-cluster { gap: 10px; }
-  .ptt-toolbar #about-btn,
-  .ptt-toolbar #record-fab {
-    width: 48px; height: 48px; border-radius: 12px;
-  }
+  .ptt-toolbar .ptt-toolbar-mute,
+  .ptt-toolbar #record-fab,
+  .ptt-toolbar #screen-share-btn,
   .ptt-toolbar .raise-hand-btn-compact {
     width: 48px; height: 48px;
+    min-width: 48px;
+    border-radius: 12px;
     font-size: 1.25rem;
   }
   .ptt-toolbar .reactions-trigger-btn {
@@ -1505,10 +1525,17 @@ body.light header { background: rgba(248,248,252,0.86); }
 
   .app-body { position: relative; overflow: hidden; padding-bottom: 0; min-height: 0; }
 
+  #app.visible::before {
+    opacity: calc(0.36 + var(--bg-grid-pulse) * 0.34);
+  }
+  #app.visible::after {
+    opacity: calc(0.52 + var(--bg-grid-pulse) * 0.48);
+  }
+
   .sidebar, .main-content, .members-panel {
     position: absolute; inset: 0 0 var(--mobile-nav-height); width: 100%; height: auto; border: none;
     transition: transform 0.32s cubic-bezier(0.4,0,0.2,1), opacity 0.32s ease;
-    will-change: transform; background: var(--bg);
+    will-change: transform;
   }
 
   /* Default: talk tab */
@@ -1524,7 +1551,11 @@ body.light header { background: rgba(248,248,252,0.86); }
   body.tab-talk .main-content  { transform: translateX(0); }
   body.tab-talk .members-panel { transform: translateX(100%); }
 
-  .sidebar, .members-panel { display: flex; flex-direction: column; overflow: hidden; background: var(--bg2); }
+  .sidebar, .members-panel {
+    display: flex; flex-direction: column; overflow: hidden;
+    background: color-mix(in srgb, var(--bg2) 84%, transparent);
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  }
   .sidebar-header { display: flex; align-items: center; justify-content: space-between; padding: 18px 18px 12px; }
   .ch-search-wrap { padding: 10px 12px 8px; }
   .channel-scroll { flex: 1; overflow-y: auto; padding: 8px 0; }
@@ -1540,14 +1571,14 @@ body.light header { background: rgba(248,248,252,0.86); }
   .member-name    { font-size: 0.9rem; }
   .mobile-member-rail { display: flex; }
 
-  /* Show ··· more button, hide sidebar footer on mobile */
-  #mobile-more-btn { display: flex !important; }
+  /* ··· more: visibility toggled in updateChannelControls (must beat this default) */
+  #mobile-more-btn { display: none !important; }
   .sidebar-footer { display: none; }
 
-  /* Hide chat toggle from header on mobile — it's now a nav tab */
-  #chat-toggle-header-btn { display: none !important; }
-
-  .main-content   { background: var(--bg); }
+  .main-content {
+    background: color-mix(in srgb, var(--bg) 78%, transparent);
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  }
   .channel-bar    { padding: 11px 14px; gap: 10px; min-height: 48px; }
 
   /* Chat panel as a slide-in tab on mobile */
@@ -1556,7 +1587,8 @@ body.light header { background: rgba(248,248,252,0.86); }
     border: none; border-left: none;
     transform: translateX(100%); opacity: 0;
     transition: transform 0.32s cubic-bezier(0.4,0,0.2,1), opacity 0.32s ease;
-    background: var(--bg2);
+    background: color-mix(in srgb, var(--bg2) 88%, transparent);
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
     /* override collapsed state for mobile: we control via tab */
     pointer-events: none;
   }
@@ -1600,6 +1632,37 @@ body.light header { background: rgba(248,248,252,0.86); }
   .ptt-ring-3 { width: 248px; height: 248px; }
   .center-area { gap: 18px; padding-top: 12px; padding-bottom: 12px; }
   .ptt-hint { font-size: 0.58rem; }
+}
+
+/* Phone landscape — short vertical space */
+@media (max-width: 900px) and (orientation: landscape) and (max-height: 460px) {
+  :root { --mobile-nav-height: calc(48px + env(safe-area-inset-bottom, 0px)); }
+  header { height: 40px; padding: 0 10px; }
+  .brand-name { font-size: 0.88rem; }
+  .mobile-nav { padding: 2px 2px calc(2px + env(safe-area-inset-bottom, 0px)); }
+  .mobile-nav .nav-tab { flex: 0 0 72px; font-size: 0.48rem; gap: 2px; padding: 4px 1px; }
+  .channel-bar { padding: 5px 8px; min-height: 36px; gap: 6px; }
+  .channel-bar h2 { font-size: 0.82rem; }
+  .channel-icon-btn { width: 28px; height: 28px; }
+  #ptt-btn { width: 100px; height: 100px; }
+  .ptt-ring-1 { width: 122px; height: 122px; }
+  .ptt-ring-2 { width: 150px; height: 150px; }
+  .ptt-ring-3 { width: 178px; height: 178px; }
+  .center-area { gap: 8px; padding: 6px 8px; }
+  #ptt-section { gap: 8px; }
+  .ptt-hint { font-size: 0.5rem; letter-spacing: 0.04em; }
+  .ptt-toolbar { gap: 5px 6px; padding: 2px 4px 4px; max-width: 100%; }
+  .ptt-toolbar .ptt-toolbar-mute,
+  .ptt-toolbar #record-fab,
+  .ptt-toolbar #screen-share-btn,
+  .ptt-toolbar .raise-hand-btn-compact {
+    width: 38px; height: 38px; min-width: 38px; border-radius: 9px;
+    font-size: 1.05rem;
+  }
+  .ptt-toolbar .reactions-trigger-btn {
+    min-width: 38px; min-height: 38px; border-radius: 9px;
+  }
+  #toast, #join-toast { bottom: 58px; }
 }
 
 /* ═══════════════════════════════════════════
@@ -2177,18 +2240,7 @@ body.light header { background: rgba(248,248,252,0.86); }
 }
 #stop-screen-share-btn:hover { background: rgba(248,113,113,0.18); }
 
-/* Screen share FAB in channel bar */
-#screen-share-btn {
-  display: none; align-items: center; justify-content: center;
-  width: 30px; height: 30px; border-radius: var(--radius-sm);
-  background: var(--bg3); border: 1px solid var(--border);
-  color: var(--text-dim); cursor: pointer;
-  transition: border-color 0.2s, color 0.2s, background 0.2s, transform 0.12s;
-  flex-shrink: 0;
-}
-#screen-share-btn:hover { border-color: var(--accent-dim); color: var(--accent); background: var(--accent-glow); }
-#screen-share-btn:active { transform: scale(0.94); }
-#screen-share-btn.sharing { border-color: rgba(248,113,113,0.45); color: var(--danger); background: rgba(248,113,113,0.08); animation: rec-pulse-fab 1.8s ease-in-out infinite; }
+/* Screen share: styles under `.ptt-toolbar #screen-share-btn` (in-channel visibility via JS) */
 
 /* Channel bar right-side action group */
 .channel-bar-actions {
@@ -2196,13 +2248,7 @@ body.light header { background: rgba(248,248,252,0.86); }
 }
 
 @media (max-width: 640px) {
-  /* Hand + react live on Talk toolbar — hide duplicates in channel bar */
-  .channel-bar-mobile-extras { display: none !important; }
-  /* screen share viewer on mobile: full screen below nav */
   #screen-share-overlay { padding-bottom: var(--mobile-nav-height, 64px); }
-}
-@media (min-width: 641px) {
-  .channel-bar-mobile-extras { display: none; }
 }
 </style>
 </head>
@@ -2273,25 +2319,6 @@ body.light header { background: rgba(248,248,252,0.86); }
           <circle cx="5" cy="12" r="1.5" fill="currentColor"/>
           <circle cx="12" cy="12" r="1.5" fill="currentColor"/>
           <circle cx="19" cy="12" r="1.5" fill="currentColor"/>
-        </svg>
-      </button>
-      <!-- Chat toggle -->
-      <button id="chat-toggle-header-btn" title="Toggle chat (C)" aria-label="Toggle chat" style="position:relative">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
-          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-        <span class="chat-unread-badge" id="chat-unread-badge" style="display:none"></span>
-      </button>
-      <button id="share-channel-btn" class="channel-icon-btn header-action-btn" title="Copy invite link" aria-label="Copy invite link">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
-          <path d="M10 13a5 5 0 007.07 0l2.12-2.12a5 5 0 00-7.07-7.07L11 4.93" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-          <path d="M14 11a5 5 0 00-7.07 0L4.81 13.12a5 5 0 007.07 7.07L13 19.07" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-        </svg>
-      </button>
-      <button id="leave-channel-btn" class="channel-icon-btn header-action-btn leave-channel-btn" title="Leave channel" aria-label="Leave channel">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
-          <path d="M10 17l5-5-5-5M15 12H3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          <path d="M14 3h5a2 2 0 012 2v14a2 2 0 01-2 2h-5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
         </svg>
       </button>
       <button id="header-settings-btn" class="channel-icon-btn header-action-btn" type="button" title="Settings" aria-label="Settings">
@@ -2376,35 +2403,33 @@ body.light header { background: rgba(248,248,252,0.86); }
           <input id="channel-topic-input" class="channel-topic-input" maxlength="80"
             placeholder="set topic..." autocomplete="off" spellcheck="false" style="display:none">
         </div>
-        <!-- Channel bar right actions: screen share + mobile hand/react -->
+        <!-- Channel bar right: invite, chat, leave, about (screen share lives under PTT) -->
         <div class="channel-bar-actions" id="channel-bar-actions" style="display:none">
-          <!-- Screen share button (desktop + mobile) -->
-          <button id="screen-share-btn" title="Share screen">
+          <button id="share-channel-btn" class="channel-icon-btn header-action-btn channel-bar-action" title="Invite / copy link" aria-label="Copy invite link">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
-              <rect x="2" y="4" width="20" height="14" rx="2" stroke="currentColor" stroke-width="1.8"/>
-              <path d="M8 20h8M12 18v2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-              <path d="M9 11l3-3 3 3M12 8v6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M10 13a5 5 0 007.07 0l2.12-2.12a5 5 0 00-7.07-7.07L11 4.93" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              <path d="M14 11a5 5 0 00-7.07 0L4.81 13.12a5 5 0 007.07 7.07L13 19.07" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
             </svg>
           </button>
-          <!-- Mobile-only: raise hand + react in bar -->
-          <div class="channel-bar-mobile-extras">
-            <button id="raise-hand-btn-bar" class="raise-hand-btn-compact" title="Raise hand">✋</button>
-            <div class="reactions-dropdown-wrap" id="reactions-dropdown-wrap-bar">
-              <button id="reactions-trigger-btn-bar" class="reactions-trigger-btn" title="React">
-                <span>😊</span>
-              </button>
-              <div class="reactions-dropdown" id="reactions-dropdown-bar" style="top:calc(100% + 8px);bottom:auto;left:auto;right:0;transform:none;animation-name:fadeDown;">
-                <button class="reaction-btn" data-emoji="👍">👍</button>
-                <button class="reaction-btn" data-emoji="👎">👎</button>
-                <button class="reaction-btn" data-emoji="🔥">🔥</button>
-                <button class="reaction-btn" data-emoji="😂">😂</button>
-                <button class="reaction-btn" data-emoji="🎉">🎉</button>
-                <button class="reaction-btn" data-emoji="❤️">❤️</button>
-                <button class="reaction-btn" data-emoji="👀">👀</button>
-                <button class="reaction-btn" data-emoji="🤔">🤔</button>
-              </div>
-            </div>
-          </div>
+          <button id="chat-toggle-header-btn" class="channel-icon-btn header-action-btn channel-bar-action" title="Toggle chat (C)" aria-label="Toggle chat" style="position:relative">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span class="chat-unread-badge" id="chat-unread-badge" style="display:none"></span>
+          </button>
+          <button id="leave-channel-btn" class="channel-icon-btn header-action-btn leave-channel-btn channel-bar-action" title="Leave channel" aria-label="Leave channel">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+              <path d="M10 17l5-5-5-5M15 12H3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M14 3h5a2 2 0 012 2v14a2 2 0 01-2 2h-5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+          </button>
+          <button id="about-btn" type="button" class="channel-icon-btn header-action-btn channel-bar-action about-bar-btn" title="About & Shortcuts" aria-label="About and shortcuts">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.6"/>
+              <line x1="12" y1="8" x2="12" y2="8.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              <line x1="12" y1="11" x2="12" y2="16" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+            </svg>
+          </button>
         </div>
       </div>
 
@@ -2457,59 +2482,53 @@ body.light header { background: rgba(248,248,252,0.86); }
             <span id="ptt-hint-vad" style="display:none">Speak when ready — voice detection transmits for you</span>
           </div>
 
-          <div class="ptt-toolbar" id="ptt-toolbar" aria-label="Session tools">
-            <div class="ptt-toolbar-cluster ptt-toolbar-cluster-left">
-              <button id="about-btn" type="button" title="About & Shortcuts" aria-label="About and shortcuts">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
-                  <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.6"/>
-                  <line x1="12" y1="8" x2="12" y2="8.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                  <line x1="12" y1="11" x2="12" y2="16" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
-                </svg>
+          <div class="ptt-toolbar" id="ptt-toolbar" aria-label="Talk controls">
+            <button id="mute-btn" style="display:none" class="mute-btn-standalone ptt-toolbar-mute" title="Mute microphone" aria-label="Mute microphone">
+              <svg id="mute-mic-on" width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <rect x="9" y="2" width="6" height="13" rx="3" fill="currentColor" opacity="0.85"/>
+                <path d="M5 10c0 3.866 3.134 7 7 7s7-3.134 7-7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                <line x1="12" y1="17" x2="12" y2="21" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                <line x1="8" y1="21" x2="16" y2="21" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+              </svg>
+              <svg id="mute-mic-off" width="16" height="16" viewBox="0 0 24 24" fill="none" style="display:none">
+                <rect x="9" y="2" width="6" height="13" rx="3" fill="currentColor" opacity="0.85"/>
+                <path d="M5 10c0 3.866 3.134 7 7 7s7-3.134 7-7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                <line x1="12" y1="17" x2="12" y2="21" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                <line x1="8" y1="21" x2="16" y2="21" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                <line x1="3" y1="3" x2="21" y2="21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+              <span id="mute-label" class="ptt-toolbar-mute-label">mic on</span>
+            </button>
+            <div class="reactions-dropdown-wrap" id="reactions-dropdown-wrap">
+              <button id="reactions-trigger-btn" class="reactions-trigger-btn" title="React">
+                <span>😊</span>
               </button>
-              <button id="record-fab" type="button" title="Record session" aria-label="Record session">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <circle cx="12" cy="12" r="6" fill="currentColor" opacity="0.85"/>
-                  <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.6" opacity="0.5"/>
-                </svg>
-              </button>
-            </div>
-            <div class="ptt-toolbar-cluster ptt-toolbar-cluster-right">
-              <button id="raise-hand-btn" class="raise-hand-btn-compact" title="Raise hand (H)">✋</button>
-              <div class="reactions-dropdown-wrap" id="reactions-dropdown-wrap">
-                <button id="reactions-trigger-btn" class="reactions-trigger-btn" title="React">
-                  <span>😊</span>
-                </button>
-                <div class="reactions-dropdown" id="reactions-dropdown">
-                  <button class="reaction-btn" data-emoji="👍" title="Thumbs up">👍</button>
-                  <button class="reaction-btn" data-emoji="👎" title="Thumbs down">👎</button>
-                  <button class="reaction-btn" data-emoji="🔥" title="Fire">🔥</button>
-                  <button class="reaction-btn" data-emoji="😂" title="Laugh">😂</button>
-                  <button class="reaction-btn" data-emoji="🎉" title="Party">🎉</button>
-                  <button class="reaction-btn" data-emoji="❤️" title="Heart">❤️</button>
-                  <button class="reaction-btn" data-emoji="👀" title="Eyes">👀</button>
-                  <button class="reaction-btn" data-emoji="🤔" title="Thinking">🤔</button>
-                </div>
+              <div class="reactions-dropdown" id="reactions-dropdown">
+                <button class="reaction-btn" data-emoji="👍" title="Thumbs up">👍</button>
+                <button class="reaction-btn" data-emoji="👎" title="Thumbs down">👎</button>
+                <button class="reaction-btn" data-emoji="🔥" title="Fire">🔥</button>
+                <button class="reaction-btn" data-emoji="😂" title="Laugh">😂</button>
+                <button class="reaction-btn" data-emoji="🎉" title="Party">🎉</button>
+                <button class="reaction-btn" data-emoji="❤️" title="Heart">❤️</button>
+                <button class="reaction-btn" data-emoji="👀" title="Eyes">👀</button>
+                <button class="reaction-btn" data-emoji="🤔" title="Thinking">🤔</button>
               </div>
             </div>
+            <button id="record-fab" type="button" title="Record session" aria-label="Record session">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="12" cy="12" r="6" fill="currentColor" opacity="0.85"/>
+                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.6" opacity="0.5"/>
+              </svg>
+            </button>
+            <button id="screen-share-btn" class="ptt-toolbar-ss" type="button" title="Share screen" aria-label="Share screen">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+                <rect x="2" y="4" width="20" height="14" rx="2" stroke="currentColor" stroke-width="1.8"/>
+                <path d="M8 20h8M12 18v2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                <path d="M9 11l3-3 3 3M12 8v6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+            <button id="raise-hand-btn" class="raise-hand-btn-compact" title="Raise hand (H)">✋</button>
           </div>
-
-          <!-- Mute button — prominent, below PTT -->
-          <button id="mute-btn" style="display:none" class="mute-btn-standalone">
-            <svg id="mute-mic-on" width="16" height="16" viewBox="0 0 24 24" fill="none">
-              <rect x="9" y="2" width="6" height="13" rx="3" fill="currentColor" opacity="0.85"/>
-              <path d="M5 10c0 3.866 3.134 7 7 7s7-3.134 7-7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-              <line x1="12" y1="17" x2="12" y2="21" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-              <line x1="8" y1="21" x2="16" y2="21" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-            </svg>
-            <svg id="mute-mic-off" width="16" height="16" viewBox="0 0 24 24" fill="none" style="display:none">
-              <rect x="9" y="2" width="6" height="13" rx="3" fill="currentColor" opacity="0.85"/>
-              <path d="M5 10c0 3.866 3.134 7 7 7s7-3.134 7-7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-              <line x1="12" y1="17" x2="12" y2="21" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-              <line x1="8" y1="21" x2="16" y2="21" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-              <line x1="3" y1="3" x2="21" y2="21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-            </svg>
-            <span id="mute-label">mic on</span>
-          </button>
 
           <!-- Old reaction bar — hidden, reactions now in dropdown above -->
           <div id="reaction-bar-wrap" style="display:none;">
@@ -2604,9 +2623,9 @@ body.light header { background: rgba(248,248,252,0.86); }
 <div id="mobile-more-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);backdrop-filter:blur(6px);z-index:300;align-items:flex-end;justify-content:center;padding:0 0 env(safe-area-inset-bottom);">
     <div id="mobile-more-sheet" style="width:100%;background:var(--bg2);border:1px solid var(--border2);border-radius:20px 20px 0 0;padding:8px 0 16px;animation:fadeUp 0.28s cubic-bezier(0.34,1.56,0.64,1);">
       <div style="width:36px;height:4px;border-radius:2px;background:var(--border2);margin:0 auto 16px;"></div>
-      <button class="mobile-more-item" id="mmore-screenshare">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="2" y="4" width="20" height="14" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M8 20h8M12 18v2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M9 11l3-3 3 3M12 8v6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        <span id="mmore-screenshare-label">Share Screen</span>
+      <button class="mobile-more-item" id="mmore-about" type="button">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.6"/><line x1="12" y1="8" x2="12" y2="8.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="12" y1="11" x2="12" y2="16" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        <span>About &amp; shortcuts</span>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style="margin-left:auto;opacity:0.3"><path d="M9 18l6-6-6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>
     </div>
@@ -3838,14 +3857,26 @@ function updateChannelControls() {
   const topic = DOM['channel-topic-input'];
   const share = DOM['share-channel-btn'];
   const leave = DOM['leave-channel-btn'];
+  const chatToggle = document.getElementById('chat-toggle-header-btn');
+  const aboutBtn = document.getElementById('about-btn');
   const more  = document.getElementById('mobile-more-btn');
   const barActions = document.getElementById('channel-bar-actions');
   const ssBtn = document.getElementById('screen-share-btn');
+  const narrowPhone = typeof window.matchMedia === 'function' && window.matchMedia('(max-width: 640px)').matches;
 
   if (share) share.style.display = inChannel ? 'flex' : 'none';
   if (leave) leave.style.display = inChannel ? 'flex' : 'none';
-  // ··· button: JS sets base display; mobile media-query overrides to flex via !important
-  if (more) more.style.display = inChannel ? '' : 'none';
+  if (chatToggle) chatToggle.style.display = inChannel ? 'flex' : 'none';
+  if (aboutBtn) aboutBtn.style.display = inChannel && !narrowPhone ? 'flex' : 'none';
+  if (more) {
+    const mobileUi = typeof window.matchMedia === 'function' && window.matchMedia('(max-width: 640px)').matches;
+    if (mobileUi) {
+      more.style.setProperty('display', inChannel ? 'flex' : 'none', 'important');
+    } else {
+      more.style.removeProperty('display');
+      more.style.display = inChannel ? '' : 'none';
+    }
+  }
   if (barActions) barActions.style.display = inChannel ? 'flex' : 'none';
   if (ssBtn) ssBtn.style.display = inChannel ? 'flex' : 'none';
   if (!topic) return;
@@ -4006,7 +4037,7 @@ function startApp() {
   (function setupMobileMore() {
     const moreBtn     = document.getElementById('mobile-more-btn');
     const moreOverlay = document.getElementById('mobile-more-overlay');
-    const mmoreScreenshare = document.getElementById('mmore-screenshare');
+    const mmoreAbout = document.getElementById('mmore-about');
     if (!moreBtn || !moreOverlay) return;
 
     function openMore() {
@@ -4019,11 +4050,12 @@ function startApp() {
     moreBtn.addEventListener('click', openMore);
     moreOverlay.addEventListener('click', e => { if (e.target === moreOverlay) closeMore(); });
 
-    if (mmoreScreenshare) mmoreScreenshare.addEventListener('click', () => {
+    if (mmoreAbout) mmoreAbout.addEventListener('click', () => {
       closeMore();
-      document.getElementById('screen-share-btn')?.click();
+      document.getElementById('about-btn')?.click();
     });
   })();
+  window.addEventListener('resize', () => { try { updateChannelControls(); } catch {} });
   setupLeaveCleanup();
   setupInviteRouting();
 
@@ -6210,7 +6242,8 @@ async function startVAD() {
       const rms = Math.sqrt(sum / speechBins);
       const thr = 4 + (state.vadThreshold / 100) * 56;
 
-      setBgGridPulse(Math.min(1, rms / 72));
+      const pulse = Math.min(1, Math.pow(Math.max(0, rms) / 38, 0.92) * 1.15);
+      setBgGridPulse(pulse);
 
       if (rms > thr) {
         clearTimeout(silenceTimer); silenceTimer = null;
@@ -6302,7 +6335,7 @@ function stopWaveform() {
   try { _waveStreamNode?.disconnect(); } catch {}
   _waveStreamNode = null;
   waveAnalyser = null;
-  setBgGridPulse(0);
+  if (!state.vadEnabled) setBgGridPulse(0);
   // Suspend the context so it stops consuming CPU while idle
   try { if (_waveCtxShared?.state === 'running') _waveCtxShared.suspend(); } catch {}
   const canvas = document.getElementById('waveform-canvas');
@@ -6350,7 +6383,7 @@ function drawWaveform() {
       ctx.roundRect(x, (canvas.height - h) / 2, barW, h, 2);
       ctx.fill();
     }
-    setBgGridPulse((avg / data.length / 255) * 1.35);
+    setBgGridPulse(Math.min(1, (avg / data.length / 255) * 2.35));
   }
   frame();
 }
@@ -7643,57 +7676,6 @@ function setupMobileNav() {
       }
     });
   };
-})();
-
-/* ═══════════════════════════════════════════
-   MOBILE BAR: RAISE HAND + REACT DUPLICATES
-   Wire the channel-bar copies to same actions
-═══════════════════════════════════════════ */
-(function setupMobileBarExtras() {
-  // Raise hand bar button
-  const handBtnBar = document.getElementById('raise-hand-btn-bar');
-  const handBtnMain = document.getElementById('raise-hand-btn');
-  if (handBtnBar && handBtnMain) {
-    handBtnBar.addEventListener('click', () => handBtnMain.click());
-    // Sync raised state to bar button
-    const _origRaiseHandReceive = window._raiseHandReceive;
-    const syncHandBar = () => {
-      const raised = handBtnMain.classList.contains('raised');
-      handBtnBar.classList.toggle('raised', raised);
-    };
-    // Watch for class changes on the main button
-    new MutationObserver(syncHandBar).observe(handBtnMain, { attributes: true, attributeFilter: ['class'] });
-  }
-
-  // Reactions trigger bar button
-  const triggerBar = document.getElementById('reactions-trigger-btn-bar');
-  const dropdownBar = document.getElementById('reactions-dropdown-bar');
-  if (triggerBar && dropdownBar) {
-    triggerBar.addEventListener('click', e => {
-      e.stopPropagation();
-      const open = dropdownBar.classList.toggle('open');
-      triggerBar.classList.toggle('open', open);
-    });
-    document.addEventListener('click', e => {
-      if (!triggerBar.contains(e.target) && !dropdownBar.contains(e.target)) {
-        dropdownBar.classList.remove('open');
-        triggerBar.classList.remove('open');
-      }
-    });
-    // Wire reaction buttons to same handler as main ones
-    dropdownBar.querySelectorAll('.reaction-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const emoji = btn.dataset.emoji;
-        dropdownBar.classList.remove('open');
-        triggerBar.classList.remove('open');
-        // Trigger same reaction logic as main buttons
-        const mainBtn = document.querySelector(`#reactions-dropdown .reaction-btn[data-emoji="${emoji}"]`);
-        if (mainBtn) { mainBtn.click(); return; }
-        // Fallback: fire directly if window._reactionSend exists
-        if (window._reactionSend) window._reactionSend(emoji);
-      });
-    });
-  }
 })();
 
 /* ═══════════════════════════════════════════
