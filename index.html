@@ -168,12 +168,39 @@ body::after {
 #app { display: none; height: 100%; flex-direction: column; position: relative; z-index: 1; }
 #app.visible { display: flex; }
 
+/* Animated grid + glow — visible behind main UI (body layer stays for onboarding) */
+#app.visible::before {
+  content: '';
+  position: fixed; inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(var(--border) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border) 1px, transparent 1px);
+  background-size: 40px 40px;
+  opacity: calc(0.32 + var(--bg-grid-pulse) * 0.28);
+  animation: bgGridDrift 22s linear infinite;
+  transition: opacity 0.12s ease-out;
+}
+#app.visible::after {
+  content: '';
+  position: fixed; inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse 78% 68% at 50% 40%,
+    rgba(124,106,255,0.12) 0%,
+    transparent 55%);
+  opacity: calc(0.45 + var(--bg-grid-pulse) * 0.45);
+  animation: bgCenterPulse 10s ease-in-out infinite;
+  transition: opacity 0.14s ease-out;
+}
+
 header {
   display: flex; align-items: center; justify-content: space-between;
   padding: 0 20px; height: 54px;
   border-bottom: 1px solid var(--border);
-  background: rgba(12,12,14,0.95); backdrop-filter: blur(12px);
-  flex-shrink: 0; gap: 12px; position: relative; z-index: 10;
+  background: rgba(12,12,14,0.82); backdrop-filter: blur(14px);
+  flex-shrink: 0; gap: 12px; position: relative; z-index: 2;
 }
 #app.visible header { animation: fadeUp 0.3s ease both; }
 
@@ -227,7 +254,7 @@ header {
 .ping-chip.bad  { color: var(--danger); border-color: #7f1d1d; }
 
 /* App body */
-.app-body { display: flex; flex: 1; overflow: hidden; }
+.app-body { display: flex; flex: 1; overflow: hidden; position: relative; z-index: 2; }
 
 /* ═══════════════════════════════════════════
    SIDEBAR (channels)
@@ -324,7 +351,9 @@ header {
   padding: 12px 24px;
   border-bottom: 1px solid var(--border);
   display: flex; align-items: center;
-  flex-shrink: 0; background: var(--bg2);
+  flex-shrink: 0;
+  background: color-mix(in srgb, var(--bg2) 88%, transparent);
+  backdrop-filter: blur(10px);
   transition: box-shadow 0.3s;
 }
 .channel-bar.in-channel { box-shadow: 0 1px 0 var(--border), 0 4px 12px rgba(0,0,0,0.2); }
@@ -348,6 +377,10 @@ header {
   background: var(--bg3); border: 1px solid var(--border);
   color: var(--text-dim); cursor: pointer;
   transition: border-color 0.2s, color 0.2s, background 0.2s, transform 0.12s;
+}
+/* Settings is always visible in the header (other .channel-icon-btn stay toggleable). */
+#header-settings-btn.channel-icon-btn {
+  display: flex;
 }
 .channel-icon-btn:hover { border-color: var(--accent-dim); color: var(--accent); background: var(--accent-glow); }
 .channel-icon-btn:active { transform: scale(0.94); }
@@ -677,7 +710,11 @@ body.light {
   --text-dim:    #7070a0;
   --text-mid:    #444468;
 }
-body.light body::before { opacity: 0.07; }
+body.light::before { opacity: 0.12; }
+body.light::after { opacity: 0.22; }
+body.light #app.visible::before { opacity: calc(0.18 + var(--bg-grid-pulse) * 0.15); }
+body.light #app.visible::after { opacity: calc(0.28 + var(--bg-grid-pulse) * 0.25); }
+body.light header { background: rgba(248,248,252,0.86); }
 
 /* ═══════════════════════════════════════════
    CHAT SIDEBAR
@@ -1071,13 +1108,20 @@ body.light body::before { opacity: 0.07; }
 .ptt-toolbar {
   display: none;
   align-items: center;
-  justify-content: center;
-  gap: 18px;
+  justify-content: space-between;
   width: 100%;
+  max-width: 460px;
   flex-wrap: wrap;
-  padding: 6px 0 4px;
+  gap: 14px 20px;
+  padding: 8px 8px 6px;
+  box-sizing: border-box;
 }
 #ptt-section.visible .ptt-toolbar { display: flex; }
+.ptt-toolbar-cluster {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
 .ptt-toolbar #about-btn {
   width: 40px; height: 40px; border-radius: 10px;
   background: var(--bg3); border: 1px solid var(--border2);
@@ -1086,10 +1130,31 @@ body.light body::before { opacity: 0.07; }
   width: 40px; height: 40px; border-radius: 10px;
   background: var(--bg3); border: 1px solid var(--border2);
 }
+.ptt-toolbar .raise-hand-btn-compact {
+  width: 40px; height: 40px; border-radius: 10px;
+  font-size: 1.15rem;
+}
+.ptt-toolbar .reactions-trigger-btn {
+  min-width: 40px; min-height: 40px;
+  border-radius: 10px;
+}
 @media (max-width: 640px) {
+  .ptt-toolbar {
+    justify-content: center;
+    max-width: 100%;
+  }
+  .ptt-toolbar-cluster { gap: 10px; }
   .ptt-toolbar #about-btn,
   .ptt-toolbar #record-fab {
     width: 48px; height: 48px; border-radius: 12px;
+  }
+  .ptt-toolbar .raise-hand-btn-compact {
+    width: 48px; height: 48px;
+    font-size: 1.25rem;
+  }
+  .ptt-toolbar .reactions-trigger-btn {
+    min-width: 48px; min-height: 48px;
+    border-radius: 12px;
   }
 }
 
@@ -2130,16 +2195,9 @@ body.light body::before { opacity: 0.07; }
   display: flex; align-items: center; gap: 6px; flex-shrink: 0; margin-left: auto;
 }
 
-/* ptt-extra-row — always a row of pill buttons, never hidden on mobile via height */
-#ptt-extra-row {
-  position: relative; z-index: 1;
-}
 @media (max-width: 640px) {
-  /* On mobile, anchor hand + react buttons into the channel bar right side */
-  #ptt-extra-row { display: none !important; } /* hide from center-area on mobile */
-  .channel-bar-mobile-extras {
-    display: flex; align-items: center; gap: 6px;
-  }
+  /* Hand + react live on Talk toolbar — hide duplicates in channel bar */
+  .channel-bar-mobile-extras { display: none !important; }
   /* screen share viewer on mobile: full screen below nav */
   #screen-share-overlay { padding-bottom: var(--mobile-nav-height, 64px); }
 }
@@ -2209,12 +2267,6 @@ body.light body::before { opacity: 0.07; }
     <div class="header-right">
       <span class="ping-chip" id="ping-chip" style="display:none"></span>
       <button class="btn-ghost" id="install-btn">install</button>
-      <button id="header-settings-btn" class="channel-icon-btn header-action-btn" type="button" title="Settings" aria-label="Settings">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-      </button>
       <!-- In-channel actions — shown/hidden by updateChannelControls -->
       <button id="mobile-more-btn" class="channel-icon-btn header-action-btn" title="More" aria-label="More options" style="display:none">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
@@ -2240,6 +2292,12 @@ body.light body::before { opacity: 0.07; }
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
           <path d="M10 17l5-5-5-5M15 12H3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           <path d="M14 3h5a2 2 0 012 2v14a2 2 0 01-2 2h-5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </button>
+      <button id="header-settings-btn" class="channel-icon-btn header-action-btn" type="button" title="Settings" aria-label="Settings">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
       </button>
     </div>
@@ -2400,19 +2458,39 @@ body.light body::before { opacity: 0.07; }
           </div>
 
           <div class="ptt-toolbar" id="ptt-toolbar" aria-label="Session tools">
-            <button id="about-btn" type="button" title="About & Shortcuts" aria-label="About and shortcuts">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
-                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.6"/>
-                <line x1="12" y1="8" x2="12" y2="8.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                <line x1="12" y1="11" x2="12" y2="16" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
-              </svg>
-            </button>
-            <button id="record-fab" type="button" title="Record session" aria-label="Record session">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="12" cy="12" r="6" fill="currentColor" opacity="0.85"/>
-                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.6" opacity="0.5"/>
-              </svg>
-            </button>
+            <div class="ptt-toolbar-cluster ptt-toolbar-cluster-left">
+              <button id="about-btn" type="button" title="About & Shortcuts" aria-label="About and shortcuts">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+                  <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.6"/>
+                  <line x1="12" y1="8" x2="12" y2="8.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                  <line x1="12" y1="11" x2="12" y2="16" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                </svg>
+              </button>
+              <button id="record-fab" type="button" title="Record session" aria-label="Record session">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="12" cy="12" r="6" fill="currentColor" opacity="0.85"/>
+                  <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.6" opacity="0.5"/>
+                </svg>
+              </button>
+            </div>
+            <div class="ptt-toolbar-cluster ptt-toolbar-cluster-right">
+              <button id="raise-hand-btn" class="raise-hand-btn-compact" title="Raise hand (H)">✋</button>
+              <div class="reactions-dropdown-wrap" id="reactions-dropdown-wrap">
+                <button id="reactions-trigger-btn" class="reactions-trigger-btn" title="React">
+                  <span>😊</span>
+                </button>
+                <div class="reactions-dropdown" id="reactions-dropdown">
+                  <button class="reaction-btn" data-emoji="👍" title="Thumbs up">👍</button>
+                  <button class="reaction-btn" data-emoji="👎" title="Thumbs down">👎</button>
+                  <button class="reaction-btn" data-emoji="🔥" title="Fire">🔥</button>
+                  <button class="reaction-btn" data-emoji="😂" title="Laugh">😂</button>
+                  <button class="reaction-btn" data-emoji="🎉" title="Party">🎉</button>
+                  <button class="reaction-btn" data-emoji="❤️" title="Heart">❤️</button>
+                  <button class="reaction-btn" data-emoji="👀" title="Eyes">👀</button>
+                  <button class="reaction-btn" data-emoji="🤔" title="Thinking">🤔</button>
+                </div>
+              </div>
+            </div>
           </div>
 
           <!-- Mute button — prominent, below PTT -->
@@ -2432,27 +2510,6 @@ body.light body::before { opacity: 0.07; }
             </svg>
             <span id="mute-label">mic on</span>
           </button>
-
-          <!-- Compact: raise hand + reactions -->
-          <div id="ptt-extra-row" style="display:none;align-items:center;justify-content:center;gap:6px;">
-            <button id="raise-hand-btn" class="raise-hand-btn-compact" title="Raise hand (H)">✋</button>
-            <!-- Reactions dropdown -->
-            <div class="reactions-dropdown-wrap" id="reactions-dropdown-wrap">
-              <button id="reactions-trigger-btn" class="reactions-trigger-btn" title="React">
-                <span>😊</span>
-              </button>
-              <div class="reactions-dropdown" id="reactions-dropdown">
-                <button class="reaction-btn" data-emoji="👍" title="Thumbs up">👍</button>
-                <button class="reaction-btn" data-emoji="👎" title="Thumbs down">👎</button>
-                <button class="reaction-btn" data-emoji="🔥" title="Fire">🔥</button>
-                <button class="reaction-btn" data-emoji="😂" title="Laugh">😂</button>
-                <button class="reaction-btn" data-emoji="🎉" title="Party">🎉</button>
-                <button class="reaction-btn" data-emoji="❤️" title="Heart">❤️</button>
-                <button class="reaction-btn" data-emoji="👀" title="Eyes">👀</button>
-                <button class="reaction-btn" data-emoji="🤔" title="Thinking">🤔</button>
-              </div>
-            </div>
-          </div>
 
           <!-- Old reaction bar — hidden, reactions now in dropdown above -->
           <div id="reaction-bar-wrap" style="display:none;">
@@ -7479,7 +7536,6 @@ function setupMobileNav() {
    & PATCH joinChannel / leaveChannel
 ═══════════════════════════════════════════ */
 (function patchChannelHooks() {
-  const pttExtraRow    = document.getElementById('ptt-extra-row');
   const reactionWrap   = document.getElementById('reaction-bar-wrap');
   const modCapacityRow = document.getElementById('mod-capacity-row');
 
@@ -7499,7 +7555,6 @@ function setupMobileNav() {
   if (_origJoin) {
     window.joinChannel = async function(ch) {
       await _origJoin(ch);
-      if (pttExtraRow)  pttExtraRow.style.display  = 'flex';
       if (reactionWrap) reactionWrap.style.display  = '';
       if (window._broadcastStatus) setTimeout(window._broadcastStatus, 500);
       if (window._chatAppendSystem) window._chatAppendSystem(`Joined #${ch}`);
@@ -7512,7 +7567,6 @@ function setupMobileNav() {
     window.leaveChannel = async function() {
       const leftChannel = state.currentChannel;
       await _origLeave();
-      if (pttExtraRow)  pttExtraRow.style.display  = 'none';
       if (reactionWrap) reactionWrap.style.display  = 'none';
       if (window._raiseHandReset) window._raiseHandReset();
       // Also close the reactions dropdown if open
