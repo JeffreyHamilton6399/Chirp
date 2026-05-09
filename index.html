@@ -456,7 +456,7 @@ header {
 .ptt-profile {
   display: none; width: 100%; height: 100%; border-radius: 50%;
   background-size: cover; background-position: center;
-  position: absolute; inset: 0;
+  position: absolute; inset: 0; z-index: 1;
 }
 #ptt-btn.has-profile .ptt-profile { display: block; }
 #ptt-btn.has-profile .ptt-icon-wrap { display: none; }
@@ -465,6 +465,19 @@ header {
   text-shadow: 0 1px 4px rgba(0,0,0,0.7);
   color: rgba(255,255,255,0.85);
 }
+
+/* Profile glow ring — always visible in front of the button rings */
+.ptt-wrap::after {
+  content: '';
+  position: absolute;
+  width: 160px; height: 160px; border-radius: 50%;
+  border: 2px solid transparent;
+  background: transparent;
+  pointer-events: none; z-index: 2;
+  transition: border-color 0.3s, box-shadow 0.3s;
+}
+#ptt-btn.has-profile + .ptt-ring { display: block; }
+
 
 .ptt-icon-wrap { transition: transform 0.15s; }
 .ptt-label {
@@ -799,9 +812,64 @@ body.light body::before { opacity: 0.07; }
   animation: popIn 0.25s cubic-bezier(0.34,1.56,0.64,1);
 }
 
-/* ═══════════════════════════════════════════
-   STATUS INDICATOR
-═══════════════════════════════════════════ */
+/* Crop modal buttons */
+.crop-btn-cancel {
+  padding: 10px 24px; border-radius: 10px;
+  background: var(--bg3); border: 1px solid var(--border2);
+  color: var(--text-dim); font-size: 0.85rem; font-weight: 600; cursor: pointer;
+  transition: border-color 0.18s, color 0.18s, background 0.18s, transform 0.1s;
+}
+.crop-btn-cancel:hover { border-color: var(--border); color: var(--text); background: var(--bg4); transform: translateY(-1px); }
+.crop-btn-cancel:active { transform: scale(0.97); }
+.crop-btn-apply {
+  padding: 10px 24px; border-radius: 10px;
+  background: var(--accent); border: none; color: #fff;
+  font-size: 0.85rem; font-weight: 700; cursor: pointer;
+  box-shadow: 0 4px 16px rgba(124,106,255,0.3);
+  transition: opacity 0.15s, box-shadow 0.2s, transform 0.1s;
+}
+.crop-btn-apply:hover { opacity: 0.88; box-shadow: 0 4px 24px rgba(124,106,255,0.5); transform: translateY(-1px); }
+.crop-btn-apply:active { opacity: 0.75; transform: scale(0.97); }
+
+/* Reactions dropdown */
+.reactions-trigger-btn {
+  display: flex; align-items: center; gap: 6px;
+  padding: 7px 13px; border-radius: 20px;
+  background: var(--bg3); border: 1.5px solid var(--border2);
+  font-size: 1rem; color: var(--text-dim); cursor: pointer;
+  transition: all 0.2s;
+  font-family: var(--mono); font-size: 0.65rem; letter-spacing: 0.06em; text-transform: uppercase;
+}
+.reactions-trigger-btn:hover { border-color: var(--accent-dim); color: var(--accent); background: var(--accent-glow); }
+.reactions-trigger-btn.open { border-color: var(--accent-dim); color: var(--accent); background: var(--accent-glow); }
+
+.reactions-dropdown-wrap { position: relative; }
+.reactions-dropdown {
+  display: none; position: absolute; bottom: calc(100% + 8px); left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg2); border: 1px solid var(--border2);
+  border-radius: 14px; padding: 8px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  z-index: 200;
+  flex-wrap: wrap; gap: 4px; max-width: 200px; justify-content: center;
+}
+.reactions-dropdown.open { display: flex; animation: fadeUp 0.18s cubic-bezier(0.34,1.56,0.64,1); }
+
+/* Hand raise — compact icon-only pill */
+.raise-hand-btn-compact {
+  display: flex; align-items: center; justify-content: center;
+  width: 36px; height: 36px; border-radius: 20px;
+  background: var(--bg3); border: 1.5px solid var(--border2);
+  font-size: 1rem; cursor: pointer;
+  transition: all 0.2s; flex-shrink: 0;
+}
+.raise-hand-btn-compact:hover { border-color: #f59e0b; background: rgba(245,158,11,0.08); transform: scale(1.08); }
+.raise-hand-btn-compact.raised { border-color: #f59e0b; background: rgba(245,158,11,0.1); animation: handPulse 1.5s ease-in-out infinite; }
+
+/* Status row inside settings */
+.settings-status-row {
+  display: flex; align-items: center; gap: 8px;
+}
 .status-dot {
   width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
   border: 1.5px solid var(--bg2);
@@ -2120,18 +2188,14 @@ body.light body::before { opacity: 0.07; }
               <div class="ptt-ring ptt-ring-1"></div>
               <div class="ptt-ring ptt-ring-2"></div>
               <div class="ptt-ring ptt-ring-3"></div>
-              <!-- Avatar quick-edit — bypasses the settings overlay -->
+              <!-- Avatar quick-edit — opens Settings -->
               <div id="avatar-edit-wrap">
-                <button id="avatar-edit-btn" type="button" aria-label="Change profile picture" title="Change profile picture">
+                <button id="avatar-edit-btn" type="button" aria-label="Change profile picture" title="Edit profile photo">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
                     <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                     <circle cx="12" cy="13" r="4" stroke="currentColor" stroke-width="2"/>
                   </svg>
                 </button>
-                <div id="avatar-edit-menu">
-                  <button class="avatar-menu-btn" id="avatar-upload-btn" type="button">Upload photo</button>
-                  <button class="avatar-menu-btn" id="avatar-camera-btn" type="button">Take photo</button>
-                </div>
               </div>
             </div>
             <div class="mobile-member-rail" id="mobile-member-rail-right"></div>
@@ -2157,38 +2221,30 @@ body.light body::before { opacity: 0.07; }
             <span id="mute-label">mic on</span>
           </button>
 
-          <!-- Raise hand + status picker row -->
+          <!-- Compact: raise hand + reactions -->
           <div id="ptt-extra-row" style="display:none;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;">
-            <button id="raise-hand-btn" class="raise-hand-btn" title="Raise hand (H)">
-              <span>✋</span> Raise Hand
-            </button>
-            <!-- Status picker -->
-            <div class="status-picker-wrap" id="status-picker-wrap">
-              <button id="status-picker-btn" class="mute-btn-standalone" style="gap:7px;padding:8px 14px;" title="Set status">
-                <span id="status-dot-btn" class="status-dot" style="position:static;border:none;width:8px;height:8px;background:var(--green)"></span>
-                <span id="status-label-btn" style="font-size:0.65rem">Online</span>
-                <svg width="10" height="10" viewBox="0 0 10 6" fill="none" style="opacity:0.4"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <button id="raise-hand-btn" class="raise-hand-btn-compact" title="Raise hand (H)">✋</button>
+            <!-- Reactions dropdown -->
+            <div class="reactions-dropdown-wrap" id="reactions-dropdown-wrap">
+              <button id="reactions-trigger-btn" class="reactions-trigger-btn" title="React">
+                <span>😊</span><span>react</span>
               </button>
-              <div class="status-picker-menu" id="status-picker-menu">
-                <button class="status-picker-opt" data-status="online"><span class="status-picker-dot" style="background:var(--green)"></span>Online</button>
-                <button class="status-picker-opt" data-status="away"><span class="status-picker-dot" style="background:#f59e0b"></span>Away</button>
-                <button class="status-picker-opt" data-status="busy"><span class="status-picker-dot" style="background:var(--danger)"></span>Busy</button>
+              <div class="reactions-dropdown" id="reactions-dropdown">
+                <button class="reaction-btn" data-emoji="👍" title="Thumbs up">👍</button>
+                <button class="reaction-btn" data-emoji="👎" title="Thumbs down">👎</button>
+                <button class="reaction-btn" data-emoji="🔥" title="Fire">🔥</button>
+                <button class="reaction-btn" data-emoji="😂" title="Laugh">😂</button>
+                <button class="reaction-btn" data-emoji="🎉" title="Party">🎉</button>
+                <button class="reaction-btn" data-emoji="❤️" title="Heart">❤️</button>
+                <button class="reaction-btn" data-emoji="👀" title="Eyes">👀</button>
+                <button class="reaction-btn" data-emoji="🤔" title="Thinking">🤔</button>
               </div>
             </div>
           </div>
 
-          <!-- Emoji reaction bar -->
+          <!-- Old reaction bar — hidden, reactions now in dropdown above -->
           <div id="reaction-bar-wrap" style="display:none;">
-            <div class="reaction-bar" id="reaction-bar">
-              <button class="reaction-btn" data-emoji="👍" title="Thumbs up">👍</button>
-              <button class="reaction-btn" data-emoji="👎" title="Thumbs down">👎</button>
-              <button class="reaction-btn" data-emoji="🔥" title="Fire">🔥</button>
-              <button class="reaction-btn" data-emoji="😂" title="Laugh">😂</button>
-              <button class="reaction-btn" data-emoji="🎉" title="Party">🎉</button>
-              <button class="reaction-btn" data-emoji="❤️" title="Heart">❤️</button>
-              <button class="reaction-btn" data-emoji="👀" title="Eyes">👀</button>
-              <button class="reaction-btn" data-emoji="🤔" title="Thinking">🤔</button>
-            </div>
+            <div class="reaction-bar" id="reaction-bar"></div>
           </div>
         </div>
 
@@ -2271,8 +2327,8 @@ body.light body::before { opacity: 0.07; }
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style="color:var(--text-dim);flex-shrink:0"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.8"/><line x1="16" y1="16" x2="21" y2="21" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><line x1="8" y1="11" x2="14" y2="11" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><line x1="11" y1="8" x2="11" y2="14" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
     </div>
     <div style="display:flex;gap:10px;">
-      <button id="crop-cancel" style="padding:10px 24px;border-radius:10px;background:var(--bg3);border:1px solid var(--border2);color:var(--text-dim);font-size:0.85rem;font-weight:600;cursor:pointer;">Cancel</button>
-      <button id="crop-apply" style="padding:10px 24px;border-radius:10px;background:var(--accent);border:none;color:#fff;font-size:0.85rem;font-weight:700;cursor:pointer;">Apply</button>
+      <button id="crop-cancel" class="crop-btn-cancel">Cancel</button>
+      <button id="crop-apply" class="crop-btn-apply">Apply</button>
     </div>
   </div>
 
@@ -2677,9 +2733,27 @@ body.light body::before { opacity: 0.07; }
           <input class="profile-file" id="profile-camera-input" type="file" accept="image/*" capture="user">
         </div>
       </div>
-    </div>
+      <div class="settings-row compact">
+        <div class="settings-row-label">
+          <span>Online Status</span>
+          <small>Visible to channel members</small>
+        </div>
+        <div class="settings-status-row">
+          <span id="settings-status-dot" class="status-dot" style="position:static;border:none;width:9px;height:9px;background:var(--green);flex-shrink:0;"></span>
+          <div class="status-picker-wrap" id="status-picker-wrap">
+            <button id="status-picker-btn" class="btn-ghost" style="padding:5px 10px;font-size:0.62rem;" title="Set status">
+              <span id="status-label-btn">Online</span>
+            </button>
+            <div class="status-picker-menu" id="status-picker-menu">
+              <button class="status-picker-opt" data-status="online"><span class="status-picker-dot" style="background:var(--green)"></span>Online</button>
+              <button class="status-picker-opt" data-status="away"><span class="status-picker-dot" style="background:#f59e0b"></span>Away</button>
+              <button class="status-picker-opt" data-status="busy"><span class="status-picker-dot" style="background:var(--danger)"></span>Busy</button>
+            </div>
+          </div>
+        </div>
+      </div>
 
-    <!-- ── AUDIO ── -->
+    </div>
     <div class="settings-group">
       <div class="settings-group-title">Audio</div>
 
@@ -4032,6 +4106,8 @@ function setupSettings() {
     }
     cropOverlay.style.display = 'none';
     if (cropInputRef) cropInputRef.value = '';
+    // Close settings after applying avatar
+    overlay.classList.remove('show');
   });
 
   async function handleProfileFile(file, input) {
@@ -4052,32 +4128,30 @@ function setupSettings() {
     toast('Profile picture removed');
   });
 
-  // ── Avatar quick-edit (on PTT button — no need to open settings) ──────────
+  // ── Avatar quick-edit (on PTT button — opens Settings directly) ──────────
   const avatarEditBtn  = document.getElementById('avatar-edit-btn');
-  const avatarEditMenu = document.getElementById('avatar-edit-menu');
-  const photoInput     = document.getElementById('profile-photo-input');
-  const cameraInput    = document.getElementById('profile-camera-input');
 
-  if (avatarEditBtn && avatarEditMenu) {
+  if (avatarEditBtn) {
     avatarEditBtn.addEventListener('click', e => {
       e.stopPropagation();
-      avatarEditMenu.classList.toggle('open');
+      openSettings();
+      // Scroll to profile section after opening
+      setTimeout(() => {
+        const profileRow = document.querySelector('.profile-row');
+        if (profileRow) profileRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 150);
     });
-    document.addEventListener('pointerdown', e => {
-      if (!avatarEditBtn.contains(e.target) && !avatarEditMenu.contains(e.target)) {
-        avatarEditMenu.classList.remove('open');
-      }
-    }, { capture: true });
   }
+  // Keep old avatar-upload/camera hooks for backward compat if they exist elsewhere
   document.getElementById('avatar-upload-btn')?.addEventListener('click', e => {
     e.stopPropagation();
-    avatarEditMenu?.classList.remove('open');
-    photoInput?.click();
+    document.getElementById('avatar-edit-menu')?.classList.remove('open');
+    document.getElementById('profile-photo-input')?.click();
   });
   document.getElementById('avatar-camera-btn')?.addEventListener('click', e => {
     e.stopPropagation();
-    avatarEditMenu?.classList.remove('open');
-    cameraInput?.click();
+    document.getElementById('avatar-edit-menu')?.classList.remove('open');
+    document.getElementById('profile-camera-input')?.click();
   });
 
   // VAD toggle — restore saved state
@@ -4391,6 +4465,18 @@ function renderChannels(filter) {
   const counts = {};
   Object.values(state.lobbyRegistry).forEach(info => {
     if (info.channel) counts[info.channel] = (counts[info.channel] || 0) + 1;
+  });
+
+  // Actually remove empty channels (not just hide them)
+  // Keep: current channel, private channels we're hosting, channels with members
+  [...liveChannels].forEach(ch => {
+    if (ch === state.currentChannel) return; // never remove current
+    if (channelVisibility[ch] === 'private') return; // keep private (they don't show in counts)
+    const memberCount = counts[ch] || 0;
+    if (memberCount === 0) {
+      liveChannels.delete(ch);
+      persistChannels();
+    }
   });
 
   // Show channel if: not private-and-foreign, matches search, and is current or has members
@@ -6690,9 +6776,25 @@ function setupMobileNav() {
    EMOJI REACTIONS
 ═══════════════════════════════════════════ */
 (function setupReactions() {
+  // Wire the dropdown toggle
+  const triggerBtn = document.getElementById('reactions-trigger-btn');
+  const dropdown   = document.getElementById('reactions-dropdown');
+  if (triggerBtn && dropdown) {
+    triggerBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      const isOpen = dropdown.classList.toggle('open');
+      triggerBtn.classList.toggle('open', isOpen);
+    });
+    document.addEventListener('click', e => {
+      if (!triggerBtn.contains(e.target) && !dropdown.contains(e.target)) {
+        dropdown.classList.remove('open');
+        triggerBtn.classList.remove('open');
+      }
+    });
+  }
+
+  // Keep old bar reference for compatibility (now empty/hidden)
   const bar     = document.getElementById('reaction-bar');
-  const barWrap = document.getElementById('reaction-bar-wrap');
-  if (!bar) return;
 
   function spawnFloat(emoji, x, y) {
     const el = document.createElement('div');
@@ -6705,7 +6807,6 @@ function setupMobileNav() {
   }
 
   function showReactionOnMember(peerId, emoji) {
-    // Try members panel
     const memberEl = document.querySelector(`[data-peer-id="${peerId}"] .member-avatar`);
     if (memberEl) {
       const pop = document.createElement('div');
@@ -6715,24 +6816,36 @@ function setupMobileNav() {
       memberEl.appendChild(pop);
       setTimeout(() => pop.remove(), 2000);
     }
-    // Also spawn center float
     spawnFloat(emoji);
   }
 
-  bar.addEventListener('click', e => {
-    const btn = e.target.closest('.reaction-btn');
-    if (!btn) return;
+  function sendReaction(btn) {
     const emoji = btn.dataset.emoji;
     if (!state.currentChannel) return;
     haptic(12);
-    // Animate locally from button center
     const rect = btn.getBoundingClientRect();
     spawnFloat(emoji, rect.left + rect.width / 2, rect.top + rect.height / 2);
     broadcastAll({ type: 'reaction', emoji });
-    // Brief scale bounce on button
     btn.style.transform = 'scale(1.4)';
     setTimeout(() => { btn.style.transform = ''; }, 200);
-  });
+    // Close dropdown after reacting
+    if (dropdown) { dropdown.classList.remove('open'); triggerBtn?.classList.remove('open'); }
+  }
+
+  // Wire dropdown reaction buttons
+  if (dropdown) {
+    dropdown.addEventListener('click', e => {
+      const btn = e.target.closest('.reaction-btn');
+      if (btn) sendReaction(btn);
+    });
+  }
+  // Also wire old bar just in case
+  if (bar) {
+    bar.addEventListener('click', e => {
+      const btn = e.target.closest('.reaction-btn');
+      if (btn) sendReaction(btn);
+    });
+  }
 
   window._reactionReceive = (peerId, emoji) => showReactionOnMember(peerId, emoji);
 })();
@@ -6745,14 +6858,12 @@ function setupMobileNav() {
   if (!btn) return;
 
   let isRaised = false;
-  const raisedPeers = new Set(); // track which peers have hands up
+  const raisedPeers = new Set();
 
   btn.addEventListener('click', () => {
     isRaised = !isRaised;
     haptic(isRaised ? 20 : 10);
     btn.classList.toggle('raised', isRaised);
-    btn.querySelector('span').textContent = isRaised ? '✋' : '✋';
-    btn.childNodes[1].textContent = isRaised ? ' Lower Hand' : ' Raise Hand';
     if (state.currentChannel) broadcastAll({ type: 'raise-hand', raised: isRaised, name: state.myName });
     if (isRaised) toast('Hand raised — everyone can see', 'info');
   });
@@ -6771,18 +6882,15 @@ function setupMobileNav() {
     } else {
       raisedPeers.delete(peerId);
     }
-    // Update member display
     renderMembers();
   };
 
   window._getRaisedHands = () => raisedPeers;
 
-  // Reset on leave
   window._raiseHandReset = () => {
     isRaised = false;
     btn.classList.remove('raised');
     raisedPeers.clear();
-    if (btn.childNodes[1]) btn.childNodes[1].textContent = ' Raise Hand';
   };
 })();
 
@@ -6790,10 +6898,9 @@ function setupMobileNav() {
    STATUS INDICATOR
 ═══════════════════════════════════════════ */
 (function setupStatusPicker() {
-  const pickerWrap = document.getElementById('status-picker-wrap');
   const pickerBtn  = document.getElementById('status-picker-btn');
   const menu       = document.getElementById('status-picker-menu');
-  const dotBtn     = document.getElementById('status-dot-btn');
+  const settingsDot = document.getElementById('settings-status-dot');
   const labelBtn   = document.getElementById('status-label-btn');
   if (!pickerBtn || !menu) return;
 
@@ -6804,7 +6911,7 @@ function setupMobileNav() {
   function applyStatus(s) {
     myStatus = s;
     localStorage.setItem('chirp_status', s);
-    if (dotBtn) dotBtn.style.background = STATUS_COLORS[s] || STATUS_COLORS.online;
+    if (settingsDot) settingsDot.style.background = STATUS_COLORS[s] || STATUS_COLORS.online;
     if (labelBtn) labelBtn.textContent = STATUS_LABELS[s] || 'Online';
     if (state.currentChannel) broadcastAll({ type: 'status', status: s, name: state.myName });
     menu.classList.remove('open');
@@ -6950,10 +7057,16 @@ function setupMobileNav() {
   const _origLeave = typeof leaveChannel === 'function' ? leaveChannel : null;
   if (_origLeave) {
     window.leaveChannel = async function() {
+      const leftChannel = state.currentChannel;
       await _origLeave();
       if (pttExtraRow)  pttExtraRow.style.display  = 'none';
       if (reactionWrap) reactionWrap.style.display  = 'none';
       if (window._raiseHandReset) window._raiseHandReset();
+      // Also close the reactions dropdown if open
+      const dropdown = document.getElementById('reactions-dropdown');
+      const triggerBtn = document.getElementById('reactions-trigger-btn');
+      if (dropdown) { dropdown.classList.remove('open'); }
+      if (triggerBtn) { triggerBtn.classList.remove('open'); }
     };
   }
 })();
