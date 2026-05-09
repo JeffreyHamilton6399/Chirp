@@ -433,6 +433,15 @@ header {
 }
 #ptt-btn.vad-mode .ptt-label { color: var(--accent); }
 
+.ptt-profile {
+  display: none; width: 64px; height: 64px; border-radius: 50%;
+  background-size: cover; background-position: center;
+  border: 2px solid rgba(124,106,255,0.55);
+  box-shadow: 0 0 24px rgba(124,106,255,0.18), inset 0 0 0 1px rgba(255,255,255,0.08);
+}
+#ptt-btn.has-profile .ptt-profile { display: block; }
+#ptt-btn.has-profile .ptt-icon-wrap { display: none; }
+
 .ptt-icon-wrap { transition: transform 0.15s; }
 .ptt-label {
   font-family: var(--mono); font-size: 0.6rem; font-weight: 500;
@@ -571,6 +580,30 @@ header {
 .settings-select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
 .settings-select option { background: var(--bg3); color: var(--text); }
 
+.profile-row {
+  display: flex; align-items: center; gap: 12px; width: 100%;
+}
+.profile-preview {
+  width: 58px; height: 58px; border-radius: 50%;
+  background: var(--bg3); border: 1.5px solid var(--border2);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.05rem; font-weight: 800; color: var(--text-mid);
+  background-size: cover; background-position: center; flex-shrink: 0;
+}
+.profile-actions {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+}
+.profile-file { display: none; }
+.profile-btn {
+  background: var(--bg3); border: 1px solid var(--border2);
+  border-radius: var(--radius-sm); padding: 8px 11px;
+  font-family: var(--mono); font-size: 0.6rem; color: var(--text-mid);
+  letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer;
+}
+.profile-btn:hover { border-color: var(--accent-dim); color: var(--accent); background: var(--accent-glow); }
+.profile-btn.danger { color: var(--danger); }
+.profile-btn.danger:hover { border-color: rgba(248,113,113,0.45); background: rgba(248,113,113,0.08); }
+
 /* ═══════════════════════════════════════════
    MEMBERS PANEL
 ═══════════════════════════════════════════ */
@@ -616,6 +649,9 @@ header {
 .member-avatar[data-letter="a"],.member-avatar[data-letter="b"] { background: rgba(124,106,255,0.15); }
 .member-avatar[data-letter="c"],.member-avatar[data-letter="d"] { background: rgba(34,211,165,0.12); }
 .member-avatar[data-letter="e"],.member-avatar[data-letter="f"] { background: rgba(248,113,113,0.12); }
+.member-avatar.has-photo {
+  background-size: cover; background-position: center; color: transparent;
+}
 
 .member-info  { flex: 1; overflow: hidden; }
 .member-name  { font-size: 0.82rem; font-weight: 600; color: var(--text-mid); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; transition: color 0.2s; }
@@ -626,6 +662,28 @@ header {
   accent-color: var(--accent);
 }
 .member-volume::-webkit-slider-thumb { cursor: pointer; }
+
+.mobile-member-rail {
+  display: none; align-items: center; justify-content: center;
+  gap: 10px; width: min(100%, 360px); min-height: 42px;
+}
+.mobile-member-chip {
+  width: 38px; height: 38px; border-radius: 50%;
+  background: var(--bg3); border: 1.5px solid var(--border2);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.72rem; font-weight: 800; color: var(--text-mid);
+  background-size: cover; background-position: center;
+  cursor: pointer; flex-shrink: 0;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.22);
+}
+.mobile-member-chip.talking { border-color: var(--green); box-shadow: 0 0 16px rgba(34,211,165,0.35); }
+.mobile-member-chip.self { border-color: var(--accent-dim); }
+.mobile-member-chip.has-photo { color: transparent; }
+.mobile-member-more {
+  font-family: var(--mono); font-size: 0.6rem; color: var(--text-dim);
+  padding: 5px 8px; border-radius: 999px; border: 1px solid var(--border2);
+  background: var(--bg3);
+}
 
 /* ═══════════════════════════════════════════
    OVERLAYS / TOASTS
@@ -814,6 +872,7 @@ header {
   .member-scroll  { flex: 1; overflow-y: auto; }
   .member-item    { padding: 12px 16px; }
   .member-name    { font-size: 0.9rem; }
+  .mobile-member-rail { display: flex; }
 
   .main-content   { background: var(--bg); }
   .channel-bar    { padding: 11px 14px; gap: 10px; min-height: 48px; }
@@ -1076,6 +1135,13 @@ header {
   display: none;
 }
 #mod-menu.show { display: block; }
+@media (max-width: 640px) {
+  #mod-menu {
+    left: 12px !important; right: 12px; bottom: calc(var(--mobile-nav-height) + 10px);
+    top: auto !important; width: auto; min-width: 0; border-radius: 14px;
+  }
+  #mod-menu.show { animation: fadeUp 0.2s ease; }
+}
 
 .mod-menu-header {
   font-family: var(--mono); font-size: 0.58rem; color: var(--text-dim);
@@ -1102,6 +1168,16 @@ header {
 .mod-btn.promote { color: var(--accent); }
 .mod-btn.promote:hover { background: var(--accent-glow); color: var(--accent); }
 .mod-btn svg { flex-shrink: 0; opacity: 0.7; }
+.mod-menu-volume {
+  padding: 8px 10px 10px; border-bottom: 1px solid var(--border); margin-bottom: 4px;
+}
+.mod-menu-volume label {
+  display: flex; justify-content: space-between; align-items: center;
+  font-family: var(--mono); font-size: 0.56rem; color: var(--text-dim);
+  letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 7px;
+}
+.mod-menu-volume input { width: 100%; accent-color: var(--accent); }
+.host-action { display: flex; }
 
 /* Host crown badge on member */
 .member-host-badge {
@@ -1504,6 +1580,7 @@ header {
           <canvas id="waveform-canvas"></canvas>
           <div class="ptt-wrap">
             <button id="ptt-btn" aria-label="Push to talk">
+              <div class="ptt-profile" id="ptt-profile"></div>
               <div class="ptt-icon-wrap">
                 <svg width="34" height="34" viewBox="0 0 34 34" fill="none">
                   <rect x="12" y="3" width="10" height="19" rx="5" fill="#7c6aff" opacity="0.9"/>
@@ -1518,6 +1595,7 @@ header {
             <div class="ptt-ring ptt-ring-2"></div>
             <div class="ptt-ring ptt-ring-3"></div>
           </div>
+          <div class="mobile-member-rail" id="mobile-member-rail"></div>
           <div class="ptt-hint">hold button · or hold <kbd id="space-kbd">Space</kbd></div>
 
           <!-- Mute button — prominent, below PTT -->
@@ -1859,6 +1937,23 @@ header {
       </div>
     </div>
 
+    <div class="settings-row" style="align-items:flex-start;flex-direction:column;gap:10px;">
+      <div class="settings-row-label">
+        <span>Profile Picture</span>
+        <span>Shows on your talk button and member avatar</span>
+      </div>
+      <div class="profile-row">
+        <div class="profile-preview" id="profile-preview"></div>
+        <div class="profile-actions">
+          <label class="profile-btn" for="profile-photo-input">Choose</label>
+          <label class="profile-btn" for="profile-camera-input">Camera</label>
+          <button class="profile-btn danger" id="profile-remove-btn" type="button">Remove</button>
+        </div>
+        <input class="profile-file" id="profile-photo-input" type="file" accept="image/*">
+        <input class="profile-file" id="profile-camera-input" type="file" accept="image/*" capture="user">
+      </div>
+    </div>
+
     <!-- ── AUDIO ── -->
     <div class="settings-section-header" style="margin-top:6px;">Audio</div>
 
@@ -2012,7 +2107,14 @@ header {
     <div class="mod-menu-name" id="mod-menu-name">—</div>
     Member
   </div>
-  <button class="mod-btn" id="mod-mute-btn">
+  <div class="mod-menu-volume">
+    <label>
+      <span>Volume</span>
+      <span id="mod-volume-val">100%</span>
+    </label>
+    <input id="mod-volume" type="range" min="0" max="100" value="100">
+  </div>
+  <button class="mod-btn host-action" id="mod-mute-btn">
     <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
       <rect x="5" y="2" width="6" height="10" rx="3" stroke="currentColor" stroke-width="1.4"/>
       <path d="M3 8c0 2.761 2.239 5 5 5s5-2.239 5-5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
@@ -2020,14 +2122,14 @@ header {
     </svg>
     <span id="mod-mute-label">Mute</span>
   </button>
-  <button class="mod-btn danger" id="mod-kick-btn">
+  <button class="mod-btn danger host-action" id="mod-kick-btn">
     <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
       <path d="M10 5L5 10M5 5l5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
       <path d="M8 1.5A6.5 6.5 0 118 14.5 6.5 6.5 0 018 1.5z" stroke="currentColor" stroke-width="1.4"/>
     </svg>
     Kick from channel
   </button>
-  <button class="mod-btn promote" id="mod-promote-btn">
+  <button class="mod-btn promote host-action" id="mod-promote-btn">
     <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
       <path d="M8 2l1.5 3.5L13 6l-2.5 2.5.5 3.5L8 10.5 5 12l.5-3.5L3 6l3.5-.5L8 2z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>
     </svg>
@@ -2197,6 +2299,7 @@ function safeAddChannel(ch) {
 
 const state = {
   myId: null, myName: null, peer: null,
+  myAvatar: null,
   currentChannel: null,
   connections: {},    // peerId -> { conn, incoming, name, channel, talking, ping, joinTime, volume }
   lobbyConn: null,
@@ -2233,6 +2336,7 @@ function makePeerInfo(conn, opts = {}) {
     incoming: Boolean(opts.incoming),
     name: opts.name || peerId,
     channel: opts.channel ?? null,
+    avatar: cleanAvatar(opts.avatar),
     talking: false,
     joinTime: opts.joinTime || Date.now(),
     volume: opts.volume ?? 1,
@@ -2298,6 +2402,7 @@ function cacheDOM() {
     'no-channel','ptt-section','space-kbd','channel-name-display',
     'channel-topic-input','share-channel-btn','leave-channel-btn',
     'waiting-overlay','waiting-countdown','ch-search-input',
+    'mobile-member-rail','ptt-profile',
     'mod-menu','mod-mute-label',
   ].forEach(id => { DOM[id] = document.getElementById(id); });
   DOM.pttHint    = document.querySelector('.ptt-hint');
@@ -2329,6 +2434,71 @@ function toast(msg, type = '') {
   el.className = `show${type ? ' ' + type : ''}`;
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => { el.className = type; }, 3500);
+}
+
+function cleanAvatar(value) {
+  const v = String(value || '');
+  return /^data:image\/(?:png|jpe?g|webp);base64,[a-z0-9+/=]+$/i.test(v) ? v : null;
+}
+
+function avatarInitial(name) {
+  return (name || '?').trim().charAt(0).toUpperCase() || '?';
+}
+
+function avatarClass(avatar) {
+  return avatar ? ' has-photo' : '';
+}
+
+function avatarStyle(avatar) {
+  return avatar ? ` style="background-image:url('${avatar}')"` : '';
+}
+
+function renderProfileSurfaces() {
+  const avatar = cleanAvatar(state.myAvatar);
+  const initial = avatarInitial(state.myName);
+  const ptt = DOM['ptt-btn'] || document.getElementById('ptt-btn');
+  const pttProfile = DOM['ptt-profile'] || document.getElementById('ptt-profile');
+  const preview = document.getElementById('profile-preview');
+
+  ptt?.classList.toggle('has-profile', Boolean(avatar));
+  if (pttProfile) pttProfile.style.backgroundImage = avatar ? `url('${avatar}')` : '';
+  if (preview) {
+    preview.style.backgroundImage = avatar ? `url('${avatar}')` : '';
+    preview.textContent = avatar ? '' : initial;
+  }
+}
+
+function compressProfileImage(file) {
+  return new Promise((resolve, reject) => {
+    if (!file || !file.type?.startsWith('image/')) { reject(new Error('not-image')); return; }
+    const reader = new FileReader();
+    reader.onerror = () => reject(reader.error || new Error('read-failed'));
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error('image-failed'));
+      img.onload = () => {
+        const size = 320;
+        const canvas = document.createElement('canvas');
+        canvas.width = size; canvas.height = size;
+        const ctx = canvas.getContext('2d');
+        const side = Math.min(img.width, img.height);
+        const sx = Math.max(0, (img.width - side) / 2);
+        const sy = Math.max(0, (img.height - side) / 2);
+        ctx.drawImage(img, sx, sy, side, side, 0, 0, size, size);
+        resolve(canvas.toDataURL('image/jpeg', 0.78));
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function announceProfile() {
+  renderProfileSurfaces();
+  renderMembers();
+  if (state.currentChannel) {
+    broadcastAll({ type: 'hello', name: state.myName, avatar: state.myAvatar, channel: state.currentChannel, joinTime: state.myJoinTime || Date.now(), channels: [...liveChannels], topics: channelTopics });
+  }
 }
 
 function selectedMicDeviceId() {
@@ -2615,6 +2785,7 @@ function markChannelActivity(ch) {
 (function init() {
   state.myId   = loadOrCreate('chirp_peer_id', () => crypto.randomUUID().replace(/-/g,'').slice(0,16));
   state.myName = localStorage.getItem('chirp_name');
+  state.myAvatar = cleanAvatar(localStorage.getItem('chirp_avatar'));
   if (state.myName) { startApp(); return; }
 
   const input  = document.getElementById('name-input');
@@ -2641,6 +2812,7 @@ function startApp() {
 
   loadPersistedChannels();
   loadPersistedChannelTopics();
+  renderProfileSurfaces();
   renderChannels();
   initPeer();
   setupPTT();
@@ -2849,10 +3021,16 @@ function setupSettings() {
   const sfxToggle  = document.getElementById('sfx-toggle');
   const callsignInput = document.getElementById('callsign-input');
   const callsignSave  = document.getElementById('callsign-save-btn');
+  const profileInputs = [
+    document.getElementById('profile-photo-input'),
+    document.getElementById('profile-camera-input'),
+  ].filter(Boolean);
+  const profileRemove = document.getElementById('profile-remove-btn');
 
   // Populate callsign field on open
   btn.addEventListener('click', () => {
     callsignInput.value = state.myName || '';
+    renderProfileSurfaces();
     overlay.classList.add('show');
     SFX.settingsOpen();
   });
@@ -2868,12 +3046,39 @@ function setupSettings() {
     if (ch) leaveChannel();
     state.myName = n;
     localStorage.setItem('chirp_name', n);
+    renderProfileSurfaces();
     if (ch) joinChannel(ch);
     overlay.classList.remove('show');
     toast(`Callsign: ${state.myName}`, 'green');
   }
   callsignSave.addEventListener('click', saveCallsign);
   callsignInput.addEventListener('keydown', e => { if (e.key === 'Enter') saveCallsign(); });
+
+  async function handleProfileFile(file, input) {
+    if (!file) return;
+    try {
+      const avatar = await compressProfileImage(file);
+      state.myAvatar = cleanAvatar(avatar);
+      if (!state.myAvatar) throw new Error('invalid-avatar');
+      localStorage.setItem('chirp_avatar', state.myAvatar);
+      announceProfile();
+      toast('Profile picture updated', 'green');
+    } catch {
+      toast('Could not use that picture', 'red');
+    } finally {
+      if (input) input.value = '';
+    }
+  }
+
+  profileInputs.forEach(input => {
+    input.addEventListener('change', () => handleProfileFile(input.files?.[0], input));
+  });
+  profileRemove?.addEventListener('click', () => {
+    state.myAvatar = null;
+    localStorage.removeItem('chirp_avatar');
+    announceProfile();
+    toast('Profile picture removed');
+  });
 
   // VAD toggle — restore saved state
   const savedVad = localStorage.getItem('chirp_vad') === '1';
@@ -3418,7 +3623,7 @@ function initPeer() {
       setTimeout(() => {
         lobbyAnnounce();
         syncChannelPeers();
-        broadcastAll({ type: 'hello', name: state.myName, channel: state.currentChannel, joinTime: state.myJoinTime || Date.now(), channels: [...liveChannels], topics: channelTopics });
+        broadcastAll({ type: 'hello', name: state.myName, avatar: state.myAvatar, channel: state.currentChannel, joinTime: state.myJoinTime || Date.now(), channels: [...liveChannels], topics: channelTopics });
       }, 700);
     }
 
@@ -3635,7 +3840,7 @@ function setupDataConn(conn, incoming = false) {
   conn.on('open',  () => {
     if (!isCurrentDataConn(peerId, conn)) return;
     notePeerSeen(peerId);
-    conn.send({ type: 'hello', name: state.myName, channel: state.currentChannel, joinTime: state.myJoinTime || Date.now(), channels: [...liveChannels], topics: channelTopics });
+    conn.send({ type: 'hello', name: state.myName, avatar: state.myAvatar, channel: state.currentChannel, joinTime: state.myJoinTime || Date.now(), channels: [...liveChannels], topics: channelTopics });
     // If we're the host, tell new peer
     if (state.isChannelHost) {
       try { conn.send({ type: 'host-changed', newHostId: state.myId }); } catch {}
@@ -3714,6 +3919,7 @@ function handleData(peerId, data) {
         state.connections[peerId].name     = data.name;
         state.connections[peerId].channel  = data.channel;
         state.connections[peerId].joinTime = data.joinTime || Date.now();
+        state.connections[peerId].avatar   = cleanAvatar(data.avatar);
       }
       setLobbyChannel(peerId, data.channel, data.name);
       if (Array.isArray(data.channels)) data.channels.forEach(ch => safeAddChannel(ch));
@@ -3936,7 +4142,7 @@ async function joinChannel(ch) {
   lobbyAnnounce(); renderChannels(); renderMembers(); updatePrivacyBtn(); updateChannelControls();
   window._mobileGoTalk?.();
   syncChannelPeers();
-  broadcastAll({ type: 'hello', name: state.myName, channel: ch, joinTime: state.myJoinTime, channels: [...liveChannels], topics: channelTopics });
+  broadcastAll({ type: 'hello', name: state.myName, avatar: state.myAvatar, channel: ch, joinTime: state.myJoinTime, channels: [...liveChannels], topics: channelTopics });
 
   // Start VAD if enabled
   if (state.vadEnabled) startVAD();
@@ -4015,6 +4221,7 @@ function renderMembers() {
   if (!state.currentChannel) {
     list.innerHTML = '';
     DOM['member-count-badge'].textContent = '0';
+    renderMobileMemberRail();
     return;
   }
 
@@ -4026,11 +4233,11 @@ function renderMembers() {
     selfEl = document.createElement('div');
     list.insertBefore(selfEl, list.firstChild);
   }
-  const selfKey = `${state.myName}|${amHost}|${state.isTalking}`;
+  const selfKey = `${state.myName}|${amHost}|${state.isTalking}|${state.myAvatar || ''}`;
   if (selfEl.dataset.rkey !== selfKey) {
     selfEl.className = `member-item member-self${state.isTalking ? ' talking' : ''}`;
     selfEl.innerHTML = `
-      <div class="member-avatar" data-letter="${state.myName.charAt(0).toLowerCase()}">${state.myName.charAt(0)}</div>
+      <div class="member-avatar${avatarClass(state.myAvatar)}" data-letter="${state.myName.charAt(0).toLowerCase()}"${avatarStyle(state.myAvatar)}>${avatarInitial(state.myName)}</div>
       <div class="member-info">
         <div class="member-name">${state.myName}${amHost ? ' <span class="member-host-badge" title="You are host">👑</span>' : ''} <span style="font-family:var(--mono);font-size:0.5rem;color:var(--text-dim);font-weight:400">(you)</span></div>
       </div>`;
@@ -4056,7 +4263,7 @@ function renderMembers() {
     const isHost  = state.channelHostId === peerId;
     const statusStr = info.reconnecting ? 'reconnecting' : (info.ping != null ? `${info.ping}ms` : '');
     const volPct  = Math.round((info.volume ?? 1) * 100);
-    const key     = `${info.name}|${info.talking}|${isMuted}|${isHost}|${statusStr}|${amHost}|${volPct}`;
+    const key     = `${info.name}|${info.talking}|${isMuted}|${isHost}|${statusStr}|${amHost}|${volPct}|${info.avatar || ''}`;
 
     let el = list.querySelector(`[data-peer-id="${peerId}"]`);
     if (!el) {
@@ -4065,16 +4272,16 @@ function renderMembers() {
       // Single delegated click — check host state at click time
       el.addEventListener('click', e => {
         if (e.target.closest('.member-volume')) return;
-        if (state.isChannelHost) showModMenu(e, peerId, state.connections[peerId]?.name || peerId);
+        showModMenu(e, peerId, state.connections[peerId]?.name || peerId);
       });
       list.appendChild(el);
     }
 
     if (el.dataset.rkey === key) return; // nothing changed
     el.dataset.rkey = key;
-    el.className = `member-item${info.talking ? ' talking' : ''}${amHost ? ' clickable' : ''}`;
+    el.className = `member-item clickable${info.talking ? ' talking' : ''}`;
     el.innerHTML = `
-      <div class="member-avatar" data-letter="${(info.name||'?').charAt(0).toLowerCase()}">${(info.name||'?').charAt(0)}</div>
+      <div class="member-avatar${avatarClass(info.avatar)}" data-letter="${(info.name||'?').charAt(0).toLowerCase()}"${avatarStyle(info.avatar)}>${avatarInitial(info.name)}</div>
       <div class="member-info">
         <div class="member-name">${info.name}${isHost ? ' <span class="member-host-badge" title="Channel host">👑</span>' : ''}${isMuted ? ' <span style="font-size:0.6rem;opacity:0.5" title="Muted by host">🔇</span>' : ''}</div>
         ${statusStr ? `<div class="member-sub">${statusStr}</div>` : ''}
@@ -4089,7 +4296,40 @@ function renderMembers() {
   });
 
   DOM['member-count-badge'].textContent = 1 + activePeerIds.size;
+  renderMobileMemberRail();
   updatePrivacyBtn(); updateChannelControls();
+}
+
+function renderMobileMemberRail() {
+  const rail = DOM['mobile-member-rail'];
+  if (!rail) return;
+  if (!state.currentChannel) { rail.innerHTML = ''; return; }
+
+  rail.innerHTML = '';
+  const people = [
+    { id: state.myId, name: state.myName, avatar: state.myAvatar, talking: state.isTalking, self: true },
+    ...Object.entries(state.connections)
+      .filter(([, info]) => info.channel === state.currentChannel)
+      .map(([id, info]) => ({ id, name: info.name || id, avatar: info.avatar, talking: info.talking, self: false })),
+  ];
+  people.slice(0, 6).forEach(person => {
+    const chip = document.createElement('button');
+    chip.type = 'button';
+    chip.className = `mobile-member-chip${person.self ? ' self' : ''}${person.talking ? ' talking' : ''}${avatarClass(person.avatar)}`;
+    chip.title = person.self ? `${person.name} (you)` : person.name;
+    chip.textContent = avatarInitial(person.name);
+    if (person.avatar) chip.style.backgroundImage = `url('${person.avatar}')`;
+    if (!person.self) {
+      chip.addEventListener('click', e => showModMenu(e, person.id, person.name));
+    }
+    rail.appendChild(chip);
+  });
+  if (people.length > 6) {
+    const more = document.createElement('span');
+    more.className = 'mobile-member-more';
+    more.textContent = `+${people.length - 6}`;
+    rail.appendChild(more);
+  }
 }
 
 /* ═══════════════════════════════════════════
@@ -4184,16 +4424,35 @@ function setupModMenu() {
     toast(`${name} is now host`, 'info');
     renderMembers(); updateChannelControls();
   });
+
+  const volume = document.getElementById('mod-volume');
+  volume?.addEventListener('input', e => {
+    const { peerId } = menu._target || {};
+    if (!peerId) return;
+    const value = Number(e.target.value) / 100;
+    setPeerVolume(peerId, value);
+    const label = document.getElementById('mod-volume-val');
+    if (label) label.textContent = `${Math.round(value * 100)}%`;
+  });
 }
 
 function showModMenu(e, peerId, name) {
   e.stopPropagation();
   const menu = DOM['mod-menu'];
   if (!menu) return;
+  if (!state.connections[peerId]) return;
   menu._target = { peerId, name };
   document.getElementById('mod-menu-name').textContent = name;
   const isMuted = state.mutedPeers?.has(peerId);
   DOM['mod-mute-label'].textContent = isMuted ? 'Unmute' : 'Mute';
+  const vol = Math.round((state.connections[peerId]?.volume ?? 1) * 100);
+  const volInput = document.getElementById('mod-volume');
+  const volLabel = document.getElementById('mod-volume-val');
+  if (volInput) volInput.value = vol;
+  if (volLabel) volLabel.textContent = `${vol}%`;
+  menu.querySelectorAll('.host-action').forEach(btn => {
+    btn.style.display = state.isChannelHost ? 'flex' : 'none';
+  });
   menu.classList.add('show');
   const vw = window.innerWidth, vh = window.innerHeight;
   const mw = menu.offsetWidth || 190, mh = menu.offsetHeight || 150;
@@ -4281,6 +4540,7 @@ async function startTalking() {
   markChannelActivity(state.currentChannel);
   // Update only self member row talking state (no full rebuild)
   DOM['member-list']?.querySelector('.member-self')?.classList.add('talking');
+  renderMobileMemberRail();
   broadcastAll({ type: 'talking', value: true });
   startWaveform();
   SFX.pttOn();
@@ -4296,6 +4556,7 @@ function stopTalking() {
   DOM['tx-label'].textContent = state.vadEnabled ? 'listening' : 'standby';
   // Update only self member row talking state (no full rebuild)
   DOM['member-list']?.querySelector('.member-self')?.classList.remove('talking');
+  renderMobileMemberRail();
   broadcastAll({ type: 'talking', value: false });
   stopWaveform();
   SFX.pttOff();
