@@ -473,6 +473,42 @@ header {
   color: var(--text-dim); transition: color 0.15s;
 }
 
+/* Avatar quick-edit button — bottom-right of PTT circle */
+#avatar-edit-wrap {
+  position: absolute;
+  bottom: calc(50% - 66px);
+  right:  calc(50% - 66px);
+  z-index: 10;
+}
+#avatar-edit-btn {
+  width: 26px; height: 26px; border-radius: 50%;
+  background: var(--bg2); border: 1.5px solid var(--border2);
+  color: var(--text-dim); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.30);
+  transition: border-color 0.15s, color 0.15s, background 0.15s, transform 0.1s;
+}
+#avatar-edit-btn:hover { border-color: var(--accent-dim); color: var(--accent); background: var(--accent-glow); transform: scale(1.08); }
+#avatar-edit-btn:active { transform: scale(0.94); }
+#avatar-edit-menu {
+  display: none; flex-direction: column; gap: 2px;
+  position: absolute; bottom: calc(100% + 6px); right: 0;
+  background: var(--bg2); border: 1px solid var(--border2);
+  border-radius: 10px; padding: 4px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.40);
+  min-width: 118px; z-index: 20;
+}
+#avatar-edit-menu.open { display: flex; animation: fadeUp 0.18s cubic-bezier(0.34,1.56,0.64,1); }
+.avatar-menu-btn {
+  padding: 7px 11px; border-radius: 7px;
+  background: none; border: none; color: var(--text);
+  font-family: var(--mono); font-size: 0.62rem;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  cursor: pointer; text-align: left; white-space: nowrap;
+  transition: background 0.12s, color 0.12s;
+}
+.avatar-menu-btn:hover { background: var(--bg3); color: var(--accent); }
+
 /* PTT hint — keyboard shortcut row */
 .ptt-hint {
   font-family: var(--mono); font-size: 0.58rem; color: var(--text-dim);
@@ -584,6 +620,373 @@ header {
   cursor: pointer; white-space: nowrap; transition: opacity 0.15s;
 }
 .settings-inline-btn:hover { opacity: 0.85; }
+
+/* ═══════════════════════════════════════════
+   LIGHT THEME
+═══════════════════════════════════════════ */
+body.light {
+  --bg:          #f4f4f7;
+  --bg2:         #eaeaef;
+  --bg3:         #e0e0e8;
+  --bg4:         #d5d5e0;
+  --border:      #c8c8d8;
+  --border2:     #b8b8cc;
+  --accent:      #5b4de0;
+  --accent2:     #8b3fcf;
+  --accent-dim:  #8b7ff0;
+  --accent-glow: rgba(91,77,224,0.14);
+  --green:       #0d9e7a;
+  --green-dim:   #a3e9d8;
+  --danger:      #d93535;
+  --text:        #1a1a2e;
+  --text-dim:    #7070a0;
+  --text-mid:    #444468;
+}
+body.light body::before { opacity: 0.07; }
+
+/* ═══════════════════════════════════════════
+   CHAT SIDEBAR
+═══════════════════════════════════════════ */
+.chat-panel {
+  width: 240px; flex-shrink: 0;
+  background: var(--bg2); border-left: 1px solid var(--border);
+  display: flex; flex-direction: column; overflow: hidden;
+  transition: width 0.25s, opacity 0.25s;
+}
+.chat-panel.collapsed { width: 0; opacity: 0; pointer-events: none; }
+
+.chat-header {
+  padding: 14px 14px 10px;
+  display: flex; align-items: center; justify-content: space-between;
+  border-bottom: 1px solid var(--border); flex-shrink: 0;
+}
+.chat-header-title {
+  font-family: var(--mono); font-size: 0.58rem; font-weight: 500;
+  color: var(--text-dim); letter-spacing: 0.2em; text-transform: uppercase;
+}
+.chat-toggle-btn {
+  width: 22px; height: 22px; border-radius: 5px;
+  background: none; border: 1px solid var(--border); color: var(--text-dim);
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: border-color 0.15s, color 0.15s; flex-shrink: 0;
+}
+.chat-toggle-btn:hover { border-color: var(--accent-dim); color: var(--accent); }
+
+.chat-messages {
+  flex: 1; overflow-y: auto; padding: 10px 0;
+  display: flex; flex-direction: column; gap: 2px;
+  min-height: 0;
+}
+.chat-messages::-webkit-scrollbar { width: 3px; }
+.chat-messages::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+.chat-msg {
+  padding: 5px 12px;
+  animation: fadeIn 0.18s ease;
+}
+.chat-msg-header {
+  display: flex; align-items: baseline; gap: 6px; margin-bottom: 2px;
+}
+.chat-msg-name {
+  font-size: 0.72rem; font-weight: 700; color: var(--accent);
+}
+.chat-msg-name.self-name { color: var(--green); }
+.chat-msg-time {
+  font-family: var(--mono); font-size: 0.52rem; color: var(--text-dim); letter-spacing: 0.04em;
+}
+.chat-msg-text {
+  font-size: 0.8rem; color: var(--text); line-height: 1.45;
+  word-break: break-word; white-space: pre-wrap;
+}
+.chat-msg-system {
+  font-family: var(--mono); font-size: 0.58rem; color: var(--text-dim);
+  text-align: center; padding: 6px 12px; letter-spacing: 0.05em;
+  animation: fadeIn 0.18s ease;
+}
+
+.chat-input-wrap {
+  padding: 8px 10px 10px; border-top: 1px solid var(--border); flex-shrink: 0;
+  display: flex; gap: 6px; align-items: flex-end;
+}
+.chat-input {
+  flex: 1; background: var(--bg3); border: 1px solid var(--border2);
+  border-radius: var(--radius-sm); padding: 7px 10px;
+  font-family: var(--sans); font-size: 0.8rem; color: var(--text);
+  outline: none; resize: none; max-height: 80px; min-height: 32px;
+  transition: border-color 0.2s;
+  line-height: 1.4; overflow-y: auto;
+}
+.chat-input:focus { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-glow); }
+.chat-input::placeholder { color: var(--text-dim); }
+.chat-send-btn {
+  width: 30px; height: 30px; border-radius: var(--radius-sm);
+  background: var(--accent); border: none; color: #fff;
+  cursor: pointer; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  transition: opacity 0.15s, transform 0.1s;
+}
+.chat-send-btn:hover { opacity: 0.85; }
+.chat-send-btn:active { transform: scale(0.93); }
+.chat-unread-badge {
+  position: absolute; top: -4px; right: -4px;
+  width: 16px; height: 16px; border-radius: 50%;
+  background: var(--danger); color: #fff;
+  font-size: 0.5rem; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  animation: popIn 0.25s cubic-bezier(0.34,1.56,0.64,1);
+}
+
+/* ═══════════════════════════════════════════
+   EMOJI REACTIONS
+═══════════════════════════════════════════ */
+.reaction-bar {
+  display: flex; align-items: center; justify-content: center;
+  gap: 6px; padding: 0; flex-wrap: wrap;
+}
+.reaction-btn {
+  font-size: 1.3rem; background: none; border: none;
+  cursor: pointer; border-radius: 8px;
+  width: 36px; height: 36px;
+  display: flex; align-items: center; justify-content: center;
+  transition: transform 0.12s, background 0.12s;
+  -webkit-tap-highlight-color: transparent;
+}
+.reaction-btn:hover { transform: scale(1.25); background: rgba(255,255,255,0.06); }
+.reaction-btn:active { transform: scale(0.9); }
+
+/* Floating reaction bubbles */
+.reaction-float {
+  position: fixed; pointer-events: none; z-index: 9000;
+  font-size: 1.8rem; animation: reactionFloat 2s ease-out forwards;
+  transform-origin: center bottom;
+}
+@keyframes reactionFloat {
+  0%   { opacity: 1; transform: translateY(0) scale(1); }
+  60%  { opacity: 1; transform: translateY(-60px) scale(1.2); }
+  100% { opacity: 0; transform: translateY(-120px) scale(0.8); }
+}
+
+/* Incoming reaction popup on member chip */
+.member-reaction-pop {
+  position: absolute; top: -18px; left: 50%; transform: translateX(-50%);
+  font-size: 1rem; pointer-events: none;
+  animation: reactionPop 1.8s ease-out forwards;
+  z-index: 100;
+}
+@keyframes reactionPop {
+  0%   { opacity: 1; transform: translateX(-50%) scale(1) translateY(0); }
+  60%  { opacity: 1; transform: translateX(-50%) scale(1.2) translateY(-8px); }
+  100% { opacity: 0; transform: translateX(-50%) scale(0.8) translateY(-20px); }
+}
+
+/* ═══════════════════════════════════════════
+   RAISE HAND
+═══════════════════════════════════════════ */
+.raise-hand-btn {
+  display: flex; align-items: center; gap: 7px;
+  padding: 8px 18px; border-radius: 20px;
+  background: var(--bg3); border: 1.5px solid var(--border2);
+  font-family: var(--mono); font-size: 0.65rem; color: var(--text-dim);
+  letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer;
+  transition: all 0.2s;
+}
+.raise-hand-btn:hover { border-color: #f59e0b; color: #f59e0b; background: rgba(245,158,11,0.08); }
+.raise-hand-btn.raised { border-color: #f59e0b; color: #f59e0b; background: rgba(245,158,11,0.1); animation: handPulse 1.5s ease-in-out infinite; }
+@keyframes handPulse { 0%,100% { box-shadow: 0 0 0 0 rgba(245,158,11,0.3); } 50% { box-shadow: 0 0 0 8px rgba(245,158,11,0); } }
+
+.member-hand-badge {
+  font-size: 0.65rem; line-height: 1; flex-shrink: 0; margin-left: 2px;
+  animation: popIn 0.25s cubic-bezier(0.34,1.56,0.64,1);
+}
+
+/* ═══════════════════════════════════════════
+   STATUS INDICATOR
+═══════════════════════════════════════════ */
+.status-dot {
+  width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+  border: 1.5px solid var(--bg2);
+  position: absolute; bottom: 0; right: 0;
+  transition: background 0.3s;
+}
+.member-avatar-wrap { position: relative; flex-shrink: 0; }
+.status-dot.online  { background: var(--green); }
+.status-dot.away    { background: #f59e0b; }
+.status-dot.busy    { background: var(--danger); }
+.status-dot.offline { background: var(--text-dim); }
+
+.status-picker-wrap { position: relative; }
+.status-picker-menu {
+  display: none; flex-direction: column;
+  position: absolute; bottom: calc(100% + 6px); left: 0;
+  background: var(--bg2); border: 1px solid var(--border2);
+  border-radius: 10px; padding: 4px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  min-width: 130px; z-index: 200;
+  animation: fadeUp 0.18s cubic-bezier(0.34,1.56,0.64,1);
+}
+.status-picker-menu.open { display: flex; }
+.status-picker-opt {
+  display: flex; align-items: center; gap: 9px;
+  padding: 7px 10px; border-radius: 6px;
+  background: none; border: none; cursor: pointer;
+  font-family: var(--mono); font-size: 0.63rem; color: var(--text);
+  letter-spacing: 0.05em; text-transform: uppercase;
+  transition: background 0.12s;
+}
+.status-picker-opt:hover { background: var(--bg3); }
+.status-picker-dot {
+  width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+}
+
+/* ═══════════════════════════════════════════
+   CHANNEL CAPACITY
+═══════════════════════════════════════════ */
+.capacity-row {
+  padding: 8px 10px 10px; border-bottom: 1px solid var(--border); margin-bottom: 4px;
+}
+.capacity-row label {
+  display: flex; justify-content: space-between; align-items: center;
+  font-family: var(--mono); font-size: 0.56rem; color: var(--text-dim);
+  letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 7px;
+}
+.capacity-row input[type=range] { width: 100%; accent-color: var(--accent); }
+.capacity-full-banner {
+  background: rgba(248,113,113,0.1); border: 1px solid rgba(248,113,113,0.3);
+  border-radius: var(--radius-sm); padding: 8px 12px; margin: 6px 0;
+  font-family: var(--mono); font-size: 0.62rem; color: var(--danger);
+  text-align: center; letter-spacing: 0.06em;
+  animation: fadeIn 0.2s ease;
+}
+
+/* ═══════════════════════════════════════════
+   THEME TOGGLE BUTTON
+═══════════════════════════════════════════ */
+#theme-toggle-btn {
+  width: 28px; height: 28px; border-radius: 7px;
+  background: none; border: 1px solid transparent;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; color: var(--text-dim);
+  transition: border-color 0.18s, color 0.18s, background 0.18s, transform 0.12s;
+  flex-shrink: 0;
+}
+#theme-toggle-btn:hover { border-color: var(--accent-dim); color: var(--accent); background: var(--accent-glow); transform: scale(1.08); }
+#theme-toggle-btn:active { transform: scale(0.94); }
+
+/* ═══════════════════════════════════════════
+   ABOUT MODAL
+═══════════════════════════════════════════ */
+#about-overlay {
+  display: none; position: fixed; inset: 0; z-index: 800;
+  background: rgba(0,0,0,0.6); backdrop-filter: blur(8px);
+  align-items: center; justify-content: center; padding: 20px;
+}
+#about-overlay.show { display: flex; animation: fadeIn 0.2s ease; }
+
+.about-card {
+  background: var(--bg2); border: 1px solid var(--border2);
+  border-radius: 20px; width: 100%; max-width: 420px;
+  box-shadow: 0 24px 64px rgba(0,0,0,0.55);
+  animation: fadeUp 0.3s cubic-bezier(0.34,1.56,0.64,1) both;
+  max-height: 90vh; overflow-y: auto; display: flex; flex-direction: column;
+}
+.about-card::-webkit-scrollbar { width: 3px; }
+.about-card::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+.about-header {
+  padding: 24px 24px 18px;
+  display: flex; align-items: center; justify-content: space-between;
+  border-bottom: 1px solid var(--border); flex-shrink: 0;
+}
+.about-brand { display: flex; align-items: center; gap: 14px; }
+.about-logo {
+  width: 44px; height: 44px; border-radius: 12px;
+  background: linear-gradient(135deg, var(--accent-dim), #1a1a2e);
+  border: 1px solid var(--accent-dim);
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 0 24px var(--accent-glow); flex-shrink: 0;
+}
+.about-title { font-size: 1.25rem; font-weight: 800; color: var(--text); letter-spacing: -0.01em; }
+.about-version { font-family: var(--mono); font-size: 0.55rem; color: var(--text-dim); letter-spacing: 0.1em; margin-top: 2px; }
+.about-close {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: var(--bg4); border: 1px solid var(--border2);
+  color: var(--text-dim); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s, color 0.15s; flex-shrink: 0;
+}
+.about-close:hover { background: var(--bg3); color: var(--text); }
+
+.about-body { padding: 20px 24px 26px; display: flex; flex-direction: column; gap: 20px; }
+
+.about-tagline {
+  font-family: var(--mono); font-size: 0.66rem; color: var(--text-dim);
+  letter-spacing: 0.05em; line-height: 1.75;
+}
+
+.about-section-title {
+  font-family: var(--mono); font-size: 0.52rem; font-weight: 600;
+  color: var(--text-dim); letter-spacing: 0.2em; text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.about-shortcuts {
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: 10px; overflow: hidden;
+}
+.shortcut-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 9px 14px;
+}
+.shortcut-row + .shortcut-row { border-top: 1px solid var(--border); }
+.shortcut-label { font-size: 0.78rem; color: var(--text-mid); }
+.shortcut-keys { display: flex; align-items: center; gap: 4px; }
+.shortcut-keys kbd {
+  background: var(--bg4); border: 1px solid var(--border2);
+  border-radius: 4px; padding: 2px 7px;
+  font-family: var(--mono); font-size: 0.56rem; color: var(--text);
+  letter-spacing: 0.04em;
+}
+
+.about-links { display: flex; gap: 8px; flex-wrap: wrap; }
+.about-link {
+  display: flex; align-items: center; gap: 6px;
+  padding: 7px 13px; border-radius: var(--radius-sm);
+  background: var(--bg3); border: 1px solid var(--border2);
+  font-family: var(--mono); font-size: 0.62rem; color: var(--text-mid);
+  letter-spacing: 0.05em; cursor: pointer; text-decoration: none;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+.about-link:hover { border-color: var(--accent-dim); color: var(--accent); background: var(--accent-glow); }
+
+.about-divider { height: 1px; background: var(--border); }
+
+.about-feedback-section { display: flex; flex-direction: column; gap: 14px; }
+.about-feedback-title { font-size: 0.9rem; font-weight: 700; color: var(--text); }
+
+/* Info button in sidebar footer */
+#about-btn {
+  width: 28px; height: 28px; border-radius: 7px;
+  background: none; border: 1px solid transparent;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; color: var(--text-dim);
+  transition: border-color 0.18s, color 0.18s, background 0.18s, transform 0.12s;
+  flex-shrink: 0;
+}
+#about-btn:hover { border-color: var(--border2); color: var(--accent); background: var(--accent-glow); transform: scale(1.08); }
+#about-btn:active { transform: scale(0.94); }
+
+/* Chat toggle in header */
+#chat-toggle-header-btn {
+  position: relative;
+  width: 28px; height: 28px; border-radius: 7px;
+  background: none; border: 1px solid transparent;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; color: var(--text-dim);
+  transition: border-color 0.18s, color 0.18s, background 0.18s;
+  flex-shrink: 0;
+}
+#chat-toggle-header-btn:hover { border-color: var(--accent-dim); color: var(--accent); background: var(--accent-glow); }
+#chat-toggle-header-btn.active { color: var(--accent); border-color: var(--accent-dim); background: var(--accent-glow); }
 
 /* Toggle switch */
 .toggle {
@@ -958,8 +1361,29 @@ header {
   #mobile-more-btn { display: flex !important; }
   .sidebar-footer { display: none; }
 
+  /* Hide chat toggle from header on mobile — it's now a nav tab */
+  #chat-toggle-header-btn { display: none !important; }
+
   .main-content   { background: var(--bg); }
   .channel-bar    { padding: 11px 14px; gap: 10px; min-height: 48px; }
+
+  /* Chat panel as a slide-in tab on mobile */
+  .chat-panel {
+    position: absolute; inset: 0 0 var(--mobile-nav-height); width: 100%; height: auto;
+    border: none; border-left: none;
+    transform: translateX(100%); opacity: 0;
+    transition: transform 0.32s cubic-bezier(0.4,0,0.2,1), opacity 0.32s ease;
+    background: var(--bg2);
+    /* override collapsed state for mobile: we control via tab */
+    pointer-events: none;
+  }
+  .chat-panel.collapsed { width: 100%; opacity: 0; }
+  body.tab-chat .chat-panel {
+    transform: translateX(0); opacity: 1; pointer-events: all;
+  }
+  body.tab-chat .main-content  { transform: translateX(-100%); }
+  body.tab-chat .sidebar       { transform: translateX(-200%); }
+  body.tab-chat .members-panel { transform: translateX(100%); }
   .channel-topic-input { display: none !important; }
   .channel-icon-btn { width: 32px; height: 32px; }
   .channel-bar h2 { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -1559,6 +1983,13 @@ header {
           <circle cx="19" cy="12" r="1.5" fill="currentColor"/>
         </svg>
       </button>
+      <!-- Chat toggle -->
+      <button id="chat-toggle-header-btn" title="Toggle chat (C)" aria-label="Toggle chat" style="position:relative">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span class="chat-unread-badge" id="chat-unread-badge" style="display:none"></span>
+      </button>
       <button id="share-channel-btn" class="channel-icon-btn header-action-btn" title="Copy invite link" aria-label="Copy invite link">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
           <path d="M10 13a5 5 0 007.07 0l2.12-2.12a5 5 0 00-7.07-7.07L11 4.93" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
@@ -1614,9 +2045,11 @@ header {
 
       </div>
       <div class="sidebar-footer">
-        <button id="feedback-fab" title="Send Feedback">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+        <button id="about-btn" title="About & Shortcuts">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.6"/>
+            <line x1="12" y1="8" x2="12" y2="8.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <line x1="12" y1="11" x2="12" y2="16" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
           </svg>
         </button>
         <button id="record-fab" title="Record Session">
@@ -1687,6 +2120,19 @@ header {
               <div class="ptt-ring ptt-ring-1"></div>
               <div class="ptt-ring ptt-ring-2"></div>
               <div class="ptt-ring ptt-ring-3"></div>
+              <!-- Avatar quick-edit — bypasses the settings overlay -->
+              <div id="avatar-edit-wrap">
+                <button id="avatar-edit-btn" type="button" aria-label="Change profile picture" title="Change profile picture">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                    <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <circle cx="12" cy="13" r="4" stroke="currentColor" stroke-width="2"/>
+                  </svg>
+                </button>
+                <div id="avatar-edit-menu">
+                  <button class="avatar-menu-btn" id="avatar-upload-btn" type="button">Upload photo</button>
+                  <button class="avatar-menu-btn" id="avatar-camera-btn" type="button">Take photo</button>
+                </div>
+              </div>
             </div>
             <div class="mobile-member-rail" id="mobile-member-rail-right"></div>
           </div>
@@ -1710,6 +2156,40 @@ header {
             </svg>
             <span id="mute-label">mic on</span>
           </button>
+
+          <!-- Raise hand + status picker row -->
+          <div id="ptt-extra-row" style="display:none;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;">
+            <button id="raise-hand-btn" class="raise-hand-btn" title="Raise hand (H)">
+              <span>✋</span> Raise Hand
+            </button>
+            <!-- Status picker -->
+            <div class="status-picker-wrap" id="status-picker-wrap">
+              <button id="status-picker-btn" class="mute-btn-standalone" style="gap:7px;padding:8px 14px;" title="Set status">
+                <span id="status-dot-btn" class="status-dot" style="position:static;border:none;width:8px;height:8px;background:var(--green)"></span>
+                <span id="status-label-btn" style="font-size:0.65rem">Online</span>
+                <svg width="10" height="10" viewBox="0 0 10 6" fill="none" style="opacity:0.4"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
+              <div class="status-picker-menu" id="status-picker-menu">
+                <button class="status-picker-opt" data-status="online"><span class="status-picker-dot" style="background:var(--green)"></span>Online</button>
+                <button class="status-picker-opt" data-status="away"><span class="status-picker-dot" style="background:#f59e0b"></span>Away</button>
+                <button class="status-picker-opt" data-status="busy"><span class="status-picker-dot" style="background:var(--danger)"></span>Busy</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Emoji reaction bar -->
+          <div id="reaction-bar-wrap" style="display:none;">
+            <div class="reaction-bar" id="reaction-bar">
+              <button class="reaction-btn" data-emoji="👍" title="Thumbs up">👍</button>
+              <button class="reaction-btn" data-emoji="👎" title="Thumbs down">👎</button>
+              <button class="reaction-btn" data-emoji="🔥" title="Fire">🔥</button>
+              <button class="reaction-btn" data-emoji="😂" title="Laugh">😂</button>
+              <button class="reaction-btn" data-emoji="🎉" title="Party">🎉</button>
+              <button class="reaction-btn" data-emoji="❤️" title="Heart">❤️</button>
+              <button class="reaction-btn" data-emoji="👀" title="Eyes">👀</button>
+              <button class="reaction-btn" data-emoji="🤔" title="Thinking">🤔</button>
+            </div>
+          </div>
         </div>
 
         <!-- Waiting for host overlay -->
@@ -1732,6 +2212,25 @@ header {
       </div>
       <div class="member-scroll" id="member-list"></div>
     </div>
+
+    <!-- Chat panel -->
+    <div class="chat-panel collapsed" id="chat-panel">
+      <div class="chat-header">
+        <span class="chat-header-title">Chat</span>
+      </div>
+      <div class="chat-messages" id="chat-messages">
+        <div class="chat-msg-system">No messages yet</div>
+      </div>
+      <div class="chat-input-wrap">
+        <textarea id="chat-input" class="chat-input" rows="1" placeholder="Message…" maxlength="500"></textarea>
+        <button id="chat-send-btn" class="chat-send-btn" title="Send (Enter)">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+            <line x1="22" y1="2" x2="11" y2="13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <polygon points="22 2 15 22 11 13 2 9 22 2" stroke="currentColor" stroke-width="2" stroke-linejoin="round" fill="none"/>
+          </svg>
+        </button>
+      </div>
+    </div>
   </div>
 
   <!-- Mobile bottom nav -->
@@ -1750,6 +2249,13 @@ header {
         <line x1="7"  y1="21" x2="15" y2="21" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
       </svg>
       <span>Talk</span>
+    </button>
+    <button class="nav-tab" data-tab="chat" id="nav-chat" style="position:relative">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <span>Chat</span>
+      <span id="nav-chat-badge" style="display:none;position:absolute;top:6px;right:calc(50% - 18px);width:16px;height:16px;border-radius:50%;background:var(--danger);color:#fff;font-size:0.5rem;font-weight:700;display:none;align-items:center;justify-content:center;"></span>
     </button>
 
   </nav>
@@ -1783,9 +2289,9 @@ header {
         <span>Record Session</span>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style="margin-left:auto;opacity:0.3"><path d="M9 18l6-6-6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>
-      <button class="mobile-more-item" id="mmore-feedback">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        <span>Send Feedback</span>
+      <button class="mobile-more-item" id="mmore-about">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.6"/><line x1="12" y1="8" x2="12" y2="8.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="12" y1="11" x2="12" y2="16" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        <span>About &amp; Feedback</span>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style="margin-left:auto;opacity:0.3"><path d="M9 18l6-6-6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>
     </div>
@@ -1823,6 +2329,107 @@ header {
 </div>
 
 <!-- Feedback modal -->
+<!-- About modal -->
+<div id="about-overlay">
+  <div class="about-card">
+    <div class="about-header">
+      <div class="about-brand">
+        <div class="about-logo">
+          <svg width="26" height="26" viewBox="0 0 34 34" fill="none">
+            <rect x="12" y="3" width="10" height="19" rx="5" fill="#7c6aff" opacity="0.9"/>
+            <path d="M6 17C6 23.627 11 29 17 29C23 29 28 23.627 28 17" stroke="#7c6aff" stroke-width="2" stroke-linecap="round"/>
+            <line x1="17" y1="29" x2="17" y2="33" stroke="#7c6aff" stroke-width="2" stroke-linecap="round"/>
+            <line x1="11" y1="33" x2="23" y2="33" stroke="#7c6aff" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div>
+          <div class="about-title">Chirp</div>
+          <div class="about-version">Browser push-to-talk · v1.0</div>
+        </div>
+      </div>
+      <button class="about-close" id="about-close">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+
+    <div class="about-body">
+      <p class="about-tagline">Open a channel, hold the button (or press Space), and your voice streams live to everyone in the same channel. No accounts, no installs — just a URL.</p>
+
+      <div>
+        <div class="about-section-title">Keyboard Shortcuts</div>
+        <div class="about-shortcuts">
+          <div class="shortcut-row">
+            <span class="shortcut-label">Push to talk</span>
+            <div class="shortcut-keys"><kbd>Space</kbd></div>
+          </div>
+          <div class="shortcut-row">
+            <span class="shortcut-label">Toggle mute</span>
+            <div class="shortcut-keys"><kbd>M</kbd></div>
+          </div>
+          <div class="shortcut-row">
+            <span class="shortcut-label">Toggle chat</span>
+            <div class="shortcut-keys"><kbd>C</kbd></div>
+          </div>
+          <div class="shortcut-row">
+            <span class="shortcut-label">Raise / lower hand</span>
+            <div class="shortcut-keys"><kbd>H</kbd></div>
+          </div>
+          <div class="shortcut-row">
+            <span class="shortcut-label">Leave channel</span>
+            <div class="shortcut-keys"><kbd>Esc</kbd></div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="about-section-title">Links</div>
+        <div class="about-links">
+          <a class="about-link" href="https://github.com" target="_blank" rel="noopener">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Source
+          </a>
+          <a class="about-link" href="https://peerjs.com" target="_blank" rel="noopener">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.6"/><line x1="2" y1="12" x2="22" y2="12" stroke="currentColor" stroke-width="1.6"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" stroke="currentColor" stroke-width="1.6"/></svg>
+            PeerJS
+          </a>
+        </div>
+      </div>
+
+      <div class="about-divider"></div>
+
+      <!-- Feedback embedded inside About -->
+      <div class="about-feedback-section">
+        <div class="about-feedback-title">Send Feedback</div>
+
+        <div id="about-feedback-success" style="display:none;flex-direction:column;align-items:center;gap:10px;padding:16px 0;color:var(--green)">
+          <svg width="36" height="36" viewBox="0 0 44 44" fill="none"><circle cx="22" cy="22" r="20" stroke="currentColor" stroke-width="2" opacity="0.25"/><path d="M13 22l6 6 12-12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <p style="font-family:var(--mono);font-size:0.68rem;letter-spacing:0.06em;color:var(--text-dim)">Thanks — message sent!</p>
+        </div>
+
+        <div id="about-feedback-form" style="display:flex;flex-direction:column;gap:12px;">
+          <div class="field-wrap">
+            <div class="field-label">Type</div>
+            <select class="feedback-select" id="about-feedback-type">
+              <option value="bug">Bug report</option>
+              <option value="idea">Feature idea</option>
+              <option value="praise">Praise</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          <div class="field-wrap">
+            <div class="field-label">Message</div>
+            <textarea class="feedback-textarea" id="about-feedback-text" placeholder="Tell me what's on your mind…" maxlength="1000" style="min-height:90px;"></textarea>
+          </div>
+          <div class="feedback-footer">
+            <button class="feedback-send" id="about-feedback-send">Send</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Feedback overlay (legacy — kept for mobile more-menu and any existing hooks) -->
 <div id="feedback-overlay">
   <div class="feedback-card">
     <h3>
@@ -2154,6 +2761,18 @@ header {
       <div class="settings-group-title">System</div>
 
       <div class="settings-row compact">
+        <div class="settings-row-label">
+          <span>Light Theme</span>
+          <small>Switch to light mode</small>
+        </div>
+        <label class="toggle" id="settings-theme-toggle">
+          <input type="checkbox" id="theme-toggle-checkbox">
+          <div class="toggle-track"></div>
+          <div class="toggle-thumb"></div>
+        </label>
+      </div>
+
+      <div class="settings-row compact">
         <div class="settings-row-label"><span>Sound Effects</span></div>
         <label class="toggle">
           <input type="checkbox" id="sfx-toggle" checked>
@@ -2208,6 +2827,13 @@ header {
       <span id="mod-volume-val">100%</span>
     </label>
     <input id="mod-volume" type="range" min="0" max="100" value="100">
+  </div>
+  <div class="capacity-row host-action" id="mod-capacity-row" style="display:none">
+    <label>
+      <span>Capacity limit</span>
+      <span id="mod-capacity-val">Off</span>
+    </label>
+    <input id="mod-capacity" type="range" min="0" max="20" value="0" title="0 = no limit">
   </div>
   <button class="mod-btn host-action" id="mod-mute-btn">
     <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
@@ -2360,6 +2986,12 @@ let brokerIdx = 0;
 const liveChannels = new Set();
 const channelVisibility = {}; // ch -> 'public' | 'private'
 const channelTopics = {};     // ch -> short channel topic
+
+// Returns channel names safe to share with any peer.
+// Private channels are never included — their names must not leave the host.
+function publicChannels() {
+  return [...liveChannels].filter(ch => channelVisibility[ch] !== 'private');
+}
 // Channels that should never be auto-created or received from lobby
 const BLOCKED_DEFAULTS = new Set(['ops', 'general', 'lounge']);
 
@@ -2596,7 +3228,7 @@ function announceProfile() {
   renderProfileSurfaces();
   renderMembers();
   if (state.currentChannel) {
-    broadcastAll({ type: 'hello', name: state.myName, avatar: state.myAvatar, channel: state.currentChannel, joinTime: state.myJoinTime || Date.now(), channels: [...liveChannels], topics: channelTopics });
+    broadcastAll({ type: 'hello', name: state.myName, avatar: state.myAvatar, channel: state.currentChannel, joinTime: state.myJoinTime || Date.now(), channels: publicChannels(), topics: channelTopics });
   }
 }
 
@@ -2722,7 +3354,7 @@ function announceLeavingChannel() {
 
   if (state.isLobbyHost) {
     setLobbyChannel(state.myId, null, state.myName);
-    lobbyBroadcast({ type: 'lobby-update', registry: state.lobbyRegistry, channels: [...liveChannels] });
+    lobbyBroadcast({ type: 'lobby-update', registry: state.lobbyRegistry, channels: publicChannels() });
     return;
   }
 
@@ -2732,7 +3364,7 @@ function announceLeavingChannel() {
       id: state.myId,
       name: state.myName,
       channel: null,
-      channels: [...liveChannels],
+      channels: publicChannels(),
       seenAt: Date.now(),
     });
   } catch {}
@@ -2805,6 +3437,7 @@ function setupChannelControls() {
     try {
       if (navigator.share) await navigator.share({ title: `Join #${state.currentChannel} on Chirp`, url });
       else await navigator.clipboard.writeText(url);
+      SFX.copyLink();
       toast('Invite link copied', 'green');
     } catch {
       toast('Could not copy invite link', 'red');
@@ -2860,7 +3493,7 @@ function pruneLobbyRegistry() {
   if (changed) {
     scheduleRenderChannels();
     renderMembers();
-    if (state.isLobbyHost) lobbyBroadcast({ type: 'lobby-update', registry: state.lobbyRegistry, channels: [...liveChannels] });
+    if (state.isLobbyHost) lobbyBroadcast({ type: 'lobby-update', registry: state.lobbyRegistry, channels: publicChannels() });
   }
 }
 
@@ -2945,11 +3578,12 @@ function startApp() {
     const moreBtn     = document.getElementById('mobile-more-btn');
     const moreOverlay = document.getElementById('mobile-more-overlay');
     const moreSheet   = document.getElementById('mobile-more-sheet');
-    const mmoreFeedback = document.getElementById('mmore-feedback');
+    const mmoreAbout    = document.getElementById('mmore-about');
     const mmoreRecord   = document.getElementById('mmore-record');
     if (!moreBtn || !moreOverlay) return;
 
     function openMore() {
+      haptic(15);
       moreOverlay.style.display = 'flex';
     }
     function closeMore() {
@@ -2958,9 +3592,9 @@ function startApp() {
     moreBtn.addEventListener('click', openMore);
     moreOverlay.addEventListener('click', e => { if (e.target === moreOverlay) closeMore(); });
 
-    if (mmoreFeedback) mmoreFeedback.addEventListener('click', () => {
+    if (mmoreAbout) mmoreAbout.addEventListener('click', () => {
       closeMore();
-      document.getElementById('feedback-overlay')?.classList.add('show');
+      document.getElementById('about-overlay')?.classList.add('show');
     });
     if (mmoreRecord) mmoreRecord.addEventListener('click', () => {
       closeMore();
@@ -2969,6 +3603,70 @@ function startApp() {
   })();
   setupLeaveCleanup();
   setupInviteRouting();
+
+  // ── About modal wiring ───────────────────────────────────────
+  (function setupAbout() {
+    const overlay  = document.getElementById('about-overlay');
+    const openBtn  = document.getElementById('about-btn');
+    const closeBtn = document.getElementById('about-close');
+    if (!overlay) return;
+
+    function openAbout() {
+      overlay.classList.add('show');
+      // Reset feedback form
+      const form    = document.getElementById('about-feedback-form');
+      const success = document.getElementById('about-feedback-success');
+      if (form)    form.style.display = 'flex';
+      if (success) success.style.display = 'none';
+    }
+    function closeAbout() { overlay.classList.remove('show'); }
+
+    openBtn?.addEventListener('click', openAbout);
+    closeBtn?.addEventListener('click', closeAbout);
+    overlay?.addEventListener('click', e => { if (e.target === overlay) closeAbout(); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && overlay.classList.contains('show')) closeAbout(); });
+
+    // Wire About feedback send (same EmailJS credentials as main feedback)
+    const sendBtn   = document.getElementById('about-feedback-send');
+    const textarea  = document.getElementById('about-feedback-text');
+    const typeEl    = document.getElementById('about-feedback-type');
+    const successEl = document.getElementById('about-feedback-success');
+    const formEl    = document.getElementById('about-feedback-form');
+    if (sendBtn && textarea) {
+      sendBtn.addEventListener('click', async () => {
+        const msg = textarea.value.trim();
+        if (!msg) { textarea.focus(); return; }
+        sendBtn.textContent = 'Sending…'; sendBtn.disabled = true;
+        try {
+          const saved = JSON.parse(localStorage.getItem('chirp_feedback') || '[]');
+          saved.push({ type: typeEl?.value || 'other', msg, name: state.myName || 'User', ts: new Date().toISOString() });
+          localStorage.setItem('chirp_feedback', JSON.stringify(saved));
+        } catch {}
+        try {
+          if (!window.emailjs) {
+            await new Promise((res, rej) => {
+              const s = document.createElement('script');
+              s.src = 'https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js';
+              s.onload = () => { emailjs.init({ publicKey: '2gn3Wt4jXxkkwP8iX' }); res(); };
+              s.onerror = rej;
+              document.head.appendChild(s);
+            });
+          }
+          await emailjs.send('service_4y4r3d6', 'template_90sz08f', {
+            name   : `${state.myName || 'Chirp User'} (${typeEl?.options[typeEl.selectedIndex]?.text || 'feedback'})`,
+            time   : new Date().toLocaleString(),
+            message: msg,
+          });
+          if (successEl) { successEl.style.display = 'flex'; }
+          if (formEl) formEl.style.display = 'none';
+          setTimeout(closeAbout, 2400);
+        } catch {
+          sendBtn.textContent = 'Send'; sendBtn.disabled = false;
+          toast('Saved locally — could not send email.', 'red');
+        }
+      });
+    }
+  })();
 }
 
 /* ═══════════════════════════════════════════
@@ -2984,18 +3682,28 @@ const SFX = (() => {
     return ctx;
   }
 
-  // Clean sine tone with gentle envelope — the core building block
-  function tone({ freq = 440, gain = 0.06, attack = 0.008, sustain = 0.05,
-                  release = 0.18, when = 0, type = 'sine' } = {}) {
+  // Shared soft filter chain: high-shelf cuts air, low-pass rounds brightness.
+  // Both stages together make any tone feel much gentler without muddying the pitch.
+  function makeChain(c, destNode) {
+    const shelf = c.createBiquadFilter();
+    shelf.type = 'highshelf'; shelf.frequency.value = 2200; shelf.gain.value = -14;
+    const lp = c.createBiquadFilter();
+    lp.type = 'lowpass'; lp.frequency.value = 1800; lp.Q.value = 0.5;
+    shelf.connect(lp); lp.connect(destNode);
+    return shelf; // caller connects oscillator → shelf
+  }
+
+  // Sine tone with gentle ADSR envelope
+  function tone({ freq = 440, gain = 0.036, attack = 0.012, sustain = 0.045,
+                  release = 0.22, when = 0, type = 'sine' } = {}) {
     if (muted) return;
     try {
       const c = getCtx(); const t = c.currentTime + when;
       const osc = c.createOscillator();
       const env = c.createGain();
-      // Gentle high-shelf cut to remove harshness
-      const shelf = c.createBiquadFilter();
-      shelf.type = 'highshelf'; shelf.frequency.value = 3000; shelf.gain.value = -8;
-      osc.connect(shelf); shelf.connect(env); env.connect(c.destination);
+      const chain = makeChain(c, env);
+      env.connect(c.destination);
+      osc.connect(chain);
       osc.type = type; osc.frequency.value = freq;
       env.gain.setValueAtTime(0, t);
       env.gain.linearRampToValueAtTime(gain, t + attack);
@@ -3005,14 +3713,14 @@ const SFX = (() => {
     } catch {}
   }
 
-  // Very short filtered click — for PTT keying
-  function click({ freq = 180, gain = 0.05, decay = 0.04, when = 0 } = {}) {
+  // Very short filtered click — for PTT and tactile confirmations
+  function click({ freq = 180, gain = 0.032, decay = 0.042, when = 0 } = {}) {
     if (muted) return;
     try {
       const c = getCtx(); const t = c.currentTime + when;
       const osc = c.createOscillator();
       const env = c.createGain();
-      const lp  = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 600;
+      const lp  = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 480; lp.Q.value = 0.6;
       osc.connect(lp); lp.connect(env); env.connect(c.destination);
       osc.type = 'sine'; osc.frequency.value = freq;
       env.gain.setValueAtTime(gain, t);
@@ -3026,125 +3734,149 @@ const SFX = (() => {
     toggleMute() { muted = !muted; return muted; },
     setMuted(v) { muted = v; },
 
-    // PTT on — barely-there soft click, like keying a muted mic
-    pttOn()  { click({ freq: 220, gain: 0.055, decay: 0.035 }); },
+    // PTT on — barely-there soft click
+    pttOn()  { click({ freq: 200, gain: 0.036, decay: 0.032 }); },
 
-    // PTT off — slightly lower pitch click
-    pttOff() { click({ freq: 180, gain: 0.042, decay: 0.030 }); },
+    // PTT off — slightly lower pitch
+    pttOff() { click({ freq: 160, gain: 0.028, decay: 0.028 }); },
 
-    // Joined channel — two gentle rising tones (like Discord join)
+    // Joined channel — two gentle rising tones
     join() {
-      tone({ freq: 660, gain: 0.065, attack: 0.01, sustain: 0.04, release: 0.22 });
-      tone({ freq: 880, gain: 0.050, attack: 0.01, sustain: 0.04, release: 0.24, when: 0.12 });
+      tone({ freq: 587, gain: 0.042, attack: 0.012, sustain: 0.035, release: 0.24 });
+      tone({ freq: 784, gain: 0.032, attack: 0.012, sustain: 0.035, release: 0.26, when: 0.13 });
     },
 
     // Left channel — two falling tones
     leave() {
-      tone({ freq: 880, gain: 0.055, attack: 0.01, sustain: 0.03, release: 0.20 });
-      tone({ freq: 660, gain: 0.042, attack: 0.01, sustain: 0.03, release: 0.20, when: 0.11 });
+      tone({ freq: 784, gain: 0.036, attack: 0.012, sustain: 0.025, release: 0.22 });
+      tone({ freq: 587, gain: 0.028, attack: 0.012, sustain: 0.025, release: 0.22, when: 0.12 });
     },
 
     // Peer joined — single soft ding
     peerJoin() {
-      tone({ freq: 784, gain: 0.052, attack: 0.008, sustain: 0.03, release: 0.26 });
+      tone({ freq: 740, gain: 0.034, attack: 0.010, sustain: 0.025, release: 0.28 });
     },
 
     // Peer left — single softer lower ding
     peerLeave() {
-      tone({ freq: 622, gain: 0.042, attack: 0.008, sustain: 0.02, release: 0.22 });
+      tone({ freq: 587, gain: 0.026, attack: 0.010, sustain: 0.018, release: 0.24 });
     },
 
     // Incoming TX — barely audible blip
     rxStart() {
-      click({ freq: 260, gain: 0.038, decay: 0.025 });
+      click({ freq: 240, gain: 0.022, decay: 0.022 });
     },
 
-    // Join request — three short ascending pings (attention, not alarming)
+    // Join request in — three short ascending tones (attention, not alarming)
     requestIn() {
-      tone({ freq: 660, gain: 0.060, attack: 0.006, sustain: 0.025, release: 0.14 });
-      tone({ freq: 784, gain: 0.055, attack: 0.006, sustain: 0.025, release: 0.14, when: 0.16 });
-      tone({ freq: 880, gain: 0.050, attack: 0.006, sustain: 0.025, release: 0.16, when: 0.32 });
+      tone({ freq: 587, gain: 0.038, attack: 0.008, sustain: 0.022, release: 0.16 });
+      tone({ freq: 698, gain: 0.034, attack: 0.008, sustain: 0.022, release: 0.16, when: 0.17 });
+      tone({ freq: 784, gain: 0.030, attack: 0.008, sustain: 0.022, release: 0.18, when: 0.34 });
     },
 
     // Approved — pleasant three-note chime (C-E-G)
     approved() {
-      tone({ freq: 523, gain: 0.058, attack: 0.008, sustain: 0.04, release: 0.22 });
-      tone({ freq: 659, gain: 0.050, attack: 0.008, sustain: 0.04, release: 0.22, when: 0.11 });
-      tone({ freq: 784, gain: 0.044, attack: 0.008, sustain: 0.04, release: 0.26, when: 0.22 });
+      tone({ freq: 523, gain: 0.038, attack: 0.010, sustain: 0.035, release: 0.24 });
+      tone({ freq: 659, gain: 0.032, attack: 0.010, sustain: 0.035, release: 0.24, when: 0.12 });
+      tone({ freq: 784, gain: 0.028, attack: 0.010, sustain: 0.035, release: 0.28, when: 0.24 });
     },
 
-    // Denied — two descending tones, muted
+    // Denied — two descending tones
     denied() {
-      tone({ freq: 440, gain: 0.055, attack: 0.006, sustain: 0.04, release: 0.18 });
-      tone({ freq: 330, gain: 0.044, attack: 0.006, sustain: 0.04, release: 0.18, when: 0.12 });
+      tone({ freq: 415, gain: 0.036, attack: 0.008, sustain: 0.035, release: 0.20 });
+      tone({ freq: 311, gain: 0.028, attack: 0.008, sustain: 0.035, release: 0.20, when: 0.13 });
     },
 
-    // Online — single soft confirmation ping
+    // Online / reconnected — single soft confirmation
     online() {
-      tone({ freq: 880, gain: 0.048, attack: 0.01, sustain: 0.03, release: 0.24 });
+      tone({ freq: 784, gain: 0.032, attack: 0.012, sustain: 0.025, release: 0.26 });
     },
 
-    // Recording started — quick downward sweep
+    // Recording started — two rising tones
     recStart() {
-      tone({ freq: 660, gain: 0.060, attack: 0.005, sustain: 0.02, release: 0.12 });
-      tone({ freq: 880, gain: 0.052, attack: 0.005, sustain: 0.02, release: 0.15, when: 0.10 });
+      tone({ freq: 587, gain: 0.036, attack: 0.008, sustain: 0.018, release: 0.14 });
+      tone({ freq: 740, gain: 0.030, attack: 0.008, sustain: 0.018, release: 0.16, when: 0.11 });
     },
 
-    // Recording stopped — two falling tones, deliberate
+    // Recording stopped — two falling tones
     recStop() {
-      tone({ freq: 550, gain: 0.058, attack: 0.008, sustain: 0.04, release: 0.18 });
-      tone({ freq: 440, gain: 0.044, attack: 0.008, sustain: 0.04, release: 0.18, when: 0.14 });
+      tone({ freq: 523, gain: 0.036, attack: 0.010, sustain: 0.035, release: 0.20 });
+      tone({ freq: 415, gain: 0.028, attack: 0.010, sustain: 0.035, release: 0.20, when: 0.14 });
     },
 
     // Paused — single muted mid click
     recPause() {
-      click({ freq: 300, gain: 0.05, decay: 0.055 });
+      click({ freq: 280, gain: 0.034, decay: 0.050 });
     },
 
-    // Resumed — slightly higher click
+    // Resumed — slightly higher click + soft tone
     recResume() {
-      click({ freq: 380, gain: 0.055, decay: 0.05 });
-      tone({ freq: 660, gain: 0.035, attack: 0.005, sustain: 0.01, release: 0.10, when: 0.04 });
+      click({ freq: 340, gain: 0.036, decay: 0.042 });
+      tone({ freq: 587, gain: 0.022, attack: 0.006, sustain: 0.010, release: 0.10, when: 0.04 });
     },
 
-    // Muted self — dull thud
+    // Muted self — dull low thud
     mute() {
-      click({ freq: 140, gain: 0.06, decay: 0.07 });
+      click({ freq: 130, gain: 0.040, decay: 0.065 });
     },
 
-    // Unmuted self — bright click
+    // Unmuted self — bright click + tiny shimmer
     unmute() {
-      click({ freq: 420, gain: 0.052, decay: 0.04 });
-      tone({ freq: 700, gain: 0.030, attack: 0.005, sustain: 0.01, release: 0.09, when: 0.03 });
+      click({ freq: 380, gain: 0.034, decay: 0.036 });
+      tone({ freq: 659, gain: 0.020, attack: 0.006, sustain: 0.010, release: 0.10, when: 0.03 });
     },
 
     // Toast / notification pop
     notify() {
-      tone({ freq: 1046, gain: 0.032, attack: 0.005, sustain: 0.015, release: 0.12 });
+      tone({ freq: 784, gain: 0.022, attack: 0.006, sustain: 0.012, release: 0.14 });
     },
 
-    // Error / warning — dissonant pair
+    // Error / warning — dissonant falling pair
     error() {
-      tone({ freq: 330, gain: 0.055, attack: 0.006, sustain: 0.05, release: 0.20 });
-      tone({ freq: 311, gain: 0.040, attack: 0.006, sustain: 0.05, release: 0.20, when: 0.06 });
+      tone({ freq: 311, gain: 0.036, attack: 0.008, sustain: 0.045, release: 0.22 });
+      tone({ freq: 294, gain: 0.026, attack: 0.008, sustain: 0.045, release: 0.22, when: 0.07 });
     },
 
     // Download / save complete — rising two-note
     saved() {
-      tone({ freq: 784, gain: 0.050, attack: 0.008, sustain: 0.03, release: 0.20 });
-      tone({ freq: 1046, gain: 0.040, attack: 0.008, sustain: 0.03, release: 0.22, when: 0.13 });
+      tone({ freq: 659, gain: 0.034, attack: 0.010, sustain: 0.025, release: 0.22 });
+      tone({ freq: 880, gain: 0.026, attack: 0.010, sustain: 0.025, release: 0.24, when: 0.14 });
     },
 
     // Channel created — soft tri-tone rise
     channelCreate() {
-      tone({ freq: 523, gain: 0.048, attack: 0.007, sustain: 0.025, release: 0.16 });
-      tone({ freq: 659, gain: 0.042, attack: 0.007, sustain: 0.025, release: 0.16, when: 0.09 });
-      tone({ freq: 784, gain: 0.036, attack: 0.007, sustain: 0.025, release: 0.18, when: 0.18 });
+      tone({ freq: 523, gain: 0.032, attack: 0.008, sustain: 0.020, release: 0.18 });
+      tone({ freq: 659, gain: 0.028, attack: 0.008, sustain: 0.020, release: 0.18, when: 0.10 });
+      tone({ freq: 784, gain: 0.024, attack: 0.008, sustain: 0.020, release: 0.20, when: 0.20 });
     },
 
     // Settings opened — faint neutral blip
     settingsOpen() {
-      tone({ freq: 740, gain: 0.030, attack: 0.006, sustain: 0.012, release: 0.10 });
+      tone({ freq: 659, gain: 0.020, attack: 0.007, sustain: 0.010, release: 0.11 });
+    },
+
+    // Channel privacy toggled — two-tone neutral indicator
+    privacyToggle() {
+      tone({ freq: 523, gain: 0.028, attack: 0.008, sustain: 0.018, release: 0.16 });
+      tone({ freq: 659, gain: 0.022, attack: 0.008, sustain: 0.018, release: 0.16, when: 0.10 });
+    },
+
+    // Share / copy link — single soft confirmation tick
+    copyLink() {
+      click({ freq: 320, gain: 0.030, decay: 0.038 });
+      tone({ freq: 784, gain: 0.018, attack: 0.006, sustain: 0.010, release: 0.12, when: 0.03 });
+    },
+
+    // Muted by host — two descending tones, slightly urgent
+    hostMuted() {
+      tone({ freq: 415, gain: 0.034, attack: 0.008, sustain: 0.030, release: 0.20 });
+      tone({ freq: 330, gain: 0.026, attack: 0.008, sustain: 0.030, release: 0.20, when: 0.14 });
+    },
+
+    // Unmuted by host — two rising tones
+    hostUnmuted() {
+      tone({ freq: 523, gain: 0.030, attack: 0.010, sustain: 0.025, release: 0.22 });
+      tone({ freq: 659, gain: 0.024, attack: 0.010, sustain: 0.025, release: 0.22, when: 0.12 });
     },
   };
 })();
@@ -3318,6 +4050,34 @@ function setupSettings() {
     localStorage.removeItem('chirp_avatar');
     announceProfile();
     toast('Profile picture removed');
+  });
+
+  // ── Avatar quick-edit (on PTT button — no need to open settings) ──────────
+  const avatarEditBtn  = document.getElementById('avatar-edit-btn');
+  const avatarEditMenu = document.getElementById('avatar-edit-menu');
+  const photoInput     = document.getElementById('profile-photo-input');
+  const cameraInput    = document.getElementById('profile-camera-input');
+
+  if (avatarEditBtn && avatarEditMenu) {
+    avatarEditBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      avatarEditMenu.classList.toggle('open');
+    });
+    document.addEventListener('pointerdown', e => {
+      if (!avatarEditBtn.contains(e.target) && !avatarEditMenu.contains(e.target)) {
+        avatarEditMenu.classList.remove('open');
+      }
+    }, { capture: true });
+  }
+  document.getElementById('avatar-upload-btn')?.addEventListener('click', e => {
+    e.stopPropagation();
+    avatarEditMenu?.classList.remove('open');
+    photoInput?.click();
+  });
+  document.getElementById('avatar-camera-btn')?.addEventListener('click', e => {
+    e.stopPropagation();
+    avatarEditMenu?.classList.remove('open');
+    cameraInput?.click();
   });
 
   // VAD toggle — restore saved state
@@ -3591,9 +4351,9 @@ function setupChannelCreate() {
   // Join random public channel
   if (randomBtn) {
     randomBtn.addEventListener('click', () => {
-      const publicChannels = [...liveChannels].filter(ch => channelVisibility[ch] !== 'private' && ch !== state.currentChannel);
-      if (publicChannels.length === 0) { toast('No public channels available', 'red'); return; }
-      const pick = publicChannels[Math.floor(Math.random() * publicChannels.length)];
+      const available = publicChannels().filter(ch => ch !== state.currentChannel);
+      if (available.length === 0) { toast('No public channels available', 'red'); return; }
+      const pick = available[Math.floor(Math.random() * available.length)];
       requestJoinChannel(pick);
     });
   }
@@ -3617,7 +4377,8 @@ function addChannel(ch) {
   safeAddChannel(ch);
   if (!liveChannels.has(ch)) return; // was blocked
   renderChannels();
-  broadcastAll({ type: 'channel-announce', channel: ch });
+  // Don't tell other peers about private channels — they learn only via invite URL
+  if (channelVisibility[ch] !== 'private') broadcastAll({ type: 'channel-announce', channel: ch });
   lobbyAnnounce(ch);
 }
 
@@ -3632,8 +4393,9 @@ function renderChannels(filter) {
     if (info.channel) counts[info.channel] = (counts[info.channel] || 0) + 1;
   });
 
-  // Show channel if: it matches the search AND (it's current, OR it has members in it)
+  // Show channel if: not private-and-foreign, matches search, and is current or has members
   const channels = [...liveChannels].filter(ch => {
+    if (channelVisibility[ch] === 'private' && ch !== state.currentChannel) return false;
     if (q && !ch.includes(q)) return false;
     if (ch === state.currentChannel) return true;
     return (counts[ch] || 0) > 0;
@@ -3874,7 +4636,7 @@ function initPeer() {
       setTimeout(() => {
         lobbyAnnounce();
         syncChannelPeers();
-        broadcastAll({ type: 'hello', name: state.myName, avatar: state.myAvatar, channel: state.currentChannel, joinTime: state.myJoinTime || Date.now(), channels: [...liveChannels], topics: channelTopics });
+        broadcastAll({ type: 'hello', name: state.myName, avatar: state.myAvatar, channel: state.currentChannel, joinTime: state.myJoinTime || Date.now(), channels: publicChannels(), topics: channelTopics });
       }, 700);
     }
 
@@ -3962,7 +4724,7 @@ function connectToLobby() {
   const conn = state.peer.connect(LOBBY_ID, { reliable: true });
   state.lobbyConn = conn;
 
-  conn.on('open', () => conn.send({ type: 'lobby-hello', id: state.myId, name: state.myName, channel: state.currentChannel, channels: [...liveChannels], seenAt: Date.now() }));
+  conn.on('open', () => conn.send({ type: 'lobby-hello', id: state.myId, name: state.myName, channel: state.currentChannel, channels: publicChannels(), seenAt: Date.now() }));
   conn.on('data', data => {
     if (data.type === 'lobby-registry') {
       state.lobbyRegistry = normalizeRegistry(data.registry);
@@ -3989,19 +4751,19 @@ function tryBecomeLobbyHost() {
     renderChannels();
 
     lp.on('connection', conn => {
-      conn.on('open', () => conn.send({ type: 'lobby-registry', registry: state.lobbyRegistry, channels: [...liveChannels] }));
+      conn.on('open', () => conn.send({ type: 'lobby-registry', registry: state.lobbyRegistry, channels: publicChannels() }));
       conn.on('data', data => {
         if (data.type === 'lobby-hello') {
           setLobbyChannel(data.id, data.channel || null, data.name);
           (data.channels || []).forEach(ch => safeAddChannel(ch));
-          lobbyBroadcast({ type: 'lobby-update', registry: state.lobbyRegistry, channels: [...liveChannels] });
+          lobbyBroadcast({ type: 'lobby-update', registry: state.lobbyRegistry, channels: publicChannels() });
           scheduleRenderChannels();
         }
         if (data.type === 'lobby-announce') {
           setLobbyChannel(data.id, data.channel || null, data.name);
           (data.channels || []).forEach(ch => safeAddChannel(ch));
           if (data.newChannel) safeAddChannel(data.newChannel);
-          lobbyBroadcast({ type: 'lobby-update', registry: state.lobbyRegistry, channel: data.newChannel || null, channels: [...liveChannels] });
+          lobbyBroadcast({ type: 'lobby-update', registry: state.lobbyRegistry, channel: data.newChannel || null, channels: publicChannels() });
           scheduleRenderChannels();
         }
       });
@@ -4025,11 +4787,13 @@ function lobbyBroadcast(data) {
 }
 
 function lobbyAnnounce(newChannel) {
-  const msg = { type: 'lobby-announce', id: state.myId, name: state.myName, channel: state.currentChannel, newChannel: newChannel || null, channels: [...liveChannels], seenAt: Date.now() };
+  // Don't leak private channel names to the lobby
+  const pubNew = (newChannel && channelVisibility[newChannel] !== 'private') ? newChannel : null;
+  const msg = { type: 'lobby-announce', id: state.myId, name: state.myName, channel: state.currentChannel, newChannel: pubNew, channels: publicChannels(), seenAt: Date.now() };
   if (state.isLobbyHost) {
     setLobbyChannel(state.myId, state.currentChannel, state.myName);
     if (newChannel) safeAddChannel(newChannel);
-    lobbyBroadcast({ type: 'lobby-update', registry: state.lobbyRegistry, channel: newChannel || null, channels: [...liveChannels] });
+    lobbyBroadcast({ type: 'lobby-update', registry: state.lobbyRegistry, channel: pubNew, channels: publicChannels() });
     scheduleRenderChannels();
   } else if (state.lobbyConn?.open) {
     try { state.lobbyConn.send(msg); } catch {}
@@ -4089,7 +4853,7 @@ function setupDataConn(conn, incoming = false) {
   conn.on('open',  () => {
     if (!isCurrentDataConn(peerId, conn)) return;
     notePeerSeen(peerId);
-    conn.send({ type: 'hello', name: state.myName, avatar: state.myAvatar, channel: state.currentChannel, joinTime: state.myJoinTime || Date.now(), channels: [...liveChannels], topics: channelTopics });
+    conn.send({ type: 'hello', name: state.myName, avatar: state.myAvatar, channel: state.currentChannel, joinTime: state.myJoinTime || Date.now(), channels: publicChannels(), topics: channelTopics });
     // If we're the host, tell new peer
     if (state.isChannelHost) {
       try { conn.send({ type: 'host-changed', newHostId: state.myId }); } catch {}
@@ -4223,6 +4987,7 @@ function handleData(peerId, data) {
 
     case 'mod-mute':
       toast('You were muted by the host', 'red');
+      SFX.hostMuted();
       if (!state.isMuted) {
         state.isMuted = true;
         if (state.audioTrack) state.audioTrack.enabled = false;
@@ -4241,6 +5006,7 @@ function handleData(peerId, data) {
 
     case 'mod-unmute':
       toast('You were unmuted by the host', 'info');
+      SFX.hostUnmuted();
       state.isMuted = false;
       const mb2 = document.getElementById('mute-btn');
       if (mb2) mb2.classList.remove('muted');
@@ -4395,7 +5161,7 @@ async function joinChannel(ch) {
   lobbyAnnounce(); renderChannels(); renderMembers(); updatePrivacyBtn(); updateChannelControls();
   window._mobileGoTalk?.();
   syncChannelPeers();
-  broadcastAll({ type: 'hello', name: state.myName, avatar: state.myAvatar, channel: ch, joinTime: state.myJoinTime, channels: [...liveChannels], topics: channelTopics });
+  broadcastAll({ type: 'hello', name: state.myName, avatar: state.myAvatar, channel: ch, joinTime: state.myJoinTime, channels: publicChannels(), topics: channelTopics });
 
   // Start VAD if enabled
   if (state.vadEnabled) startVAD();
@@ -4457,7 +5223,7 @@ function removePeer(peerId, opts = {}) {
   try { inboundCall?.close(); } catch {}
   removeAudio(peerId);
   if (wasHost) ensureChannelHost();
-  if (state.isLobbyHost) lobbyBroadcast({ type: 'lobby-update', registry: state.lobbyRegistry, channels: [...liveChannels] });
+  if (state.isLobbyHost) lobbyBroadcast({ type: 'lobby-update', registry: state.lobbyRegistry, channels: publicChannels() });
   renderMembers(); renderChannels();
   if (wasInChannel && !opts.silent) { toast(`${name} left`); SFX.peerLeave(); }
 }
@@ -4635,7 +5401,9 @@ function setupPrivacyBtn() {
     channelVisibility[state.currentChannel] = isPrivate ? 'public' : 'private';
     updatePrivacyBtn();
     renderChannels();
-    // Broadcast the change so other peers update their sidebar
+    SFX.privacyToggle();
+    // Re-announce so lobby updates its public channel list immediately
+    lobbyAnnounce();
     broadcastAll({ type: 'channel-visibility', channel: state.currentChannel, visibility: channelVisibility[state.currentChannel] });
     toast(isPrivate ? 'Channel set to public' : 'Channel set to private', isPrivate ? 'green' : 'info');
   });
@@ -4766,15 +5534,23 @@ function updatePingDisplay() {
 }
 
 /* ═══════════════════════════════════════════
+   HAPTIC FEEDBACK
+   Gracefully no-ops on browsers without vibration support.
+═══════════════════════════════════════════ */
+function haptic(ms) {
+  try { navigator.vibrate?.(ms); } catch {}
+}
+
+/* ═══════════════════════════════════════════
    PTT (Push to Talk)
 ═══════════════════════════════════════════ */
 function setupPTT() {
   const btn = document.getElementById('ptt-btn');
 
   // Touch / mouse events (only active when VAD is off)
-  btn.addEventListener('touchstart',  e => { if (!state.vadEnabled) { e.preventDefault(); startTalking(); } }, { passive: false });
-  btn.addEventListener('touchend',    e => { if (!state.vadEnabled) { e.preventDefault(); stopTalking(); } },  { passive: false });
-  btn.addEventListener('touchcancel', e => { if (!state.vadEnabled) { e.preventDefault(); stopTalking(); } },  { passive: false });
+  btn.addEventListener('touchstart',  e => { if (!state.vadEnabled) { e.preventDefault(); haptic(18); startTalking(); } }, { passive: false });
+  btn.addEventListener('touchend',    e => { if (!state.vadEnabled) { e.preventDefault(); haptic(10); stopTalking(); } },  { passive: false });
+  btn.addEventListener('touchcancel', e => { if (!state.vadEnabled) { e.preventDefault(); haptic(10); stopTalking(); } },  { passive: false });
   btn.addEventListener('mousedown',   e => { if (!state.vadEnabled) { e.preventDefault(); startTalking(); } });
   btn.addEventListener('mouseup',     e => { if (!state.vadEnabled) { e.preventDefault(); stopTalking(); } });
   btn.addEventListener('mouseleave',  () => { if (!state.vadEnabled && state.isTalking) stopTalking(); });
@@ -5088,13 +5864,35 @@ function setupMobileNav() {
 
   const setTab = tabName => {
     tabs.forEach(tab => tab.classList.toggle('active', tab.dataset.tab === tabName));
-    document.body.classList.remove('tab-channels','tab-talk');
+    document.body.classList.remove('tab-channels','tab-talk','tab-chat');
     document.body.classList.add(`tab-${tabName}`);
+    haptic(10);
+    // When switching to chat tab, collapse the desktop panel state
+    if (tabName === 'chat') {
+      const panel = document.getElementById('chat-panel');
+      if (panel) panel.classList.remove('collapsed');
+      // Clear unread badge on nav
+      const navBadge = document.getElementById('nav-chat-badge');
+      if (navBadge) navBadge.style.display = 'none';
+    }
   };
 
   setTab('talk');
   tabs.forEach(tab => tab.addEventListener('click', () => setTab(tab.dataset.tab)));
   window._mobileGoTalk = () => { if (window.matchMedia('(max-width: 640px)').matches) setTab('talk'); };
+
+  // Mirror unread badge from header to nav tab
+  const observer = new MutationObserver(() => {
+    const headerBadge = document.getElementById('chat-unread-badge');
+    const navBadge = document.getElementById('nav-chat-badge');
+    if (!headerBadge || !navBadge) return;
+    const isChatTab = document.body.classList.contains('tab-chat');
+    const show = headerBadge.style.display !== 'none' && !isChatTab;
+    navBadge.style.display = show ? 'flex' : 'none';
+    navBadge.textContent = headerBadge.textContent;
+  });
+  const headerBadge = document.getElementById('chat-unread-badge');
+  if (headerBadge) observer.observe(headerBadge, { attributes: true, childList: true, subtree: true });
 }
 
 /* ═══════════════════════════════════════════
@@ -5749,6 +6547,484 @@ function setupMobileNav() {
 
 
 })();
+
+/* ═══════════════════════════════════════════
+   THEME TOGGLE (dark ↔ light)
+═══════════════════════════════════════════ */
+(function setupThemeToggle() {
+  const btn      = document.getElementById('theme-toggle-btn');
+  const moonIcon = document.getElementById('theme-moon-icon');
+  const sunIcon  = document.getElementById('theme-sun-icon');
+  const checkbox = document.getElementById('theme-toggle-checkbox');
+
+  const savedTheme = localStorage.getItem('chirp_theme') || 'dark';
+  function applyTheme(theme) {
+    document.body.classList.toggle('light', theme === 'light');
+    if (moonIcon) moonIcon.style.display = theme === 'dark' ? '' : 'none';
+    if (sunIcon)  sunIcon.style.display  = theme === 'light' ? '' : 'none';
+    if (checkbox) checkbox.checked = theme === 'light';
+    localStorage.setItem('chirp_theme', theme);
+  }
+  applyTheme(savedTheme);
+
+  if (btn) {
+    btn.addEventListener('click', () => {
+      const current = document.body.classList.contains('light') ? 'light' : 'dark';
+      applyTheme(current === 'dark' ? 'light' : 'dark');
+    });
+  }
+
+  if (checkbox) {
+    checkbox.addEventListener('change', () => {
+      applyTheme(checkbox.checked ? 'light' : 'dark');
+    });
+  }
+})();
+
+/* ═══════════════════════════════════════════
+   TEXT CHAT
+═══════════════════════════════════════════ */
+(function setupChat() {
+  const panel      = document.getElementById('chat-panel');
+  const headerBtn  = document.getElementById('chat-toggle-header-btn');
+  const messagesEl = document.getElementById('chat-messages');
+  const inputEl    = document.getElementById('chat-input');
+  const sendBtn    = document.getElementById('chat-send-btn');
+  const badgeEl    = document.getElementById('chat-unread-badge');
+  if (!panel || !headerBtn) return;
+
+  let isOpen        = false;
+  let unread        = 0;
+  const MAX_MSGS    = 200;
+
+  function toggleChat(open) {
+    isOpen = open !== undefined ? open : !isOpen;
+    panel.classList.toggle('collapsed', !isOpen);
+    headerBtn.classList.toggle('active', isOpen);
+    if (isOpen) { clearUnread(); setTimeout(() => inputEl?.focus(), 250); }
+  }
+
+  function clearUnread() {
+    unread = 0;
+    if (badgeEl) badgeEl.style.display = 'none';
+  }
+
+  function bumpUnread() {
+    if (isOpen) return;
+    unread++;
+    if (badgeEl) {
+      badgeEl.textContent = unread > 9 ? '9+' : unread;
+      badgeEl.style.display = '';
+    }
+  }
+
+  function fmtTs() {
+    const d = new Date();
+    return `${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`;
+  }
+
+  function appendMessage(name, text, isSelf, isSystem) {
+    const emptyNote = messagesEl.querySelector('.chat-msg-system');
+    if (emptyNote && emptyNote.textContent === 'No messages yet') emptyNote.remove();
+
+    const el = document.createElement('div');
+    if (isSystem) {
+      el.className = 'chat-msg-system';
+      el.textContent = text;
+    } else {
+      el.className = 'chat-msg';
+      el.innerHTML = `<div class="chat-msg-header"><span class="chat-msg-name${isSelf ? ' self-name' : ''}">${name}</span><span class="chat-msg-time">${fmtTs()}</span></div><div class="chat-msg-text">${text.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>`;
+    }
+    messagesEl.appendChild(el);
+
+    // Trim old messages
+    while (messagesEl.children.length > MAX_MSGS) messagesEl.firstElementChild?.remove();
+
+    // Auto-scroll if near bottom
+    const atBottom = messagesEl.scrollTop + messagesEl.clientHeight >= messagesEl.scrollHeight - 60;
+    if (atBottom || isSelf) messagesEl.scrollTop = messagesEl.scrollHeight;
+
+    if (!isSystem && !isSelf) bumpUnread();
+  }
+
+  function sendMessage() {
+    const text = inputEl.value.trim();
+    if (!text || !state.currentChannel) return;
+    inputEl.value = '';
+    appendMessage(state.myName, text, true);
+    broadcastAll({ type: 'chat', name: state.myName, text });
+  }
+
+  headerBtn.addEventListener('click', () => toggleChat());
+
+  sendBtn.addEventListener('click', sendMessage);
+  inputEl.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+    if (e.key === 'Escape') toggleChat(false);
+  });
+
+  // Auto-resize textarea
+  inputEl.addEventListener('input', () => {
+    inputEl.style.height = '32px';
+    inputEl.style.height = Math.min(inputEl.scrollHeight, 80) + 'px';
+  });
+
+  // Keyboard shortcut C to toggle chat
+  document.addEventListener('keydown', e => {
+    if (e.code === 'KeyC' && !e.ctrlKey && !e.metaKey && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+      toggleChat();
+    }
+  });
+
+  // Clear messages on leave
+  const origLeave = window._hookLeaveChannel;
+  window._chatAppendSystem = (text) => appendMessage(null, text, false, true);
+  window._chatReceive = (name, text) => appendMessage(name, text, false, false);
+
+  // Hook into the existing handleData function by patching broadcastAll listener
+  // We patch handleData via global hook
+  window._chatHandleData = true;
+})();
+
+/* ═══════════════════════════════════════════
+   EMOJI REACTIONS
+═══════════════════════════════════════════ */
+(function setupReactions() {
+  const bar     = document.getElementById('reaction-bar');
+  const barWrap = document.getElementById('reaction-bar-wrap');
+  if (!bar) return;
+
+  function spawnFloat(emoji, x, y) {
+    const el = document.createElement('div');
+    el.className = 'reaction-float';
+    el.textContent = emoji;
+    el.style.left = `${(x || window.innerWidth / 2) - 15}px`;
+    el.style.top  = `${(y || window.innerHeight / 2) - 15}px`;
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 2100);
+  }
+
+  function showReactionOnMember(peerId, emoji) {
+    // Try members panel
+    const memberEl = document.querySelector(`[data-peer-id="${peerId}"] .member-avatar`);
+    if (memberEl) {
+      const pop = document.createElement('div');
+      pop.className = 'member-reaction-pop';
+      pop.textContent = emoji;
+      memberEl.style.position = 'relative';
+      memberEl.appendChild(pop);
+      setTimeout(() => pop.remove(), 2000);
+    }
+    // Also spawn center float
+    spawnFloat(emoji);
+  }
+
+  bar.addEventListener('click', e => {
+    const btn = e.target.closest('.reaction-btn');
+    if (!btn) return;
+    const emoji = btn.dataset.emoji;
+    if (!state.currentChannel) return;
+    haptic(12);
+    // Animate locally from button center
+    const rect = btn.getBoundingClientRect();
+    spawnFloat(emoji, rect.left + rect.width / 2, rect.top + rect.height / 2);
+    broadcastAll({ type: 'reaction', emoji });
+    // Brief scale bounce on button
+    btn.style.transform = 'scale(1.4)';
+    setTimeout(() => { btn.style.transform = ''; }, 200);
+  });
+
+  window._reactionReceive = (peerId, emoji) => showReactionOnMember(peerId, emoji);
+})();
+
+/* ═══════════════════════════════════════════
+   RAISE HAND
+═══════════════════════════════════════════ */
+(function setupRaiseHand() {
+  const btn = document.getElementById('raise-hand-btn');
+  if (!btn) return;
+
+  let isRaised = false;
+  const raisedPeers = new Set(); // track which peers have hands up
+
+  btn.addEventListener('click', () => {
+    isRaised = !isRaised;
+    haptic(isRaised ? 20 : 10);
+    btn.classList.toggle('raised', isRaised);
+    btn.querySelector('span').textContent = isRaised ? '✋' : '✋';
+    btn.childNodes[1].textContent = isRaised ? ' Lower Hand' : ' Raise Hand';
+    if (state.currentChannel) broadcastAll({ type: 'raise-hand', raised: isRaised, name: state.myName });
+    if (isRaised) toast('Hand raised — everyone can see', 'info');
+  });
+
+  // Keyboard shortcut H
+  document.addEventListener('keydown', e => {
+    if (e.code === 'KeyH' && !e.ctrlKey && !e.metaKey && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+      btn.click();
+    }
+  });
+
+  window._raiseHandReceive = (peerId, raised, name) => {
+    if (raised) {
+      raisedPeers.add(peerId);
+      toast(`✋ ${name} raised their hand`, 'info');
+    } else {
+      raisedPeers.delete(peerId);
+    }
+    // Update member display
+    renderMembers();
+  };
+
+  window._getRaisedHands = () => raisedPeers;
+
+  // Reset on leave
+  window._raiseHandReset = () => {
+    isRaised = false;
+    btn.classList.remove('raised');
+    raisedPeers.clear();
+    if (btn.childNodes[1]) btn.childNodes[1].textContent = ' Raise Hand';
+  };
+})();
+
+/* ═══════════════════════════════════════════
+   STATUS INDICATOR
+═══════════════════════════════════════════ */
+(function setupStatusPicker() {
+  const pickerWrap = document.getElementById('status-picker-wrap');
+  const pickerBtn  = document.getElementById('status-picker-btn');
+  const menu       = document.getElementById('status-picker-menu');
+  const dotBtn     = document.getElementById('status-dot-btn');
+  const labelBtn   = document.getElementById('status-label-btn');
+  if (!pickerBtn || !menu) return;
+
+  const STATUS_COLORS = { online: 'var(--green)', away: '#f59e0b', busy: 'var(--danger)' };
+  const STATUS_LABELS = { online: 'Online', away: 'Away', busy: 'Busy' };
+  let myStatus = localStorage.getItem('chirp_status') || 'online';
+
+  function applyStatus(s) {
+    myStatus = s;
+    localStorage.setItem('chirp_status', s);
+    if (dotBtn) dotBtn.style.background = STATUS_COLORS[s] || STATUS_COLORS.online;
+    if (labelBtn) labelBtn.textContent = STATUS_LABELS[s] || 'Online';
+    if (state.currentChannel) broadcastAll({ type: 'status', status: s, name: state.myName });
+    menu.classList.remove('open');
+  }
+
+  applyStatus(myStatus);
+
+  pickerBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    menu.classList.toggle('open');
+  });
+
+  menu.querySelectorAll('.status-picker-opt').forEach(opt => {
+    opt.addEventListener('click', e => { e.stopPropagation(); applyStatus(opt.dataset.status); });
+  });
+
+  document.addEventListener('click', () => menu.classList.remove('open'));
+
+  window._statusReceive = (peerId, status) => {
+    if (state.connections[peerId]) state.connections[peerId].status = status;
+    renderMembers();
+  };
+
+  window._getMyStatus = () => myStatus;
+  window._broadcastStatus = () => {
+    if (state.currentChannel) broadcastAll({ type: 'status', status: myStatus });
+  };
+})();
+
+/* ═══════════════════════════════════════════
+   CHANNEL CAPACITY
+═══════════════════════════════════════════ */
+(function setupChannelCapacity() {
+  const capacityInput = document.getElementById('mod-capacity');
+  const capacityVal   = document.getElementById('mod-capacity-val');
+  const capacityRow   = document.getElementById('mod-capacity-row');
+  if (!capacityInput) return;
+
+  let channelCapacity = 0; // 0 = no limit
+
+  capacityInput.addEventListener('input', () => {
+    channelCapacity = Number(capacityInput.value);
+    capacityVal.textContent = channelCapacity === 0 ? 'Off' : channelCapacity;
+    if (state.currentChannel) {
+      broadcastAll({ type: 'channel-capacity', capacity: channelCapacity });
+      const peerCount = Object.values(state.connections).filter(c => c.channel === state.currentChannel).length + 1;
+      if (channelCapacity > 0 && peerCount >= channelCapacity) {
+        toast(`Channel capacity set to ${channelCapacity} — channel is full`, 'red');
+      } else if (channelCapacity > 0) {
+        toast(`Capacity limit: ${channelCapacity} members`, 'info');
+      } else {
+        toast('Capacity limit removed', 'green');
+      }
+    }
+  });
+
+  window._getChannelCapacity = () => channelCapacity;
+  window._setChannelCapacity = (cap) => {
+    channelCapacity = Number(cap) || 0;
+    if (capacityInput) capacityInput.value = channelCapacity;
+    if (capacityVal) capacityVal.textContent = channelCapacity === 0 ? 'Off' : channelCapacity;
+  };
+
+  window._isChannelFull = () => {
+    if (!channelCapacity || !state.currentChannel) return false;
+    const count = Object.values(state.connections).filter(c => c.channel === state.currentChannel).length + 1;
+    return count >= channelCapacity;
+  };
+})();
+
+/* ═══════════════════════════════════════════
+   WIRE NEW MESSAGE TYPES INTO handleData
+   (patch via prototype override)
+═══════════════════════════════════════════ */
+(function patchHandleData() {
+  // We override handleData to intercept new message types.
+  // The original function is already defined above in the main script block.
+  // We save a reference and wrap it.
+  const _orig = typeof handleData === 'function' ? handleData : null;
+  if (!_orig) return;
+
+  window.handleData = function(peerId, data) {
+    switch (data.type) {
+      case 'chat':
+        if (window._chatReceive) window._chatReceive(data.name || 'peer', String(data.text || '').slice(0, 500));
+        return;
+
+      case 'reaction':
+        if (window._reactionReceive) window._reactionReceive(peerId, data.emoji);
+        return;
+
+      case 'raise-hand':
+        if (window._raiseHandReceive) window._raiseHandReceive(peerId, Boolean(data.raised), data.name || 'peer');
+        return;
+
+      case 'status':
+        if (window._statusReceive) window._statusReceive(peerId, data.status);
+        return;
+
+      case 'channel-capacity':
+        if (window._setChannelCapacity) window._setChannelCapacity(data.capacity);
+        return;
+
+      default:
+        _orig(peerId, data);
+    }
+  };
+})();
+
+/* ═══════════════════════════════════════════
+   SHOW/HIDE PTT EXTRAS WHEN IN CHANNEL
+   & PATCH joinChannel / leaveChannel
+═══════════════════════════════════════════ */
+(function patchChannelHooks() {
+  const pttExtraRow    = document.getElementById('ptt-extra-row');
+  const reactionWrap   = document.getElementById('reaction-bar-wrap');
+  const modCapacityRow = document.getElementById('mod-capacity-row');
+
+  // Show capacity in mod menu only for host, channel-context
+  const _origShowModMenu = typeof showModMenu === 'function' ? showModMenu : null;
+  if (_origShowModMenu) {
+    window.showModMenu = function(e, peerId, name) {
+      _origShowModMenu(e, peerId, name);
+      if (modCapacityRow) {
+        modCapacityRow.style.display = state.isChannelHost ? '' : 'none';
+      }
+    };
+  }
+
+  // Patch joinChannel to show extras and broadcast status
+  const _origJoin = typeof joinChannel === 'function' ? joinChannel : null;
+  if (_origJoin) {
+    window.joinChannel = function(ch) {
+      _origJoin(ch);
+      if (pttExtraRow)  pttExtraRow.style.display  = 'flex';
+      if (reactionWrap) reactionWrap.style.display  = '';
+      if (window._broadcastStatus) setTimeout(window._broadcastStatus, 500);
+      if (window._chatAppendSystem) window._chatAppendSystem(`Joined #${ch}`);
+    };
+  }
+
+  // Patch leaveChannel to hide extras and reset
+  const _origLeave = typeof leaveChannel === 'function' ? leaveChannel : null;
+  if (_origLeave) {
+    window.leaveChannel = async function() {
+      await _origLeave();
+      if (pttExtraRow)  pttExtraRow.style.display  = 'none';
+      if (reactionWrap) reactionWrap.style.display  = 'none';
+      if (window._raiseHandReset) window._raiseHandReset();
+    };
+  }
+})();
+
+/* ═══════════════════════════════════════════
+   PATCH renderMembers TO SHOW STATUS + HAND
+═══════════════════════════════════════════ */
+(function patchRenderMembers() {
+  const _orig = typeof renderMembers === 'function' ? renderMembers : null;
+  if (!_orig) return;
+
+  window.renderMembers = function() {
+    _orig();
+    // After original renders, inject status dots & hand badges
+    const list = document.getElementById('member-list');
+    if (!list) return;
+
+    // Self entry - status dot
+    const selfAvatar = list.querySelector('.member-self .member-avatar');
+    if (selfAvatar && window._getMyStatus) {
+      const STATUS_COLORS = { online: 'var(--green)', away: '#f59e0b', busy: 'var(--danger)' };
+      let dot = selfAvatar.querySelector('.status-dot');
+      if (!dot) {
+        selfAvatar.style.position = 'relative';
+        dot = document.createElement('div');
+        dot.className = 'status-dot';
+        selfAvatar.appendChild(dot);
+      }
+      dot.style.background = STATUS_COLORS[window._getMyStatus()] || STATUS_COLORS.online;
+    }
+
+    // Peer entries
+    Object.entries(state.connections).forEach(([peerId, info]) => {
+      const el = list.querySelector(`[data-peer-id="${peerId}"]`);
+      if (!el) return;
+
+      // Status dot
+      const av = el.querySelector('.member-avatar');
+      if (av && info.status) {
+        const STATUS_COLORS = { online: 'var(--green)', away: '#f59e0b', busy: 'var(--danger)' };
+        let dot = av.querySelector('.status-dot');
+        if (!dot) {
+          av.style.position = 'relative';
+          dot = document.createElement('div');
+          dot.className = 'status-dot';
+          av.appendChild(dot);
+        }
+        dot.style.background = STATUS_COLORS[info.status] || STATUS_COLORS.online;
+      }
+
+      // Raised hand badge
+      const raisedHands = window._getRaisedHands ? window._getRaisedHands() : new Set();
+      const nameEl = el.querySelector('.member-name');
+      if (nameEl) {
+        let handBadge = nameEl.querySelector('.member-hand-badge');
+        if (raisedHands.has(peerId)) {
+          if (!handBadge) {
+            handBadge = document.createElement('span');
+            handBadge.className = 'member-hand-badge';
+            handBadge.title = 'Hand raised';
+            nameEl.appendChild(handBadge);
+          }
+          handBadge.textContent = ' ✋';
+        } else if (handBadge) {
+          handBadge.remove();
+        }
+      }
+    });
+  };
+})();
+
 </script>
 </body>
 </html>
