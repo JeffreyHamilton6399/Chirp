@@ -896,6 +896,10 @@ body.light header { background: rgba(248,248,252,0.86); }
 }
 .reactions-trigger-btn:hover { border-color: var(--accent-dim); color: var(--accent); background: var(--accent-glow); }
 .reactions-trigger-btn.open { border-color: var(--accent-dim); color: var(--accent); background: var(--accent-glow); }
+/* Inside hub-folder use hub-folder-item sizing */
+.hub-folder .reactions-trigger-btn {
+  width: 52px; height: 52px; border-radius: 13px; font-size: 1.25rem;
+}
 
 .reactions-dropdown-wrap { position: relative; }
 .reactions-dropdown {
@@ -1126,6 +1130,7 @@ body.light header { background: rgba(248,248,252,0.86); }
 }
 .ptt-toolbar #screen-share-btn,
 .ptt-toolbar .ptt-toolbar-ss {
+  /* default hidden — JS shows when in-channel; hub-folder-item overrides display */
   display: none;
   align-items: center;
   justify-content: center;
@@ -1138,6 +1143,11 @@ body.light header { background: rgba(248,248,252,0.86); }
   transition: border-color 0.2s, color 0.2s, background 0.2s, transform 0.12s;
   flex-shrink: 0;
   padding: 0;
+}
+/* Inside hub-folder the item is always visible (folder hides/shows instead) */
+.hub-folder #screen-share-btn {
+  display: flex !important;
+  width: 52px; height: 52px; border-radius: 13px;
 }
 .ptt-toolbar #screen-share-btn:hover,
 .ptt-toolbar .ptt-toolbar-ss:hover {
@@ -1152,6 +1162,10 @@ body.light header { background: rgba(248,248,252,0.86); }
 .ptt-toolbar .raise-hand-btn-compact {
   width: 40px; height: 40px; border-radius: 10px;
   font-size: 1.15rem;
+}
+/* Raise-hand inside hub uses hub-folder-item sizing */
+.hub-folder .raise-hand-btn-compact {
+  width: 52px; height: 52px; border-radius: 13px; font-size: 1.25rem;
 }
 .ptt-toolbar .reactions-trigger-btn {
   min-width: 40px; min-height: 40px;
@@ -1961,6 +1975,12 @@ body.light header { background: rgba(248,248,252,0.86); }
 #record-fab:active { transform: scale(0.94); }
 #record-fab.recording { color: var(--danger); border-color: rgba(248,113,113,0.4); animation: rec-pulse-fab 1.8s ease-in-out infinite; }
 @keyframes rec-pulse-fab { 0%,100% { opacity:1; } 50% { opacity:0.5; } }
+/* Inside hub-folder, override to full grid-item size */
+.hub-folder #record-fab {
+  width: 52px; height: 52px; border-radius: 13px;
+  border: 1px solid var(--border2); background: var(--bg3);
+  flex-direction: column; gap: 4px;
+}
 
 /* ═══════════════════════════════════════════
    RECORDING OVERLAY
@@ -2250,6 +2270,105 @@ body.light header { background: rgba(248,248,252,0.86); }
 @media (max-width: 640px) {
   #screen-share-overlay { padding-bottom: var(--mobile-nav-height, 64px); }
 }
+
+/* ═══════════════════════════════════════════
+   AUDIO-REACTIVE BACKGROUND
+═══════════════════════════════════════════ */
+#audio-bg {
+  position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background: radial-gradient(ellipse 72% 62% at 50% 50%,
+    rgba(124,106,255, calc(var(--bg-grid-pulse, 0) * 0.26)) 0%,
+    rgba(168, 85,247, calc(var(--bg-grid-pulse, 0) * 0.10)) 42%,
+    transparent 68%);
+  transform: scale(calc(1 + var(--bg-grid-pulse, 0) * 0.20));
+  will-change: transform;
+  transition: transform 0.07s ease-out;
+}
+#app.visible::after {
+  transform: scale(calc(1 + var(--bg-grid-pulse, 0) * 0.10));
+  transition: opacity 0.14s ease-out, transform 0.10s ease-out;
+}
+
+/* ═══════════════════════════════════════════
+   HUB / FOLDER MENU
+═══════════════════════════════════════════ */
+.hub-wrap {
+  position: relative; display: flex;
+  align-items: center; justify-content: center;
+}
+.hub-btn {
+  width: 40px; height: 40px; border-radius: 12px;
+  background: var(--bg3); border: 1.5px solid var(--border2);
+  color: var(--text-dim); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: border-color 0.2s, color 0.2s, background 0.2s, transform 0.2s, box-shadow 0.2s;
+  position: relative; z-index: 2; flex-shrink: 0;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+}
+.hub-btn:hover { border-color: var(--accent-dim); color: var(--accent); background: var(--accent-glow); transform: scale(1.06); }
+.hub-btn.open  { border-color: var(--accent); color: var(--accent); background: var(--accent-glow); transform: rotate(45deg) scale(1.06); box-shadow: 0 4px 18px rgba(124,106,255,0.3); }
+.hub-btn:active { transform: scale(0.94); }
+
+.hub-folder {
+  position: absolute;
+  bottom: calc(100% + 14px);
+  left: 50%; transform: translateX(-50%) scale(0.88) translateY(8px);
+  background: var(--bg2); border: 1px solid var(--border2);
+  border-radius: 18px; padding: 11px;
+  box-shadow: 0 18px 52px rgba(0,0,0,0.55), 0 0 0 1px rgba(124,106,255,0.07);
+  display: grid; grid-template-columns: repeat(3, 52px); gap: 9px;
+  opacity: 0; pointer-events: none;
+  transform-origin: center bottom;
+  transition: opacity 0.18s cubic-bezier(0.4,0,0.2,1),
+              transform 0.22s cubic-bezier(0.34,1.56,0.64,1);
+  z-index: 100;
+}
+.hub-folder.open {
+  opacity: 1; pointer-events: all;
+  transform: translateX(-50%) scale(1) translateY(0);
+}
+/* Tiny arrow pointing down */
+.hub-folder::after {
+  content: '';
+  position: absolute; bottom: -7px; left: 50%;
+  transform: translateX(-50%);
+  border-left: 7px solid transparent;
+  border-right: 7px solid transparent;
+  border-top: 7px solid var(--border2);
+}
+
+.hub-folder-item {
+  width: 52px; height: 52px; border-radius: 13px;
+  background: var(--bg3); border: 1px solid var(--border2);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 4px; cursor: pointer; color: var(--text-dim);
+  font-family: var(--mono); font-size: 0.42rem; letter-spacing: 0.08em;
+  text-transform: uppercase;
+  transition: border-color 0.15s, background 0.15s, color 0.15s, transform 0.12s;
+  padding: 0; position: relative; overflow: visible;
+}
+.hub-folder-item:hover { border-color: var(--accent-dim); background: var(--accent-glow); color: var(--accent); transform: scale(1.07); }
+.hub-folder-item:active { transform: scale(0.93); }
+.hub-folder-item.active { border-color: var(--accent); color: var(--accent); background: rgba(124,106,255,0.12); }
+.hub-folder-item.raised { border-color: #f59e0b; background: rgba(245,158,11,0.1); animation: handPulse 1.5s ease-in-out infinite; }
+.hub-folder-item.recording { color: var(--danger); border-color: rgba(248,113,113,0.45); animation: rec-pulse-fab 1.8s ease-in-out infinite; }
+.hub-folder-item.sharing  { border-color: rgba(248,113,113,0.45); color: var(--danger); animation: rec-pulse-fab 1.8s ease-in-out infinite; }
+.hub-folder-item-icon { font-size: 1.25rem; line-height: 1; }
+.hub-folder-item-lbl  { font-size: 0.42rem; font-family: var(--mono); letter-spacing: 0.07em; text-transform: uppercase; color: inherit; }
+
+/* Reactions dropdown inside hub */
+.hub-reactions-wrap { position: relative; }
+.hub-reactions-wrap .reactions-dropdown {
+  bottom: calc(100% + 8px);
+  left: 50%;
+}
+
+@media (max-width: 640px) {
+  .hub-folder { grid-template-columns: repeat(3, 58px); gap: 10px; padding: 12px; }
+  .hub-folder-item { width: 58px; height: 58px; border-radius: 14px; }
+  .hub-folder-item-icon { font-size: 1.35rem; }
+  .hub-btn { width: 48px; height: 48px; border-radius: 13px; }
+}
 </style>
 </head>
 <body>
@@ -2291,6 +2410,7 @@ body.light header { background: rgba(248,248,252,0.86); }
      MAIN APP
 ═══════════════════════════════════════════ -->
 <div id="app">
+  <div id="audio-bg" aria-hidden="true"></div>
   <header>
     <div class="header-left">
       <div class="logo-sm">
@@ -2483,6 +2603,7 @@ body.light header { background: rgba(248,248,252,0.86); }
           </div>
 
           <div class="ptt-toolbar" id="ptt-toolbar" aria-label="Talk controls">
+            <!-- Mute — always visible, standalone, never inside the hub -->
             <button id="mute-btn" style="display:none" class="mute-btn-standalone ptt-toolbar-mute" title="Mute microphone" aria-label="Mute microphone">
               <svg id="mute-mic-on" width="16" height="16" viewBox="0 0 24 24" fill="none">
                 <rect x="9" y="2" width="6" height="13" rx="3" fill="currentColor" opacity="0.85"/>
@@ -2499,35 +2620,86 @@ body.light header { background: rgba(248,248,252,0.86); }
               </svg>
               <span id="mute-label" class="ptt-toolbar-mute-label">mic on</span>
             </button>
-            <div class="reactions-dropdown-wrap" id="reactions-dropdown-wrap">
-              <button id="reactions-trigger-btn" class="reactions-trigger-btn" title="React">
-                <span>😊</span>
+
+            <!-- Hub button + folder popup -->
+            <div class="hub-wrap" id="hub-wrap">
+              <button class="hub-btn" id="hub-btn" type="button" title="Tools" aria-label="Open tools menu" aria-expanded="false">
+                <!-- grid / apps icon -->
+                <svg width="15" height="15" viewBox="0 0 20 20" fill="none">
+                  <rect x="2"  y="2"  width="6" height="6" rx="1.5" fill="currentColor" opacity="0.85"/>
+                  <rect x="12" y="2"  width="6" height="6" rx="1.5" fill="currentColor" opacity="0.85"/>
+                  <rect x="2"  y="12" width="6" height="6" rx="1.5" fill="currentColor" opacity="0.85"/>
+                  <rect x="12" y="12" width="6" height="6" rx="1.5" fill="currentColor" opacity="0.85"/>
+                </svg>
               </button>
-              <div class="reactions-dropdown" id="reactions-dropdown">
-                <button class="reaction-btn" data-emoji="👍" title="Thumbs up">👍</button>
-                <button class="reaction-btn" data-emoji="👎" title="Thumbs down">👎</button>
-                <button class="reaction-btn" data-emoji="🔥" title="Fire">🔥</button>
-                <button class="reaction-btn" data-emoji="😂" title="Laugh">😂</button>
-                <button class="reaction-btn" data-emoji="🎉" title="Party">🎉</button>
-                <button class="reaction-btn" data-emoji="❤️" title="Heart">❤️</button>
-                <button class="reaction-btn" data-emoji="👀" title="Eyes">👀</button>
-                <button class="reaction-btn" data-emoji="🤔" title="Thinking">🤔</button>
-              </div>
-            </div>
-            <button id="record-fab" type="button" title="Record session" aria-label="Record session">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="12" cy="12" r="6" fill="currentColor" opacity="0.85"/>
-                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.6" opacity="0.5"/>
-              </svg>
-            </button>
-            <button id="screen-share-btn" class="ptt-toolbar-ss" type="button" title="Share screen" aria-label="Share screen">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
-                <rect x="2" y="4" width="20" height="14" rx="2" stroke="currentColor" stroke-width="1.8"/>
-                <path d="M8 20h8M12 18v2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-                <path d="M9 11l3-3 3 3M12 8v6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-            </button>
-            <button id="raise-hand-btn" class="raise-hand-btn-compact" title="Raise hand (H)">✋</button>
+
+              <div class="hub-folder" id="hub-folder" role="menu">
+
+                <!-- Copy invite link -->
+                <button class="hub-folder-item" id="hub-copy-link-btn" type="button" title="Copy invite link" role="menuitem">
+                  <svg class="hub-folder-item-icon" width="20" height="20" viewBox="0 0 24 24" fill="none">
+                    <path d="M10 13a5 5 0 007.07 0l2.12-2.12a5 5 0 00-7.07-7.07L11 4.93" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    <path d="M14 11a5 5 0 00-7.07 0L4.81 13.12a5 5 0 007.07 7.07L13 19.07" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                  </svg>
+                  <span class="hub-folder-item-lbl">Link</span>
+                </button>
+
+                <!-- Reactions — keeps original ID for JS -->
+                <div class="hub-reactions-wrap" id="reactions-dropdown-wrap">
+                  <button id="reactions-trigger-btn" class="hub-folder-item reactions-trigger-btn" title="React" role="menuitem">
+                    <span class="hub-folder-item-icon">😊</span>
+                    <span class="hub-folder-item-lbl">React</span>
+                  </button>
+                  <div class="reactions-dropdown" id="reactions-dropdown">
+                    <button class="reaction-btn" data-emoji="👍" title="Thumbs up">👍</button>
+                    <button class="reaction-btn" data-emoji="👎" title="Thumbs down">👎</button>
+                    <button class="reaction-btn" data-emoji="🔥" title="Fire">🔥</button>
+                    <button class="reaction-btn" data-emoji="😂" title="Laugh">😂</button>
+                    <button class="reaction-btn" data-emoji="🎉" title="Party">🎉</button>
+                    <button class="reaction-btn" data-emoji="❤️" title="Heart">❤️</button>
+                    <button class="reaction-btn" data-emoji="👀" title="Eyes">👀</button>
+                    <button class="reaction-btn" data-emoji="🤔" title="Thinking">🤔</button>
+                  </div>
+                </div>
+
+                <!-- Record — keeps original ID for JS -->
+                <button id="record-fab" type="button" class="hub-folder-item" title="Record session" aria-label="Record session" role="menuitem">
+                  <svg class="hub-folder-item-icon" width="20" height="20" viewBox="0 0 24 24" fill="none">
+                    <circle cx="12" cy="12" r="6" fill="currentColor" opacity="0.85"/>
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.6" opacity="0.5"/>
+                  </svg>
+                  <span class="hub-folder-item-lbl">Record</span>
+                </button>
+
+                <!-- Screen share — keeps original ID for JS -->
+                <button id="screen-share-btn" class="hub-folder-item ptt-toolbar-ss" type="button" title="Share screen" aria-label="Share screen" role="menuitem">
+                  <svg class="hub-folder-item-icon" width="20" height="20" viewBox="0 0 24 24" fill="none">
+                    <rect x="2" y="4" width="20" height="14" rx="2" stroke="currentColor" stroke-width="1.8"/>
+                    <path d="M8 20h8M12 18v2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                    <path d="M9 11l3-3 3 3M12 8v6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  <span class="hub-folder-item-lbl">Share</span>
+                </button>
+
+                <!-- Raise hand — keeps original ID for JS -->
+                <button id="raise-hand-btn" class="hub-folder-item raise-hand-btn-compact" title="Raise hand (H)" role="menuitem">
+                  <span class="hub-folder-item-icon">✋</span>
+                  <span class="hub-folder-item-lbl">Raise</span>
+                </button>
+
+                <!-- About & shortcuts -->
+                <button class="hub-folder-item" id="hub-about-btn" type="button" title="About &amp; shortcuts" role="menuitem">
+                  <svg class="hub-folder-item-icon" width="20" height="20" viewBox="0 0 24 24" fill="none">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.6"/>
+                    <line x1="12" y1="8" x2="12" y2="8.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    <line x1="12" y1="11" x2="12" y2="16" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                  </svg>
+                  <span class="hub-folder-item-lbl">About</span>
+                </button>
+
+              </div><!-- /.hub-folder -->
+            </div><!-- /.hub-wrap -->
+
           </div>
 
           <!-- Old reaction bar — hidden, reactions now in dropdown above -->
@@ -3878,7 +4050,9 @@ function updateChannelControls() {
     }
   }
   if (barActions) barActions.style.display = inChannel ? 'flex' : 'none';
-  if (ssBtn) ssBtn.style.display = inChannel ? 'flex' : 'none';
+  // screen-share-btn is inside hub-folder; its parent hub-wrap tracks channel state
+  const hubWrap = document.getElementById('hub-wrap');
+  if (hubWrap) hubWrap.style.display = inChannel ? 'flex' : 'none';
   if (!topic) return;
 
   topic.style.display = inChannel ? '' : 'none';
@@ -8025,6 +8199,168 @@ function setupMobileNav() {
       return r;
     };
   }
+})();
+
+/* ═══════════════════════════════════════════
+   HUB / FOLDER MENU
+   Opens a tools grid with: copy-link, reactions,
+   record, screen-share, raise-hand, about.
+   Mute stays standalone outside the hub.
+═══════════════════════════════════════════ */
+(function setupHubMenu() {
+  const hubBtn    = document.getElementById('hub-btn');
+  const hubFolder = document.getElementById('hub-folder');
+  if (!hubBtn || !hubFolder) return;
+
+  function openHub() {
+    hubFolder.classList.add('open');
+    hubBtn.classList.add('open');
+    hubBtn.setAttribute('aria-expanded', 'true');
+  }
+  function closeHub() {
+    hubFolder.classList.remove('open');
+    hubBtn.classList.remove('open');
+    hubBtn.setAttribute('aria-expanded', 'false');
+  }
+  function toggleHub() {
+    hubFolder.classList.contains('open') ? closeHub() : openHub();
+  }
+
+  hubBtn.addEventListener('click', e => { e.stopPropagation(); toggleHub(); });
+
+  // Close on outside click
+  document.addEventListener('click', e => {
+    if (hubFolder.classList.contains('open') && !hubBtn.contains(e.target) && !hubFolder.contains(e.target)) {
+      closeHub();
+    }
+  });
+
+  // Close on Escape
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeHub(); });
+
+  // --- Copy link ---
+  document.getElementById('hub-copy-link-btn')?.addEventListener('click', async () => {
+    closeHub();
+    if (!state.currentChannel) return;
+    const url = channelInviteUrl(state.currentChannel);
+    try {
+      if (navigator.share) await navigator.share({ title: `Join #${state.currentChannel} on Chirp`, url });
+      else await navigator.clipboard.writeText(url);
+      SFX.copyLink();
+      toast('Invite link copied', 'green');
+    } catch {
+      toast('Could not copy invite link', 'red');
+    }
+  });
+
+  // --- About ---
+  document.getElementById('hub-about-btn')?.addEventListener('click', () => {
+    closeHub();
+    document.getElementById('about-overlay')?.classList.add('show');
+  });
+
+  // --- Keep hub-folder-item states in sync with original button states ---
+  // Record: mirror .recording class
+  const recFab = document.getElementById('record-fab');
+  if (recFab) {
+    const obs = new MutationObserver(() => {
+      recFab.classList.toggle('recording', recFab.classList.contains('recording'));
+    });
+    obs.observe(recFab, { attributes: true, attributeFilter: ['class'] });
+  }
+  // Screen share: mirror .sharing
+  const ssBtn = document.getElementById('screen-share-btn');
+  if (ssBtn) {
+    const obs2 = new MutationObserver(() => {
+      ssBtn.classList.toggle('sharing', ssBtn.classList.contains('sharing'));
+    });
+    obs2.observe(ssBtn, { attributes: true, attributeFilter: ['class'] });
+  }
+  // Raise hand: mirror .raised
+  const handBtn = document.getElementById('raise-hand-btn');
+  if (handBtn) {
+    const obs3 = new MutationObserver(() => {
+      handBtn.classList.toggle('raised', handBtn.classList.contains('raised'));
+    });
+    obs3.observe(handBtn, { attributes: true, attributeFilter: ['class'] });
+  }
+
+  // Close hub when a folder item (except reactions trigger) is clicked
+  hubFolder.addEventListener('click', e => {
+    const item = e.target.closest('.hub-folder-item');
+    if (item && item.id !== 'reactions-trigger-btn') {
+      // small delay so the clicked action runs first
+      setTimeout(closeHub, 80);
+    }
+  });
+})();
+
+/* ═══════════════════════════════════════════
+   REMOTE AUDIO → BACKGROUND PULSE
+   Taps incoming peer audio elements and blends
+   their level into setBgGridPulse so the background
+   reacts to what everyone in the channel is saying.
+═══════════════════════════════════════════ */
+(function setupRemoteAudioBg() {
+  const analysers = new Map(); // HTMLAudioElement → {analyser, src}
+  const buf       = new Uint8Array(16);
+  let   bgCtx     = null;
+
+  function getCtx() {
+    if (!bgCtx || bgCtx.state === 'closed') {
+      bgCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (bgCtx.state === 'suspended') bgCtx.resume().catch(() => {});
+    return bgCtx;
+  }
+
+  function monitor() {
+    requestAnimationFrame(monitor);
+
+    // If local waveform is actively running, let it drive the pulse exclusively
+    if (waveAnimId) return;
+
+    // Scan DOM for peer audio elements
+    const audioEls = document.querySelectorAll('audio[data-peer]');
+
+    // Drop stale
+    analysers.forEach((_, el) => {
+      if (!el.isConnected) {
+        try { analysers.get(el)?.src.disconnect(); } catch {}
+        analysers.delete(el);
+      }
+    });
+
+    // Hook new ones
+    audioEls.forEach(el => {
+      if (!analysers.has(el) && el.srcObject) {
+        try {
+          const ctx      = getCtx();
+          const src      = ctx.createMediaStreamSource(el.srcObject);
+          const analyser = ctx.createAnalyser();
+          analyser.fftSize = 32;
+          src.connect(analyser);
+          analysers.set(el, { analyser, src });
+        } catch {}
+      }
+    });
+
+    if (analysers.size === 0) { setBgGridPulse(0); return; }
+
+    let maxLevel = 0;
+    analysers.forEach(({ analyser }) => {
+      analyser.getByteFrequencyData(buf);
+      let sum = 0;
+      for (let i = 0; i < buf.length; i++) sum += buf[i];
+      const lvl = (sum / buf.length / 255);
+      if (lvl > maxLevel) maxLevel = lvl;
+    });
+
+    setBgGridPulse(Math.min(1, maxLevel * 3.2));
+  }
+
+  // Start polling after a short delay to let the app init
+  setTimeout(() => requestAnimationFrame(monitor), 4000);
 })();
 
 </script>
