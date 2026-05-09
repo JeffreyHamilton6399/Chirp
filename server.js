@@ -1,4 +1,3 @@
-const fs   = require('node:fs');
 const http = require('node:http');
 const os   = require('node:os');
 const path = require('node:path');
@@ -60,16 +59,6 @@ app.use(express.static(ROOT, {
     res.setHeader('cache-control', 'no-cache');
   },
 }));
-
-// Debug NDJSON sink (session 42a545) — browser POSTs land here when Cursor ingest is offline.
-app.post('/__chirp-debug-log', express.json({ limit: '24kb' }), (req, res) => {
-  try {
-    fs.appendFileSync(path.join(ROOT, 'debug-42a545.log'), `${JSON.stringify(req.body ?? {})}\n`);
-  } catch (err) {
-    console.error('[debug-log]', err.message);
-  }
-  res.status(204).end();
-});
 
 // ── SPA fallback ──────────────────────────────────────────────────────────────
 app.use((req, res) => {

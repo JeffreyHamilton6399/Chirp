@@ -293,7 +293,7 @@ header {
   padding: 9px 14px; cursor: pointer;
   margin: 1px 6px; border-radius: var(--radius-sm);
   border-left: 2px solid transparent;
-  transition: background 0.15s, padding-left 0.15s;
+  transition: background 0.2s ease, padding-left 0.2s ease, border-color 0.2s ease, color 0.2s ease;
   animation: slideLeft 0.22s ease both;
 }
 .channel-item:hover { background: rgba(255,255,255,0.03); padding-left: 18px; }
@@ -1307,7 +1307,8 @@ body.light header { background: rgba(248,248,252,0.86); }
 
 .member-item {
   display: flex; align-items: center; gap: 9px;
-  padding: 8px 14px; transition: background 0.2s;
+  padding: 8px 14px;
+  transition: background 0.22s ease, opacity 0.2s ease;
   animation: member-in 0.25s ease;
 }
 .member-item:hover { background: rgba(124,106,255,0.04); }
@@ -3580,32 +3581,15 @@ function setConnUI(st, text) {
 ═══════════════════════════════════════════ */
 const CONFIG    = { appName: 'Chirp' };
 const LOBBY_ID  = 'chirp-lobby-0001';
-const PRESENCE_TTL = 45000;
+const PRESENCE_TTL = 90000;
 const ACTIVITY_TTL = 6000;
 const PEER_RECONNECT_GRACE = 30000;
 
-// #region agent log
-function _dbgAgent(o) {
-  const body = JSON.stringify({ sessionId: '42a545', timestamp: Date.now(), runId: 'post-fix', ...o });
-  const headers = { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '42a545' };
-  const origin = typeof location !== 'undefined' ? location.origin : '';
-  if (origin && origin !== 'null') {
-    fetch(`${origin}/__chirp-debug-log`, { method: 'POST', headers, body }).catch(() => {});
-  }
-  fetch('http://127.0.0.1:7486/ingest/95a235c4-df13-4020-89b7-4505faaea01d', { method: 'POST', headers, body }).catch(() => {});
-  try {
-    const k = 'chirp_dbg_42a545';
-    const ring = (sessionStorage.getItem(k) || '') + body + '\n';
-    sessionStorage.setItem(k, ring.length > 65536 ? ring.slice(-65536) : ring);
-  } catch (_) {}
-}
-let _dbg_bgPulseN = 0;
-let _dbg_cssWrites = 0;
-let _dbg_rcN = 0;
-let _dbg_resizeBuf = [];
+/** Lobby host: delay registry removal on socket blip (was instant delete → global flicker). */
+const _lobbyHostRemovalTimers = {};
 let _bgPulseAppliedKey = null;
 let _resizeControlsTimer = null;
-// #endregion
+let _lastMobileRailSig = '';
 
 function isPrivateNetworkHost(host) {
   const h = String(host || '').toLowerCase();
@@ -3825,6 +3809,7 @@ function notePeerSeen(peerId) {
     if (info.reconnecting) info.reconnecting = false;
   }
   if (state.lobbyRegistry[peerId]) state.lobbyRegistry[peerId].seenAt = now;
+  else if (info?.channel && info?.name) setLobbyChannel(peerId, info.channel, info.name);
   clearPeerReconnect(peerId);
 }
 
@@ -3993,6 +3978,10 @@ function stopStream(stream) {
 
 async function acquireLocalMicStream({ force = false, toastErrors = true } = {}) {
   if (state.localStream && state.audioTrack?.readyState === 'live' && !force) return true;
+  if (state._micTrackEnded && state.audioTrack) {
+    try { state.audioTrack.removeEventListener('ended', state._micTrackEnded); } catch (_) {}
+    state._micTrackEnded = null;
+  }
   if (!navigator.mediaDevices?.getUserMedia || window.isSecureContext === false) {
     if (toastErrors) toast(micErrorMessage(), 'red');
     return false;
@@ -4036,6 +4025,20 @@ async function acquireLocalMicStream({ force = false, toastErrors = true } = {})
   state.localStream = stream;
   state.audioTrack = track;
   state.audioTrack.enabled = state.isTalking && !state.isMuted;
+  state._micTrackEnded = () => {
+    if (state.audioTrack !== track) return;
+    state.localStream = null;
+    state.audioTrack = null;
+    if (!state.currentChannel) return;
+    acquireLocalMicStream({ force: true, toastErrors }).then(ok => {
+      if (ok) {
+        applyMicToActiveCalls();
+        if (state.vadEnabled && state.currentChannel) { stopVAD(); startVAD(); }
+        if (toastErrors) toast('Microphone restored', 'green');
+      }
+    });
+  };
+  track.addEventListener('ended', state._micTrackEnded);
   return true;
 }
 
@@ -4207,8 +4210,12 @@ function pruneLobbyRegistry() {
     if (id === state.myId) return;
     if (info.seenAt && now - info.seenAt > PRESENCE_TTL) {
       const activeConn = state.connections[id]?.conn?.open;
+      const liveCall = Boolean(state.calls[id] || state.inboundCalls[id]);
       if (activeConn) {
-        // Refresh seenAt so we don't keep entering this branch; no DOM update needed
+        setLobbyChannel(id, state.connections[id].channel ?? info.channel, state.connections[id].name || info.name);
+        return;
+      }
+      if (liveCall && state.connections[id]) {
         setLobbyChannel(id, state.connections[id].channel ?? info.channel, state.connections[id].name || info.name);
         return;
       }
@@ -4325,15 +4332,6 @@ function startApp() {
     });
   })();
   window.addEventListener('resize', () => {
-    // #region agent log
-    const t = performance.now();
-    _dbg_resizeBuf.push(t);
-    _dbg_resizeBuf = _dbg_resizeBuf.filter(x => t - x < 400);
-    if (_dbg_resizeBuf.length >= 8) {
-      _dbgAgent({ location: 'index.html:resize', message: 'resize storm (>=8 in 400ms)', hypothesisId: 'H2', data: { burst: _dbg_resizeBuf.length } });
-      _dbg_resizeBuf.length = 0;
-    }
-    // #endregion
     clearTimeout(_resizeControlsTimer);
     _resizeControlsTimer = setTimeout(() => { try { updateChannelControls(); } catch {} }, 110);
   });
@@ -5197,13 +5195,6 @@ function renderChannels(filter) {
   const scroll = document.getElementById('channel-scroll');
   if (!scroll) return;
 
-  // #region agent log
-  _dbg_rcN++;
-  if (_dbg_rcN <= 8 || _dbg_rcN % 20 === 0) {
-    _dbgAgent({ location: 'index.html:renderChannels', message: 'renderChannels invoked', hypothesisId: 'H3', data: { n: _dbg_rcN, qLen: q.length, liveSize: liveChannels.size } });
-  }
-  // #endregion
-
   // Build member counts from lobby registry
   const counts = {};
   Object.values(state.lobbyRegistry).forEach(info => {
@@ -5607,12 +5598,16 @@ function tryBecomeLobbyHost() {
       conn.on('open', () => conn.send({ type: 'lobby-registry', registry: state.lobbyRegistry, channels: publicChannels() }));
       conn.on('data', data => {
         if (data.type === 'lobby-hello') {
+          clearTimeout(_lobbyHostRemovalTimers[data.id]);
+          delete _lobbyHostRemovalTimers[data.id];
           setLobbyChannel(data.id, data.channel || null, data.name);
           (data.channels || []).forEach(ch => safeAddChannel(ch));
           lobbyBroadcast({ type: 'lobby-update', registry: state.lobbyRegistry, channels: publicChannels() });
           scheduleRenderChannels();
         }
         if (data.type === 'lobby-announce') {
+          clearTimeout(_lobbyHostRemovalTimers[data.id]);
+          delete _lobbyHostRemovalTimers[data.id];
           setLobbyChannel(data.id, data.channel || null, data.name);
           (data.channels || []).forEach(ch => safeAddChannel(ch));
           if (data.newChannel) safeAddChannel(data.newChannel);
@@ -5621,8 +5616,17 @@ function tryBecomeLobbyHost() {
         }
       });
       conn.on('close', () => {
-        const id = Object.keys(state.lobbyRegistry).find(k => k === conn.peer);
-        if (id) { delete state.lobbyRegistry[id]; lobbyBroadcast({ type: 'lobby-update', registry: state.lobbyRegistry }); scheduleRenderChannels(); }
+        const id = conn.peer;
+        if (!id || id === LOBBY_ID) return;
+        clearTimeout(_lobbyHostRemovalTimers[id]);
+        _lobbyHostRemovalTimers[id] = setTimeout(() => {
+          delete _lobbyHostRemovalTimers[id];
+          if (state.lobbyRegistry[id]) {
+            delete state.lobbyRegistry[id];
+            lobbyBroadcast({ type: 'lobby-update', registry: state.lobbyRegistry, channels: publicChannels() });
+            scheduleRenderChannels();
+          }
+        }, 15000);
       });
     });
     lp.on('disconnected', () => { try { lp.reconnect(); } catch {} });
@@ -5922,10 +5926,14 @@ function connectToPeer(peerId, initiateCall, joinTime, force = false) {
   if (peerId === state.myId || !state.peer?.open) return;
   const current = state.connections[peerId];
   if (current?.conn?.open && !force) return;
-  if (current?.reconnecting && !force) return;
+  if (current?.reconnecting && !force && current.conn?.open) return;
   const conn = state.peer.connect(peerId, { reliable: true });
-  if (!current) state.connections[peerId] = makePeerInfo(conn, { peerId, joinTime });
-  else if (joinTime) current.joinTime = joinTime;
+  const chHint = state.currentChannel || null;
+  if (!current) state.connections[peerId] = makePeerInfo(conn, { peerId, joinTime, channel: chHint });
+  else {
+    if (joinTime) current.joinTime = joinTime;
+    if (chHint && !current.channel) current.channel = chHint;
+  }
   setupDataConn(conn);
   if (initiateCall && state.localStream) callPeer(peerId);
 }
@@ -5943,10 +5951,27 @@ function playRemoteStream(peerId, stream) {
   removeAudio(peerId);
   const audio = document.createElement('audio');
   audio.id = `audio-${peerId}`; audio.srcObject = stream;
-  audio.autoplay = true; audio.volume = state.outputVolume * (state.connections[peerId]?.volume ?? 1);
+  audio.autoplay = true; audio.playsInline = true;
+  audio.volume = state.outputVolume * (state.connections[peerId]?.volume ?? 1);
   audio.dataset.peer = peerId;
   audio.style.display = 'none';
   document.body.appendChild(audio);
+
+  const tryPlay = () => { audio.play().catch(() => {}); };
+  tryPlay();
+  const visAc = new AbortController();
+  audio._visAbort = visAc;
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) tryPlay(); }, { signal: visAc.signal });
+
+  stream.getAudioTracks().forEach(tr => {
+    tr.addEventListener('ended', () => {
+      if (state.currentChannel && state.lobbyRegistry[peerId]?.channel === state.currentChannel) {
+        try { delete state.calls[peerId]; delete state.inboundCalls[peerId]; } catch (_) {}
+        removeAudio(peerId);
+        setTimeout(() => { if (state.connections[peerId]?.conn?.open) syncChannelPeers(); }, 400);
+      }
+    });
+  });
 
   // Store the raw MediaStream so the recorder can tap it with createMediaStreamSource
   if (state.connections[peerId]) state.connections[peerId].remoteStream = stream;
@@ -5955,7 +5980,11 @@ function playRemoteStream(peerId, stream) {
   if (window._recAddPeerStream) window._recAddPeerStream(peerId, stream);
 }
 
-function removeAudio(peerId) { document.getElementById(`audio-${peerId}`)?.remove(); }
+function removeAudio(peerId) {
+  const el = document.getElementById(`audio-${peerId}`);
+  try { el?._visAbort?.abort(); } catch (_) {}
+  el?.remove();
+}
 
 function applyPeerVolume(peerId) {
   const audio = document.getElementById(`audio-${peerId}`);
@@ -5973,7 +6002,7 @@ function ensureChannelHost() {
   const candidates = [
     { id: state.myId, joinTime: state.myJoinTime || 0 },
     ...Object.entries(state.connections)
-      .filter(([, info]) => info.channel === state.currentChannel)
+      .filter(([id, info]) => peerInCurrentChannel(id, info))
       .map(([id, info]) => ({ id, joinTime: info.joinTime || 0 })),
   ].sort((a, b) => (a.joinTime - b.joinTime) || a.id.localeCompare(b.id));
 
@@ -6099,6 +6128,13 @@ function broadcastAll(data) {
 /* ═══════════════════════════════════════════
    RENDER MEMBERS — diff-based, no full rebuild
 ═══════════════════════════════════════════ */
+function peerInCurrentChannel(peerId, info) {
+  if (!state.currentChannel || !info) return false;
+  if (info.channel === state.currentChannel) return true;
+  const reg = state.lobbyRegistry[peerId];
+  return Boolean(reg?.channel === state.currentChannel && info.conn?.open);
+}
+
 function renderMembers() {
   const list = DOM['member-list'];
   if (!state.currentChannel) {
@@ -6130,7 +6166,7 @@ function renderMembers() {
   // ── Peer entries: add/update/remove via data-peer-id ──
   const activePeerIds = new Set(
     Object.entries(state.connections)
-      .filter(([, i]) => i.channel === state.currentChannel)
+      .filter(([id, i]) => peerInCurrentChannel(id, i))
       .map(([id]) => id)
   );
 
@@ -6189,14 +6225,19 @@ function renderMobileMemberRail() {
   if (!railLeft || !railRight) return;
 
   if (!state.currentChannel) {
+    _lastMobileRailSig = '';
     railLeft.innerHTML = '';
     railRight.innerHTML = '';
     return;
   }
 
   const peers = Object.entries(state.connections)
-    .filter(([, info]) => info.channel === state.currentChannel)
+    .filter(([id, info]) => peerInCurrentChannel(id, info))
     .map(([id, info]) => ({ id, name: info.name || id, avatar: info.avatar, talking: info.talking }));
+
+  const sig = peers.map(p => `${p.id}:${p.talking ? 1 : 0}:${p.avatar || ''}`).join('|');
+  if (sig === _lastMobileRailSig) return;
+  _lastMobileRailSig = sig;
 
   // Split peers evenly: left half gets the first half, right half the rest
   const half = Math.ceil(peers.length / 2);
@@ -6591,20 +6632,10 @@ function setupMuteBtn() {
 ═══════════════════════════════════════════ */
 function setBgGridPulse(level01) {
   const v = Math.max(0, Math.min(1, level01));
-  // Coarse quantize so we rarely touch the root stylesheet (many selectors read this var).
   const q = Math.round(v * 24) / 24;
-  // #region agent log
-  _dbg_bgPulseN++;
-  if (_dbg_bgPulseN % 45 === 0) {
-    _dbgAgent({ location: 'index.html:setBgGridPulse', message: 'bg pulse throttle sample', hypothesisId: 'H1', data: { invocations: _dbg_bgPulseN, cssWrites: _dbg_cssWrites, level: v, appliedKey: _bgPulseAppliedKey } });
-  }
-  // #endregion
   const key = q.toFixed(3);
   if (_bgPulseAppliedKey === key) return;
   _bgPulseAppliedKey = key;
-  // #region agent log
-  _dbg_cssWrites++;
-  // #endregion
   document.documentElement.style.setProperty('--bg-grid-pulse', key);
 }
 
