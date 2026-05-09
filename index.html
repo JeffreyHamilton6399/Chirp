@@ -2331,6 +2331,122 @@ function toast(msg, type = '') {
   toastTimer = setTimeout(() => { el.className = type; }, 3500);
 }
 
+function selectedMicDeviceId() {
+  return localStorage.getItem('chirp_mic_device') || '';
+}
+
+function buildMicConstraints(deviceId = selectedMicDeviceId(), exactDevice = true) {
+  const noiseSupp = localStorage.getItem('chirp_noise') !== '0';
+  const echoCanc  = localStorage.getItem('chirp_echo')  !== '0';
+  return {
+    echoCancellation: echoCanc,
+    noiseSuppression: noiseSupp,
+    autoGainControl: true,
+    ...(deviceId ? { deviceId: exactDevice ? { exact: deviceId } : { ideal: deviceId } } : {}),
+  };
+}
+
+function micErrorMessage(err) {
+  if (!navigator.mediaDevices?.getUserMedia) {
+    return window.isSecureContext === false
+      ? 'Mic needs HTTPS or localhost. On this PC, open Chirp with localhost instead of a network IP.'
+      : 'This browser does not support microphone access.';
+  }
+  if (window.isSecureContext === false) {
+    return 'Mic needs HTTPS or localhost. On this PC, open Chirp with localhost instead of a network IP.';
+  }
+  switch (err?.name) {
+    case 'NotAllowedError':
+    case 'SecurityError':
+      return 'Microphone permission is blocked. Click the browser lock icon and allow microphone access.';
+    case 'NotFoundError':
+    case 'DevicesNotFoundError':
+      return 'No microphone was found by the browser.';
+    case 'NotReadableError':
+    case 'TrackStartError':
+      return 'The microphone is busy in another app or Windows blocked access.';
+    case 'OverconstrainedError':
+    case 'ConstraintNotSatisfiedError':
+      return 'That microphone is not available anymore. Choose another input.';
+    default:
+      return 'Could not open the microphone. Check browser and Windows microphone permissions.';
+  }
+}
+
+function stopStream(stream) {
+  try { stream?.getTracks().forEach(track => track.stop()); } catch {}
+}
+
+async function acquireLocalMicStream({ force = false, toastErrors = true } = {}) {
+  if (state.localStream && state.audioTrack?.readyState === 'live' && !force) return true;
+  if (!navigator.mediaDevices?.getUserMedia || window.isSecureContext === false) {
+    if (toastErrors) toast(micErrorMessage(), 'red');
+    return false;
+  }
+
+  const previousStream = state.localStream;
+  const chosenDevice = selectedMicDeviceId();
+  let stream = null;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({
+      audio: buildMicConstraints(chosenDevice, true),
+      video: false,
+    });
+  } catch (err) {
+    const canFallback = chosenDevice && ['OverconstrainedError', 'ConstraintNotSatisfiedError', 'NotFoundError', 'DevicesNotFoundError'].includes(err?.name);
+    if (!canFallback) {
+      if (toastErrors) toast(micErrorMessage(err), 'red');
+      return false;
+    }
+    localStorage.removeItem('chirp_mic_device');
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({
+        audio: buildMicConstraints('', false),
+        video: false,
+      });
+      if (toastErrors) toast('Selected mic was unavailable, using default', 'red');
+    } catch (fallbackErr) {
+      if (toastErrors) toast(micErrorMessage(fallbackErr), 'red');
+      return false;
+    }
+  }
+
+  const track = stream.getAudioTracks()[0];
+  if (!track) {
+    stopStream(stream);
+    if (toastErrors) toast('No microphone track was opened', 'red');
+    return false;
+  }
+
+  if (previousStream && previousStream !== stream) stopStream(previousStream);
+  state.localStream = stream;
+  state.audioTrack = track;
+  state.audioTrack.enabled = state.isTalking && !state.isMuted;
+  return true;
+}
+
+function applyMicToActiveCalls() {
+  if (!state.audioTrack) return;
+  [...Object.values(state.calls), ...Object.values(state.inboundCalls)].forEach(call => {
+    try {
+      const sender = call?.peerConnection?.getSenders?.().find(s => s.track?.kind === 'audio');
+      sender?.replaceTrack?.(state.audioTrack)?.catch?.(() => {});
+    } catch {}
+  });
+}
+
+async function refreshCurrentMic(reason = 'Mic updated') {
+  if (!state.localStream) return;
+  const ok = await acquireLocalMicStream({ force: true });
+  if (!ok) return;
+  applyMicToActiveCalls();
+  if (state.vadEnabled && state.currentChannel) {
+    stopVAD();
+    startVAD();
+  }
+  toast(reason, 'green');
+}
+
 function announceLeavingChannel() {
   if (!state.currentChannel) return;
   broadcastAll({ type: 'leave', channel: state.currentChannel, name: state.myName });
@@ -2801,6 +2917,7 @@ function setupSettings() {
     noiseToggle.addEventListener('change', () => {
       localStorage.setItem('chirp_noise', noiseToggle.checked ? '1' : '0');
       toast(noiseToggle.checked ? 'Noise suppression on' : 'Noise suppression off');
+      refreshCurrentMic('Mic settings applied');
     });
   }
 
@@ -2812,6 +2929,7 @@ function setupSettings() {
     echoToggle.addEventListener('change', () => {
       localStorage.setItem('chirp_echo', echoToggle.checked ? '1' : '0');
       toast(echoToggle.checked ? 'Echo cancellation on' : 'Echo cancellation off');
+      refreshCurrentMic('Mic settings applied');
     });
   }
 
@@ -2885,9 +3003,16 @@ function setupSettings() {
 
   // ── Mic device selector ───────────────────────────────────────
   const micSelect = document.getElementById('mic-device-select');
-  if (micSelect && navigator.mediaDevices?.enumerateDevices) {
+  if (micSelect) {
     async function populateMicDevices() {
       try {
+        if (!navigator.mediaDevices?.enumerateDevices || !navigator.mediaDevices?.getUserMedia || window.isSecureContext === false) {
+          micSelect.innerHTML = `<option value="">${micErrorMessage()}</option>`;
+          micSelect.disabled = true;
+          return;
+        }
+        micSelect.disabled = false;
+
         // enumerateDevices only returns labels after mic permission is granted.
         // If we don't have it yet, do a quick permission-request then re-enumerate.
         let devices = await navigator.mediaDevices.enumerateDevices();
@@ -2898,7 +3023,12 @@ function setupSettings() {
             try {
               const tmp = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
               tmp.getTracks().forEach(t => t.stop()); // release immediately
-            } catch { /* permission denied — labels will stay blank, that's fine */ }
+            } catch (err) {
+              if (!populateMicDevices.warned) {
+                populateMicDevices.warned = true;
+                toast(micErrorMessage(err), 'red');
+              }
+            }
           }
           devices = await navigator.mediaDevices.enumerateDevices();
         }
@@ -2906,36 +3036,50 @@ function setupSettings() {
         const mics = devices.filter(d => d.kind === 'audioinput');
         const savedId = localStorage.getItem('chirp_mic_device') || '';
         micSelect.innerHTML = '<option value="">Default microphone</option>';
-        mics.forEach(d => {
-          if (!d.label) return; // skip devices with no label (shouldn't happen after permission)
+        mics.forEach((d, idx) => {
           const opt = document.createElement('option');
           opt.value = d.deviceId;
-          opt.textContent = d.label;
+          opt.textContent = d.label || `Microphone ${idx + 1}`;
           micSelect.appendChild(opt);
         });
-        micSelect.value = savedId;
-      } catch {}
+        if (!mics.length) {
+          micSelect.innerHTML = '<option value="">No microphones found</option>';
+          micSelect.disabled = true;
+          return;
+        }
+        if (savedId && mics.some(d => d.deviceId === savedId)) micSelect.value = savedId;
+        else micSelect.value = '';
+      } catch (err) {
+        micSelect.innerHTML = `<option value="">${micErrorMessage(err)}</option>`;
+      }
     }
     // Populate on open (re-run each time settings opens to catch newly plugged-in devices)
     btn.addEventListener('click', populateMicDevices, { capture: false });
     populateMicDevices();
-    navigator.mediaDevices.addEventListener('devicechange', populateMicDevices);
+    navigator.mediaDevices?.addEventListener?.('devicechange', populateMicDevices);
 
-    micSelect.addEventListener('change', () => {
+    micSelect.addEventListener('change', async () => {
       const id = micSelect.value;
       localStorage.setItem('chirp_mic_device', id);
-      // Release current stream so next channel join uses the new device
-      if (state.localStream) {
-        state.localStream.getTracks().forEach(t => t.stop());
-        state.localStream = null;
-        state.audioTrack  = null;
+      micSelect.disabled = true;
+      const ok = await acquireLocalMicStream({ force: true });
+      micSelect.disabled = false;
+
+      if (ok) {
+        applyMicToActiveCalls();
+        if (state.currentChannel) {
+          Object.keys(state.connections).forEach(pid => {
+            if (!state.calls[pid] && !state.inboundCalls[pid]) callPeer(pid);
+          });
+        }
+        if (state.vadEnabled && state.currentChannel) {
+          stopVAD();
+          startVAD();
+        }
+        const label = micSelect.options[micSelect.selectedIndex]?.text || 'Default microphone';
+        toast(`Mic active: ${label}`, 'green');
       }
-      // Restart VAD with new device if active
-      if (state.vadEnabled && state.currentChannel) {
-        stopVAD(); startVAD();
-      }
-      const label = micSelect.options[micSelect.selectedIndex]?.text || 'Default';
-      toast(`Mic: ${label}`, 'info');
+      populateMicDevices();
     });
   }
 }
@@ -3025,7 +3169,7 @@ function addChannel(ch) {
 function renderChannels(filter) {
   const q = filter !== undefined ? filter : (document.getElementById('ch-search-input')?.value.trim().toLowerCase() || '');
   const scroll = document.getElementById('channel-scroll');
-  scroll.innerHTML = '';
+  if (!scroll) return;
 
   // Build member counts from lobby registry
   const counts = {};
@@ -3040,23 +3184,45 @@ function renderChannels(filter) {
     return (counts[ch] || 0) > 0;
   });
   if (channels.length === 0) {
-    scroll.innerHTML = `<div style="padding:12px 16px;font-family:var(--mono);font-size:0.6rem;color:var(--text-dim)">${q ? 'no match — press Enter to create' : 'no channels yet'}</div>`;
+    scroll.querySelectorAll('[data-channel]').forEach(el => el.remove());
+    let empty = scroll.querySelector('.channel-empty');
+    if (!empty) {
+      empty = document.createElement('div');
+      empty.className = 'channel-empty';
+      empty.style.cssText = 'padding:12px 16px;font-family:var(--mono);font-size:0.6rem;color:var(--text-dim)';
+      scroll.appendChild(empty);
+    }
+    empty.textContent = q ? 'no match - press Enter to create' : 'no channels yet';
     return;
   }
 
+  scroll.querySelector('.channel-empty')?.remove();
+  const active = new Set(channels);
+  scroll.querySelectorAll('[data-channel]').forEach(el => {
+    if (!active.has(el.dataset.channel)) el.remove();
+  });
+
   channels.forEach(ch => {
-    const el = document.createElement('div');
     const isTalking = Date.now() - (state.channelActivity[ch] || 0) < ACTIVITY_TTL;
-    el.className = `channel-item${state.currentChannel === ch ? ' active' : ''}${isTalking ? ' talking' : ''}`;
     const cnt = counts[ch] || 0;
     const isPrivate = channelVisibility[ch] === 'private';
-    el.innerHTML = `
+    const key = `${ch}|${state.currentChannel === ch}|${isTalking}|${cnt}|${isPrivate}`;
+    let el = scroll.querySelector(`[data-channel="${ch}"]`);
+    if (!el) {
+      el = document.createElement('div');
+      el.dataset.channel = ch;
+      el.addEventListener('click', () => { if (state.currentChannel !== ch) requestJoinChannel(ch); });
+    }
+    el.className = `channel-item${state.currentChannel === ch ? ' active' : ''}${isTalking ? ' talking' : ''}`;
+    if (el.dataset.rkey !== key) {
+      el.dataset.rkey = key;
+      el.innerHTML = `
       <span class="ch-hash">${isPrivate ? '🔒' : '#'}</span>
       <span class="ch-name">${ch}</span>
       ${isTalking ? '<span class="ch-activity-dot"></span>' : ''}
       <span class="ch-count" id="count-${ch}">${cnt || ''}</span>
     `;
-    el.addEventListener('click', () => { if (state.currentChannel !== ch) requestJoinChannel(ch); });
+    }
     scroll.appendChild(el);
   });
 }
@@ -3303,11 +3469,13 @@ function initPeer() {
   state.peer.on('close',        () => { clearTimeout(connectTimeout); if (!state.reconnectTimer) setConnUI('error', 'offline'); });
   state.peer.on('connection',   conn => setupDataConn(conn, true));
   state.peer.on('call',         call => {
-    if (!state.localStream) { call.close(); return; }
-    call.answer(state.localStream);
-    call.on('stream', remoteStream => { if (!state.inboundCalls[call.peer]) { state.inboundCalls[call.peer] = call; playRemoteStream(call.peer, remoteStream); } });
-    call.on('close', () => { delete state.inboundCalls[call.peer]; removeAudio(call.peer); });
-    call.on('error', () => { delete state.inboundCalls[call.peer]; removeAudio(call.peer); });
+    (async () => {
+      if (!state.localStream && !(await acquireLocalMicStream({ toastErrors: false }))) { call.close(); return; }
+      call.answer(state.localStream);
+      call.on('stream', remoteStream => { if (!state.inboundCalls[call.peer]) { state.inboundCalls[call.peer] = call; playRemoteStream(call.peer, remoteStream); } });
+      call.on('close', () => { delete state.inboundCalls[call.peer]; removeAudio(call.peer); });
+      call.on('error', () => { delete state.inboundCalls[call.peer]; removeAudio(call.peer); });
+    })();
   });
 }
 
@@ -3741,23 +3909,8 @@ async function joinChannel(ch) {
   if (state.currentChannel === ch) return;
   if (state.currentChannel) await leaveChannel();
 
-  if (!state.localStream) {
-    try {
-      const noiseSupp = localStorage.getItem('chirp_noise') !== '0';
-      const echoCanc  = localStorage.getItem('chirp_echo')  !== '0';
-      const deviceId  = localStorage.getItem('chirp_mic_device') || '';
-      state.localStream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: echoCanc,
-          noiseSuppression: noiseSupp,
-          autoGainControl: true,
-          ...(deviceId ? { deviceId: { ideal: deviceId } } : {}),
-        },
-        video: false
-      });
-      state.audioTrack = state.localStream.getAudioTracks()[0];
-      state.audioTrack.enabled = false;
-    } catch { toast('Mic permission denied — PTT will not work', 'red'); }
+  if (!state.localStream || state.audioTrack?.readyState !== 'live') {
+    await acquireLocalMicStream();
   }
 
   state.currentChannel = ch;
@@ -4119,7 +4272,7 @@ function setupPTT() {
 
 async function startTalking() {
   if (state.isTalking || !state.currentChannel || state.isMuted) return;
-  if (!state.localStream) { toast('No microphone — check permissions', 'red'); return; }
+  if (!state.localStream && !(await acquireLocalMicStream())) return;
   state.isTalking = true;
   if (state.audioTrack) state.audioTrack.enabled = true;
   DOM['ptt-btn'].classList.add('active');
@@ -4160,16 +4313,7 @@ async function startVAD() {
   // We deliberately use a SEPARATE stream for VAD so that disabling
   // state.audioTrack (muting PTT) doesn't feed silence to the analyser.
   try {
-    const noiseSupp = localStorage.getItem('chirp_noise') !== '0';
-    const echoCanc  = localStorage.getItem('chirp_echo')  !== '0';
-    const deviceId  = localStorage.getItem('chirp_mic_device') || '';
-    const constraints = {
-      echoCancellation: echoCanc,
-      noiseSuppression: noiseSupp,
-      autoGainControl: true,
-      ...(deviceId ? { deviceId: { ideal: deviceId } } : {}),
-    };
-    state.vadStream = await navigator.mediaDevices.getUserMedia({ audio: constraints, video: false });
+    state.vadStream = await navigator.mediaDevices.getUserMedia({ audio: buildMicConstraints(), video: false });
   } catch(e) {
     console.warn('VAD: could not open dedicated mic stream:', e);
     // Fallback: try to use state.localStream if available and its track is enabled
@@ -4809,10 +4953,7 @@ function setupMobileNav() {
 
   // ── Start recording ───────────────────────
   startBtn.addEventListener('click', async () => {
-    if (!state.localStream) {
-      toast('No microphone available', 'red');
-      return;
-    }
+    if (!state.localStream && !(await acquireLocalMicStream())) return;
 
     rec.format   = 'mp3';
     rec.mimeType = pickMime();
