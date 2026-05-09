@@ -2105,6 +2105,7 @@ const CONFIG    = { appName: 'Chirp' };
 const LOBBY_ID  = 'chirp-lobby-0001';
 const PRESENCE_TTL = 45000;
 const ACTIVITY_TTL = 6000;
+const PEER_RECONNECT_GRACE = 30000;
 
 function isPrivateNetworkHost(host) {
   const h = String(host || '').toLowerCase();
@@ -2122,6 +2123,10 @@ function configuredPeerBrokers() {
   const secure = secureSetting == null
     ? location.protocol === 'https:'
     : ['1', 'true', 'yes'].includes(String(secureSetting).toLowerCase());
+  const cloudBrokers = [
+    { name: 'PeerJS cloud', host: '0.peerjs.com', port: 443, path: '/', secure: true, key: 'peerjs' },
+    { name: 'PeerJS default cloud' },
+  ];
   const brokers = [];
 
   if (explicitHost) {
@@ -2135,6 +2140,8 @@ function configuredPeerBrokers() {
     });
   }
 
+  if (!explicitHost) brokers.push(...cloudBrokers);
+
   if (/^https?:$/.test(location.protocol) && location.hostname) {
     brokers.push({
       name: isPrivateNetworkHost(location.hostname) ? 'Chirp local server' : 'Chirp hosted server',
@@ -2146,10 +2153,7 @@ function configuredPeerBrokers() {
     });
   }
 
-  brokers.push(
-    { name: 'PeerJS cloud', host: '0.peerjs.com', port: 443, path: '/', secure: true, key: 'peerjs' },
-    { name: 'PeerJS default cloud' },
-  );
+  if (explicitHost) brokers.push(...cloudBrokers);
   return brokers;
 }
 
@@ -2207,6 +2211,7 @@ const state = {
   lastPeerError: null,
   pingInterval: null, pingTimes: {},
   heartbeatInterval: null,
+  peerReconnectTimers: {},
   myJoinTime: null,
   channelActivity: {},
   pendingInviteChannel: null,
@@ -2232,6 +2237,8 @@ function makePeerInfo(conn, opts = {}) {
     joinTime: opts.joinTime || Date.now(),
     volume: opts.volume ?? 1,
     ping: null,
+    lastSeen: Date.now(),
+    reconnecting: false,
   };
 }
 
@@ -2258,6 +2265,24 @@ function setLobbyChannel(peerId, channel, name) {
     channel: channel ?? null,
     seenAt: Date.now(),
   };
+}
+
+function clearPeerReconnect(peerId) {
+  clearTimeout(state.peerReconnectTimers[peerId]);
+  delete state.peerReconnectTimers[peerId];
+  if (state.connections[peerId]) state.connections[peerId].reconnecting = false;
+}
+
+function notePeerSeen(peerId) {
+  if (!peerId || peerId === state.myId) return;
+  const now = Date.now();
+  const info = state.connections[peerId];
+  if (info) {
+    info.lastSeen = now;
+    if (info.reconnecting) info.reconnecting = false;
+  }
+  if (state.lobbyRegistry[peerId]) state.lobbyRegistry[peerId].seenAt = now;
+  clearPeerReconnect(peerId);
 }
 
 /* ═══════════════════════════════════════════
@@ -2331,7 +2356,7 @@ function announceLeavingChannel() {
 function setupLeaveCleanup() {
   if (setupLeaveCleanup.bound) return;
   setupLeaveCleanup.bound = true;
-  window.addEventListener('pagehide', announceLeavingChannel);
+  // pagehide also fires during mobile/PWA backgrounding, so only explicit unload announces a leave.
   window.addEventListener('beforeunload', announceLeavingChannel);
 }
 
@@ -2433,9 +2458,14 @@ function pruneLobbyRegistry() {
   Object.entries(state.lobbyRegistry).forEach(([id, info]) => {
     if (id === state.myId) return;
     if (info.seenAt && now - info.seenAt > PRESENCE_TTL) {
+      const activeConn = state.connections[id]?.conn?.open;
+      if (activeConn) {
+        setLobbyChannel(id, state.connections[id].channel ?? info.channel, state.connections[id].name || info.name);
+        changed = true;
+        return;
+      }
       delete state.lobbyRegistry[id];
-      if (state.connections[id]) removePeer(id);
-      delete state.lobbyRegistry[id];
+      if (state.connections[id]) removePeer(id, { reason: 'stale-presence' });
       changed = true;
     }
   });
@@ -2449,7 +2479,9 @@ function pruneLobbyRegistry() {
 function startPresenceHeartbeat() {
   clearInterval(state.heartbeatInterval);
   state.heartbeatInterval = setInterval(() => {
+    if (!state.isLobbyHost && !state.lobbyConn?.open && state.peer?.open) connectToLobby();
     lobbyAnnounce();
+    syncChannelPeers();
     pruneLobbyRegistry();
   }, 10000);
 }
@@ -3215,6 +3247,14 @@ function initPeer() {
     startPing();
     connectToLobby();
     startPresenceHeartbeat();
+    if (state.currentChannel) {
+      setLobbyChannel(state.myId, state.currentChannel, state.myName);
+      setTimeout(() => {
+        lobbyAnnounce();
+        syncChannelPeers();
+        broadcastAll({ type: 'hello', name: state.myName, channel: state.currentChannel, joinTime: state.myJoinTime || Date.now(), channels: [...liveChannels], topics: channelTopics });
+      }, 700);
+    }
 
     const inviteCh = state.pendingInviteChannel || inviteChannelFromUrl();
     state.pendingInviteChannel = null;
@@ -3380,7 +3420,8 @@ function lobbyAnnounce(newChannel) {
 function syncChannelPeers() {
   if (!state.currentChannel) return;
   Object.entries(state.lobbyRegistry).forEach(([pid, info]) => {
-    if (pid !== state.myId && info.channel === state.currentChannel && !state.connections[pid])
+    const existing = state.connections[pid];
+    if (pid !== state.myId && info.channel === state.currentChannel && (!existing || !existing.conn?.open))
       connectToPeer(pid, true);
   });
 }
@@ -3408,11 +3449,11 @@ function setupDataConn(conn, incoming = false) {
   if (!current) {
     state.connections[peerId] = makePeerInfo(conn, { incoming });
   } else if (current.conn !== conn) {
-    if (current.incoming === incoming && current.conn?.open) {
+    if (!current.reconnecting && current.incoming === incoming && current.conn?.open) {
       try { conn.close(); } catch {}
       return;
     }
-    if (!shouldUseNewDataConn(peerId, incoming, current.incoming)) {
+    if (!current.reconnecting && !shouldUseNewDataConn(peerId, incoming, current.incoming)) {
       try { conn.close(); } catch {}
       return;
     }
@@ -3425,15 +3466,52 @@ function setupDataConn(conn, incoming = false) {
   }
   conn.on('open',  () => {
     if (!isCurrentDataConn(peerId, conn)) return;
+    notePeerSeen(peerId);
     conn.send({ type: 'hello', name: state.myName, channel: state.currentChannel, joinTime: state.myJoinTime || Date.now(), channels: [...liveChannels], topics: channelTopics });
     // If we're the host, tell new peer
     if (state.isChannelHost) {
       try { conn.send({ type: 'host-changed', newHostId: state.myId }); } catch {}
     }
   });
-  conn.on('data',  data => { if (isCurrentDataConn(peerId, conn)) handleData(peerId, data); });
-  conn.on('close', () => { if (isCurrentDataConn(peerId, conn)) removePeer(peerId); });
-  conn.on('error', () => { if (isCurrentDataConn(peerId, conn)) removePeer(peerId); });
+  conn.on('data',  data => {
+    if (!isCurrentDataConn(peerId, conn)) return;
+    notePeerSeen(peerId);
+    handleData(peerId, data);
+  });
+  conn.on('close', () => handlePeerConnectionLoss(peerId, conn));
+  conn.on('error', () => handlePeerConnectionLoss(peerId, conn));
+}
+
+function handlePeerConnectionLoss(peerId, conn) {
+  if (!isCurrentDataConn(peerId, conn)) return;
+  const info = state.connections[peerId];
+  if (!info) return;
+
+  info.reconnecting = true;
+  info.talking = false;
+  renderMembers();
+
+  if (state.currentChannel && info.channel === state.currentChannel && state.peer?.open) {
+    setTimeout(() => {
+      const latest = state.connections[peerId];
+      if (!latest || latest.conn?.open || latest.channel !== state.currentChannel) return;
+      connectToPeer(peerId, true, latest.joinTime, true);
+    }, 1200);
+  }
+
+  clearTimeout(state.peerReconnectTimers[peerId]);
+  state.peerReconnectTimers[peerId] = setTimeout(() => {
+    delete state.peerReconnectTimers[peerId];
+    const latest = state.connections[peerId];
+    if (!latest || latest.conn?.open) return;
+    if (state.currentChannel && state.lobbyRegistry[peerId]?.channel === state.currentChannel) {
+      latest.reconnecting = false;
+      syncChannelPeers();
+      renderMembers();
+      return;
+    }
+    removePeer(peerId, { reason: 'connection-lost' });
+  }, PEER_RECONNECT_GRACE);
 }
 
 function handleData(peerId, data) {
@@ -3484,7 +3562,7 @@ function handleData(peerId, data) {
 
     case 'peer-list':
       data.peers.forEach(({ id: pid, joinTime }) => {
-        if (!state.connections[pid] && pid !== state.myId) connectToPeer(pid, true, joinTime);
+        if (pid !== state.myId && (!state.connections[pid] || !state.connections[pid].conn?.open)) connectToPeer(pid, true, joinTime);
       });
       break;
 
@@ -3516,7 +3594,7 @@ function handleData(peerId, data) {
 
     case 'leave':
       setLobbyChannel(peerId, null, data.name);
-      removePeer(peerId);
+      removePeer(peerId, { reason: 'leave' });
       break;
     case 'ping':  try { state.connections[peerId]?.conn.send({ type: 'pong', t: data.t }); } catch {} break;
 
@@ -3589,10 +3667,14 @@ function handleData(peerId, data) {
 /* ═══════════════════════════════════════════
    PEER AUDIO
 ═══════════════════════════════════════════ */
-function connectToPeer(peerId, initiateCall, joinTime) {
-  if (state.connections[peerId] || peerId === state.myId || !state.peer?.open) return;
+function connectToPeer(peerId, initiateCall, joinTime, force = false) {
+  if (peerId === state.myId || !state.peer?.open) return;
+  const current = state.connections[peerId];
+  if (current?.conn?.open && !force) return;
+  if (current?.reconnecting && !force) return;
   const conn = state.peer.connect(peerId, { reliable: true });
-  state.connections[peerId] = makePeerInfo(conn, { peerId, joinTime });
+  if (!current) state.connections[peerId] = makePeerInfo(conn, { peerId, joinTime });
+  else if (joinTime) current.joinTime = joinTime;
   setupDataConn(conn);
   if (initiateCall && state.localStream) callPeer(peerId);
 }
@@ -3742,7 +3824,8 @@ async function leaveChannel() {
   renderChannels();
 }
 
-function removePeer(peerId) {
+function removePeer(peerId, opts = {}) {
+  clearPeerReconnect(peerId);
   const info = state.connections[peerId];
   if (!info) return;
   const name = info.name || peerId;
@@ -3764,7 +3847,7 @@ function removePeer(peerId) {
   if (wasHost) ensureChannelHost();
   if (state.isLobbyHost) lobbyBroadcast({ type: 'lobby-update', registry: state.lobbyRegistry, channels: [...liveChannels] });
   renderMembers(); renderChannels();
-  if (wasInChannel) { toast(`${name} left`); SFX.peerLeave(); }
+  if (wasInChannel && !opts.silent) { toast(`${name} left`); SFX.peerLeave(); }
 }
 
 function broadcastAll(data) {
@@ -3818,9 +3901,9 @@ function renderMembers() {
     const info    = state.connections[peerId];
     const isMuted = state.mutedPeers?.has(peerId);
     const isHost  = state.channelHostId === peerId;
-    const pingStr = info.ping != null ? `${info.ping}ms` : '';
+    const statusStr = info.reconnecting ? 'reconnecting' : (info.ping != null ? `${info.ping}ms` : '');
     const volPct  = Math.round((info.volume ?? 1) * 100);
-    const key     = `${info.name}|${info.talking}|${isMuted}|${isHost}|${pingStr}|${amHost}|${volPct}`;
+    const key     = `${info.name}|${info.talking}|${isMuted}|${isHost}|${statusStr}|${amHost}|${volPct}`;
 
     let el = list.querySelector(`[data-peer-id="${peerId}"]`);
     if (!el) {
@@ -3841,7 +3924,7 @@ function renderMembers() {
       <div class="member-avatar" data-letter="${(info.name||'?').charAt(0).toLowerCase()}">${(info.name||'?').charAt(0)}</div>
       <div class="member-info">
         <div class="member-name">${info.name}${isHost ? ' <span class="member-host-badge" title="Channel host">👑</span>' : ''}${isMuted ? ' <span style="font-size:0.6rem;opacity:0.5" title="Muted by host">🔇</span>' : ''}</div>
-        ${pingStr ? `<div class="member-sub">${pingStr}</div>` : ''}
+        ${statusStr ? `<div class="member-sub">${statusStr}</div>` : ''}
         <input class="member-volume" type="range" min="0" max="100" value="${volPct}" title="Volume for ${info.name}">
       </div>`;
     const slider = el.querySelector('.member-volume');
@@ -3973,7 +4056,7 @@ function hideModMenu() {
 }
 
 function updatePingDisplay() {
-  const pings = Object.values(state.connections).map(c => c.ping).filter(p => p != null);
+  const pings = Object.values(state.connections).filter(c => !c.reconnecting).map(c => c.ping).filter(p => p != null);
   const chip  = DOM['ping-chip'];
   if (!chip) return;
   if (!pings.length || !state.currentChannel) { chip.style.display = 'none'; return; }
@@ -3985,7 +4068,7 @@ function updatePingDisplay() {
   // Surgically update only the ping sub-labels in existing member rows
   const list = DOM['member-list'];
   Object.entries(state.connections).forEach(([pid, info]) => {
-    if (info.ping == null) return;
+    if (info.reconnecting || info.ping == null) return;
     const el = list?.querySelector(`[data-peer-id="${pid}"]`);
     if (!el) return;
     let sub = el.querySelector('.member-sub');
