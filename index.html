@@ -377,15 +377,19 @@ header {
 #ptt-section { display: none; flex-direction: column; align-items: center; gap: 28px; width: 100%; max-width: 320px; }
 #ptt-section.visible { display: flex; }
 
-/* Waveform */
+/* Waveform — lives behind the PTT circle */
 #waveform-canvas {
+  position: absolute;
+  left: 50%; top: 50%;
+  transform: translate(-50%, -50%);
   width: 100%; max-width: 260px; height: 40px;
   opacity: 0; transition: opacity 0.3s; border-radius: 4px;
+  pointer-events: none; z-index: 0;
 }
 #waveform-canvas.active { opacity: 1; filter: drop-shadow(0 0 8px rgba(124,106,255,0.3)); }
 
 /* PTT button — the one clear focal point */
-.ptt-wrap { position: relative; display: flex; align-items: center; justify-content: center; }
+.ptt-wrap { position: relative; display: flex; align-items: center; justify-content: center; isolation: isolate; }
 
 .ptt-ring {
   position: absolute; border-radius: 50%;
@@ -769,6 +773,19 @@ header {
 #toast.red   { border-color: #7f1d1d; color: var(--danger); }
 #toast.info  { border-color: var(--accent-dim); color: #a5b4fc; }
 
+/* Mobile more-menu sheet items */
+.mobile-more-item {
+  display: flex; align-items: center; gap: 14px;
+  width: 100%; padding: 16px 24px;
+  background: none; border: none; cursor: pointer;
+  font-family: var(--sans); font-size: 0.95rem; font-weight: 600;
+  color: var(--text); text-align: left;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s;
+}
+.mobile-more-item:active { background: rgba(255,255,255,0.04); }
+.mobile-more-item svg:first-child { color: var(--text-dim); flex-shrink: 0; }
+
 /* ═══════════════════════════════════════════
    INSTALL BANNER & iOS MODAL
 ═══════════════════════════════════════════ */
@@ -815,11 +832,11 @@ header {
   backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
   z-index: 200;
   padding: 4px 4px env(safe-area-inset-bottom, 8px);
-  align-items: stretch; justify-content: space-around;
+  align-items: stretch; justify-content: center; gap: 0;
 }
 .nav-tab {
   display: flex; flex-direction: column; align-items: center; gap: 3px;
-  flex: 1; min-width: 0; padding: 8px 2px; background: none; border: none; cursor: pointer;
+  flex: 0 0 140px; min-width: 0; padding: 8px 2px; background: none; border: none; cursor: pointer;
   color: var(--text-dim); font-family: var(--mono); font-size: 0.52rem;
   letter-spacing: 0.08em; text-transform: uppercase;
   transition: color 0.2s; -webkit-tap-highlight-color: transparent; position: relative;
@@ -875,10 +892,6 @@ header {
   body.tab-talk .main-content  { transform: translateX(0); }
   body.tab-talk .members-panel { transform: translateX(100%); }
 
-  body.tab-members .sidebar       { transform: translateX(-200%); }
-  body.tab-members .main-content  { transform: translateX(-100%); }
-  body.tab-members .members-panel { transform: translateX(0); }
-
   .sidebar, .members-panel { display: flex; flex-direction: column; overflow: hidden; background: var(--bg2); }
   .sidebar-header { display: flex; align-items: center; justify-content: space-between; padding: 18px 18px 12px; }
   .ch-search-wrap { padding: 10px 12px 8px; }
@@ -894,6 +907,10 @@ header {
   .member-item    { padding: 12px 16px; }
   .member-name    { font-size: 0.9rem; }
   .mobile-member-rail { display: flex; }
+
+  /* Show ··· more button, hide sidebar footer on mobile */
+  #mobile-more-btn { display: flex !important; }
+  .sidebar-footer { display: none; }
 
   .main-content   { background: var(--bg); }
   .channel-bar    { padding: 11px 14px; gap: 10px; min-height: 48px; }
@@ -1572,6 +1589,14 @@ header {
             </svg>
             <span id="ch-privacy-bar-label">public</span>
           </button>
+          <!-- Mobile ··· menu trigger -->
+          <button id="mobile-more-btn" class="channel-icon-btn" title="More" aria-label="More options" style="display:none">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+              <circle cx="5" cy="12" r="1.5" fill="currentColor"/>
+              <circle cx="12" cy="12" r="1.5" fill="currentColor"/>
+              <circle cx="19" cy="12" r="1.5" fill="currentColor"/>
+            </svg>
+          </button>
           <button id="share-channel-btn" class="channel-icon-btn" title="Copy invite link" aria-label="Copy invite link">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
               <path d="M10 13a5 5 0 007.07 0l2.12-2.12a5 5 0 00-7.07-7.07L11 4.93" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
@@ -1599,10 +1624,10 @@ header {
         </div>
 
         <div id="ptt-section">
-          <canvas id="waveform-canvas"></canvas>
           <div class="ptt-and-peers">
             <div class="mobile-member-rail" id="mobile-member-rail-left"></div>
             <div class="ptt-wrap">
+              <canvas id="waveform-canvas"></canvas>
               <button id="ptt-btn" aria-label="Push to talk">
                 <div class="ptt-profile" id="ptt-profile"></div>
                 <div class="ptt-icon-wrap">
@@ -1682,26 +1707,31 @@ header {
       </svg>
       <span>Talk</span>
     </button>
-    <button class="nav-tab" data-tab="members" id="nav-members">
-      <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-        <circle cx="8.5" cy="7"  r="3"   stroke="currentColor" stroke-width="1.6"/>
-        <path d="M2 18c0-3.314 2.91-6 6.5-6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
-        <circle cx="15"  cy="8"  r="2.5" stroke="currentColor" stroke-width="1.6"/>
-        <path d="M20 18c0-2.761-2.239-5-5-5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
-      </svg>
-      <span>Members</span>
-    </button>
-    <button class="nav-tab" id="nav-settings-btn">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-        <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-      <span>Settings</span>
-    </button>
-  </nav>
-</div>
 
-<!-- Install banner (mobile) -->
+  </nav>
+  <!-- Mobile more bottom sheet -->
+  <div id="mobile-more-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);backdrop-filter:blur(6px);z-index:300;align-items:flex-end;justify-content:center;padding:0 0 env(safe-area-inset-bottom);">
+    <div id="mobile-more-sheet" style="width:100%;background:var(--bg2);border:1px solid var(--border2);border-radius:20px 20px 0 0;padding:8px 0 16px;animation:fadeUp 0.28s cubic-bezier(0.34,1.56,0.64,1);">
+      <div style="width:36px;height:4px;border-radius:2px;background:var(--border2);margin:0 auto 16px;"></div>
+      <button class="mobile-more-item" id="mmore-settings">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span>Settings</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style="margin-left:auto;opacity:0.3"><path d="M9 18l6-6-6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <button class="mobile-more-item" id="mmore-record">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="6" fill="currentColor" opacity="0.85"/><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.6" opacity="0.5"/></svg>
+        <span>Record Session</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style="margin-left:auto;opacity:0.3"><path d="M9 18l6-6-6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <button class="mobile-more-item" id="mmore-feedback">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span>Send Feedback</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style="margin-left:auto;opacity:0.3"><path d="M9 18l6-6-6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    </div>
+  </div>
+
+</div>
 <div id="install-banner">
   <div class="install-banner-text">
     <div class="install-banner-title">Install Chirp</div>
@@ -2861,6 +2891,34 @@ function startApp() {
   setupPrivacyBtn();
   setupChannelControls();
   setupMobileNav();
+
+  // ── Mobile ··· more sheet wiring ────────────
+  (function setupMobileMore() {
+    const moreBtn     = document.getElementById('mobile-more-btn');
+    const moreOverlay = document.getElementById('mobile-more-overlay');
+    const moreSheet   = document.getElementById('mobile-more-sheet');
+    const mmoreFeedback = document.getElementById('mmore-feedback');
+    const mmoreRecord   = document.getElementById('mmore-record');
+    if (!moreBtn || !moreOverlay) return;
+
+    function openMore() {
+      moreOverlay.style.display = 'flex';
+    }
+    function closeMore() {
+      moreOverlay.style.display = 'none';
+    }
+    moreBtn.addEventListener('click', openMore);
+    moreOverlay.addEventListener('click', e => { if (e.target === moreOverlay) closeMore(); });
+
+    if (mmoreFeedback) mmoreFeedback.addEventListener('click', () => {
+      closeMore();
+      document.getElementById('feedback-overlay')?.classList.add('show');
+    });
+    if (mmoreRecord) mmoreRecord.addEventListener('click', () => {
+      closeMore();
+      document.getElementById('rec-overlay')?.classList.add('show');
+    });
+  })();
   setupLeaveCleanup();
   setupInviteRouting();
 }
@@ -3071,11 +3129,19 @@ function setupSettings() {
     SFX.settingsOpen();
   }
   btn.addEventListener('click', openSettings);
-  // Mobile nav settings button
+  // Mobile nav settings button (may no longer exist)
   const navSettingsBtn = document.getElementById('nav-settings-btn');
   if (navSettingsBtn) navSettingsBtn.addEventListener('click', openSettings);
   closeBtn.addEventListener('click', () => overlay.classList.remove('show'));
   overlay.addEventListener('click', e => { if (e.target === overlay) overlay.classList.remove('show'); });
+
+  // Mobile ··· more sheet → Settings item
+  const mmoreSettings = document.getElementById('mmore-settings');
+  if (mmoreSettings) mmoreSettings.addEventListener('click', () => {
+    const moreOverlay = document.getElementById('mobile-more-overlay');
+    if (moreOverlay) moreOverlay.style.display = 'none';
+    openSettings();
+  });
 
   // Save callsign
   function saveCallsign() {
@@ -4845,7 +4911,7 @@ function setupMobileNav() {
 
   const setTab = tabName => {
     tabs.forEach(tab => tab.classList.toggle('active', tab.dataset.tab === tabName));
-    document.body.classList.remove('tab-channels','tab-talk','tab-members');
+    document.body.classList.remove('tab-channels','tab-talk');
     document.body.classList.add(`tab-${tabName}`);
   };
 
