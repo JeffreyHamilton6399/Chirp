@@ -2561,7 +2561,7 @@ body.light header { background: rgba(248,248,252,0.86); }
         </div>
         <!-- Channel bar right: leave, about (share link is in hub; chat toggle moved to members header) -->
         <div class="channel-bar-actions" id="channel-bar-actions" style="display:none">
-          <button id="share-channel-btn" class="channel-icon-btn header-action-btn channel-bar-action" title="Share channel QR" aria-label="Share channel QR code" onclick="if(typeof openChannelQR==='function'&&typeof state!=='undefined')openChannelQR(state.currentChannel)">
+          <button id="share-channel-btn" class="channel-icon-btn header-action-btn channel-bar-action" title="Share channel QR" aria-label="Share channel QR code">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
               <rect x="3" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.8"/>
               <rect x="14" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.8"/>
@@ -3584,6 +3584,29 @@ const PRESENCE_TTL = 45000;
 const ACTIVITY_TTL = 6000;
 const PEER_RECONNECT_GRACE = 30000;
 
+// #region agent log
+function _dbgAgent(o) {
+  const body = JSON.stringify({ sessionId: '42a545', timestamp: Date.now(), runId: 'post-fix', ...o });
+  const headers = { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '42a545' };
+  const origin = typeof location !== 'undefined' ? location.origin : '';
+  if (origin && origin !== 'null') {
+    fetch(`${origin}/__chirp-debug-log`, { method: 'POST', headers, body }).catch(() => {});
+  }
+  fetch('http://127.0.0.1:7486/ingest/95a235c4-df13-4020-89b7-4505faaea01d', { method: 'POST', headers, body }).catch(() => {});
+  try {
+    const k = 'chirp_dbg_42a545';
+    const ring = (sessionStorage.getItem(k) || '') + body + '\n';
+    sessionStorage.setItem(k, ring.length > 65536 ? ring.slice(-65536) : ring);
+  } catch (_) {}
+}
+let _dbg_bgPulseN = 0;
+let _dbg_cssWrites = 0;
+let _dbg_rcN = 0;
+let _dbg_resizeBuf = [];
+let _bgPulseAppliedKey = null;
+let _resizeControlsTimer = null;
+// #endregion
+
 function isPrivateNetworkHost(host) {
   const h = String(host || '').toLowerCase();
   return h === 'localhost' || h === '127.0.0.1' || h === '::1' ||
@@ -3831,6 +3854,7 @@ function cacheDOM() {
 let _rcTimer = null;
 function scheduleRenderChannels(filter) {
   clearTimeout(_rcTimer);
+  // If called with a filter (search), preserve it; otherwise re-read from the input at flush time
   _rcTimer = setTimeout(() => renderChannels(filter), 50);
 }
 
@@ -4113,7 +4137,7 @@ function updateChannelControls() {
   const ssBtn = document.getElementById('screen-share-btn');
   const narrowPhone = typeof window.matchMedia === 'function' && window.matchMedia('(max-width: 640px)').matches;
 
-  if (share) share.style.display = 'none'; // hidden — link is in hub dropdown
+  if (share) share.style.display = inChannel ? 'flex' : 'none'; // QR invite button
   if (leave) leave.style.display = inChannel ? 'flex' : 'none';
   if (chatToggle) chatToggle.style.display = 'none'; // moved to members panel
   if (membersChatBtn) membersChatBtn.style.display = inChannel ? 'flex' : 'none';
@@ -4142,17 +4166,9 @@ function updateChannelControls() {
 
 function setupChannelControls() {
   DOM['leave-channel-btn']?.addEventListener('click', () => leaveChannel());
-  DOM['share-channel-btn']?.addEventListener('click', async () => {
+  DOM['share-channel-btn']?.addEventListener('click', () => {
     if (!state.currentChannel) return;
-    const url = channelInviteUrl(state.currentChannel);
-    try {
-      if (navigator.share) await navigator.share({ title: `Join #${state.currentChannel} on Chirp`, url });
-      else await navigator.clipboard.writeText(url);
-      SFX.copyLink();
-      toast('Invite link copied', 'green');
-    } catch {
-      toast('Could not copy invite link', 'red');
-    }
+    if (typeof openChannelQR === 'function') openChannelQR(state.currentChannel);
   });
 
   const topic = DOM['channel-topic-input'];
@@ -4192,8 +4208,8 @@ function pruneLobbyRegistry() {
     if (info.seenAt && now - info.seenAt > PRESENCE_TTL) {
       const activeConn = state.connections[id]?.conn?.open;
       if (activeConn) {
+        // Refresh seenAt so we don't keep entering this branch; no DOM update needed
         setLobbyChannel(id, state.connections[id].channel ?? info.channel, state.connections[id].name || info.name);
-        changed = true;
         return;
       }
       delete state.lobbyRegistry[id];
@@ -4308,7 +4324,19 @@ function startApp() {
       else document.getElementById('about-btn')?.click();
     });
   })();
-  window.addEventListener('resize', () => { try { updateChannelControls(); } catch {} });
+  window.addEventListener('resize', () => {
+    // #region agent log
+    const t = performance.now();
+    _dbg_resizeBuf.push(t);
+    _dbg_resizeBuf = _dbg_resizeBuf.filter(x => t - x < 400);
+    if (_dbg_resizeBuf.length >= 8) {
+      _dbgAgent({ location: 'index.html:resize', message: 'resize storm (>=8 in 400ms)', hypothesisId: 'H2', data: { burst: _dbg_resizeBuf.length } });
+      _dbg_resizeBuf.length = 0;
+    }
+    // #endregion
+    clearTimeout(_resizeControlsTimer);
+    _resizeControlsTimer = setTimeout(() => { try { updateChannelControls(); } catch {} }, 110);
+  });
   setupLeaveCleanup();
   setupInviteRouting();
 
@@ -5169,6 +5197,13 @@ function renderChannels(filter) {
   const scroll = document.getElementById('channel-scroll');
   if (!scroll) return;
 
+  // #region agent log
+  _dbg_rcN++;
+  if (_dbg_rcN <= 8 || _dbg_rcN % 20 === 0) {
+    _dbgAgent({ location: 'index.html:renderChannels', message: 'renderChannels invoked', hypothesisId: 'H3', data: { n: _dbg_rcN, qLen: q.length, liveSize: liveChannels.size } });
+  }
+  // #endregion
+
   // Build member counts from lobby registry
   const counts = {};
   Object.values(state.lobbyRegistry).forEach(info => {
@@ -6019,12 +6054,12 @@ async function leaveChannel() {
   lobbyAnnounce();
   syncInviteHash(null);
   DOM['channel-scroll']?.querySelectorAll('[data-channel]').forEach(el => el.classList.remove('active'));
-  DOM['member-list'].innerHTML = '';
-  DOM['member-count-badge'].textContent = '0';
-  DOM['channel-name-display'].textContent = '—';
-  DOM['ptt-section'].classList.remove('visible');
-  DOM['no-channel'].style.display  = '';
-  DOM['mute-btn'].style.display    = 'none';
+  if (DOM['member-list'])        DOM['member-list'].innerHTML = '';
+  if (DOM['member-count-badge']) DOM['member-count-badge'].textContent = '0';
+  if (DOM['channel-name-display']) DOM['channel-name-display'].textContent = '—';
+  DOM['ptt-section']?.classList.remove('visible');
+  if (DOM['no-channel'])  DOM['no-channel'].style.display  = '';
+  if (DOM['mute-btn'])    DOM['mute-btn'].style.display    = 'none';
   updatePrivacyBtn(); updateChannelControls();
   DOM.channelBar?.classList.remove('in-channel');
   renderChannels();
@@ -6483,17 +6518,12 @@ async function startVAD() {
     DOM['ptt-btn']?.classList.add('vad-mode');
 
     let silenceTimer = null;
-    let _vadFrame = 0;
+    const VAD_INTERVAL = 50; // ~20fps — audio changes don't need 60fps polling
     const SILENCE_DELAY = 700;
 
     function vadLoop() {
       if (!state.vadEnabled || !state.vadAnalyser) { stopVAD(); return; }
       if (state.vadCtx && state.vadCtx.state === 'suspended') { state.vadCtx.resume(); }
-
-      state.vadAnimId = requestAnimationFrame(vadLoop);
-
-      // Run analysis at ~20fps (every 3rd frame) — audio changes << 60fps
-      if (++_vadFrame % 3 !== 0) return;
 
       state.vadAnalyser.getByteFrequencyData(data);
 
@@ -6512,13 +6542,15 @@ async function startVAD() {
       } else if (state.isTalking) {
         if (!silenceTimer) silenceTimer = setTimeout(() => { stopTalking(); silenceTimer = null; }, SILENCE_DELAY);
       }
+
+      state.vadAnimId = setTimeout(vadLoop, VAD_INTERVAL);
     }
     vadLoop();
   } catch(e) { console.warn('VAD failed:', e); }
 }
 
 function stopVAD() {
-  if (state.vadAnimId) { cancelAnimationFrame(state.vadAnimId); state.vadAnimId = null; }
+  if (state.vadAnimId) { clearTimeout(state.vadAnimId); state.vadAnimId = null; }
   if (state.vadCtx)    { try { state.vadCtx.close(); } catch {} state.vadCtx = null; }
   state.vadAnalyser = null;
   setBgGridPulse(0);
@@ -6559,7 +6591,21 @@ function setupMuteBtn() {
 ═══════════════════════════════════════════ */
 function setBgGridPulse(level01) {
   const v = Math.max(0, Math.min(1, level01));
-  document.documentElement.style.setProperty('--bg-grid-pulse', String(v));
+  // Coarse quantize so we rarely touch the root stylesheet (many selectors read this var).
+  const q = Math.round(v * 24) / 24;
+  // #region agent log
+  _dbg_bgPulseN++;
+  if (_dbg_bgPulseN % 45 === 0) {
+    _dbgAgent({ location: 'index.html:setBgGridPulse', message: 'bg pulse throttle sample', hypothesisId: 'H1', data: { invocations: _dbg_bgPulseN, cssWrites: _dbg_cssWrites, level: v, appliedKey: _bgPulseAppliedKey } });
+  }
+  // #endregion
+  const key = q.toFixed(3);
+  if (_bgPulseAppliedKey === key) return;
+  _bgPulseAppliedKey = key;
+  // #region agent log
+  _dbg_cssWrites++;
+  // #endregion
+  document.documentElement.style.setProperty('--bg-grid-pulse', key);
 }
 
 let waveAnalyser, waveAnimId;
@@ -6568,6 +6614,12 @@ let waveAnalyser, waveAnimId;
 // the browser's context limit on rapid press-release cycles.
 let _waveCtxShared = null;
 let _waveStreamNode = null; // current MediaStreamSourceNode
+
+// Pre-compute 256 fill-style strings so the hot path never does string interpolation
+const _WAVE_FILL_CACHE = new Array(256);
+for (let _v = 0; _v < 256; _v++) {
+  _WAVE_FILL_CACHE[_v] = `rgba(124,106,255,${(0.3 + (_v / 255) * 0.7).toFixed(3)})`;
+}
 
 function _getWaveCtx() {
   if (!_waveCtxShared || _waveCtxShared.state === 'closed') {
@@ -6620,12 +6672,6 @@ function drawWaveform() {
   const ctx  = canvas.getContext('2d');
   // Allocate the frequency buffer once and reuse it each frame
   const data = new Uint8Array(waveAnalyser.frequencyBinCount);
-  // Pre-compute 256 fill-style strings so the hot path never does string interpolation
-  const FILL_CACHE = new Array(256);
-  for (let v = 0; v < 256; v++) {
-    const alpha = (0.3 + (v / 255) * 0.7).toFixed(3);
-    FILL_CACHE[v] = `rgba(124,106,255,${alpha})`;
-  }
 
   function frame() {
     waveAnimId = requestAnimationFrame(frame);
@@ -6639,7 +6685,7 @@ function drawWaveform() {
       avg += v;
       const h    = Math.max((v / 255) * canvas.height * 0.9, 2);
       const x    = i * step;
-      ctx.fillStyle = FILL_CACHE[v];
+      ctx.fillStyle = _WAVE_FILL_CACHE[v];
       ctx.beginPath();
       ctx.roundRect(x, (canvas.height - h) / 2, barW, h, 2);
       ctx.fill();
@@ -7892,10 +7938,12 @@ function setupMobileNav() {
     const list = document.getElementById('member-list');
     if (!list) return;
 
+    const STATUS_COLORS = { online: 'var(--green)', away: '#f59e0b', busy: 'var(--danger)' };
+    const raisedHands = window._getRaisedHands ? window._getRaisedHands() : new Set();
+
     // Self entry - status dot
     const selfAvatar = list.querySelector('.member-self .member-avatar');
     if (selfAvatar && window._getMyStatus) {
-      const STATUS_COLORS = { online: 'var(--green)', away: '#f59e0b', busy: 'var(--danger)' };
       let dot = selfAvatar.querySelector('.status-dot');
       if (!dot) {
         selfAvatar.style.position = 'relative';
@@ -7914,7 +7962,6 @@ function setupMobileNav() {
       // Status dot
       const av = el.querySelector('.member-avatar');
       if (av && info.status) {
-        const STATUS_COLORS = { online: 'var(--green)', away: '#f59e0b', busy: 'var(--danger)' };
         let dot = av.querySelector('.status-dot');
         if (!dot) {
           av.style.position = 'relative';
@@ -7926,7 +7973,6 @@ function setupMobileNav() {
       }
 
       // Raised hand badge
-      const raisedHands = window._getRaisedHands ? window._getRaisedHands() : new Set();
       const nameEl = el.querySelector('.member-name');
       if (nameEl) {
         let handBadge = nameEl.querySelector('.member-hand-badge');
@@ -8276,8 +8322,8 @@ function setupMobileNav() {
   // Patch joinChannel to request wake lock and start keepalive
   const _prevJoin = window.joinChannel;
   if (_prevJoin) {
-    window.joinChannel = function(ch) {
-      const r = _prevJoin.apply(this, arguments);
+    window.joinChannel = async function(ch) {
+      const r = await _prevJoin.apply(this, arguments);
       startKeepAlive();
       requestWakeLock();
       return r;
@@ -8353,31 +8399,8 @@ function setupMobileNav() {
     document.getElementById('about-overlay')?.classList.add('show');
   });
 
-  // --- Keep hub-folder-item states in sync with original button states ---
-  // Record: mirror .recording class
-  const recFab = document.getElementById('record-fab');
-  if (recFab) {
-    const obs = new MutationObserver(() => {
-      recFab.classList.toggle('recording', recFab.classList.contains('recording'));
-    });
-    obs.observe(recFab, { attributes: true, attributeFilter: ['class'] });
-  }
-  // Screen share: mirror .sharing
-  const ssBtn = document.getElementById('screen-share-btn');
-  if (ssBtn) {
-    const obs2 = new MutationObserver(() => {
-      ssBtn.classList.toggle('sharing', ssBtn.classList.contains('sharing'));
-    });
-    obs2.observe(ssBtn, { attributes: true, attributeFilter: ['class'] });
-  }
-  // Raise hand: mirror .raised
-  const handBtn = document.getElementById('raise-hand-btn');
-  if (handBtn) {
-    const obs3 = new MutationObserver(() => {
-      handBtn.classList.toggle('raised', handBtn.classList.contains('raised'));
-    });
-    obs3.observe(handBtn, { attributes: true, attributeFilter: ['class'] });
-  }
+  // Note: record-fab, screen-share-btn, and raise-hand-btn manage their own
+  // class states directly — no mirroring needed here.
 
   // Close hub when a folder item (except reactions trigger) is clicked
   hubFolder.addEventListener('click', e => {
@@ -8399,6 +8422,16 @@ function setupMobileNav() {
   const analysers = new Map(); // HTMLAudioElement → {analyser, src}
   const buf       = new Uint8Array(16);
   let   bgCtx     = null;
+  let   _scanDirty = true; // flag: re-scan DOM for new audio elements
+
+  // Mark dirty whenever peers change — avoids DOM scan on every frame
+  const _origAddAudio = window.playRemoteStream;
+  // We patch via MutationObserver on the body to catch audio elements added/removed
+  new MutationObserver(muts => {
+    for (const m of muts) {
+      if (m.addedNodes.length || m.removedNodes.length) { _scanDirty = true; break; }
+    }
+  }).observe(document.body, { childList: true, subtree: true });
 
   function getCtx() {
     if (!bgCtx || bgCtx.state === 'closed') {
@@ -8414,30 +8447,33 @@ function setupMobileNav() {
     // If local waveform is actively running, let it drive the pulse exclusively
     if (waveAnimId) return;
 
-    // Scan DOM for peer audio elements
-    const audioEls = document.querySelectorAll('audio[data-peer]');
+    // Only re-scan DOM when something changed (peer joined/left)
+    if (_scanDirty) {
+      _scanDirty = false;
+      const audioEls = document.querySelectorAll('audio[data-peer]');
 
-    // Drop stale
-    analysers.forEach((_, el) => {
-      if (!el.isConnected) {
-        try { analysers.get(el)?.src.disconnect(); } catch {}
-        analysers.delete(el);
-      }
-    });
+      // Drop stale
+      analysers.forEach((_, el) => {
+        if (!el.isConnected) {
+          try { analysers.get(el)?.src.disconnect(); } catch {}
+          analysers.delete(el);
+        }
+      });
 
-    // Hook new ones
-    audioEls.forEach(el => {
-      if (!analysers.has(el) && el.srcObject) {
-        try {
-          const ctx      = getCtx();
-          const src      = ctx.createMediaStreamSource(el.srcObject);
-          const analyser = ctx.createAnalyser();
-          analyser.fftSize = 32;
-          src.connect(analyser);
-          analysers.set(el, { analyser, src });
-        } catch {}
-      }
-    });
+      // Hook new ones
+      audioEls.forEach(el => {
+        if (!analysers.has(el) && el.srcObject) {
+          try {
+            const ctx      = getCtx();
+            const src      = ctx.createMediaStreamSource(el.srcObject);
+            const analyser = ctx.createAnalyser();
+            analyser.fftSize = 32;
+            src.connect(analyser);
+            analysers.set(el, { analyser, src });
+          } catch {}
+        }
+      });
+    }
 
     if (analysers.size === 0) { setBgGridPulse(0); return; }
 
