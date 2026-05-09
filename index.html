@@ -391,14 +391,14 @@ header {
 #ptt-section { display: none; flex-direction: column; align-items: center; gap: 28px; width: 100%; max-width: 320px; }
 #ptt-section.visible { display: flex; }
 
-/* Waveform — lives behind the PTT circle */
+/* Waveform — lives in front of the PTT circle (including profile photo) */
 #waveform-canvas {
   position: absolute;
   left: 50%; top: 50%;
   transform: translate(-50%, -50%);
   width: 100%; max-width: 260px; height: 40px;
   opacity: 0; transition: opacity 0.3s; border-radius: 4px;
-  pointer-events: none; z-index: 0;
+  pointer-events: none; z-index: 3;
   will-change: opacity;
 }
 #waveform-canvas.active { opacity: 1; filter: drop-shadow(0 0 8px rgba(124,106,255,0.3)); }
@@ -461,7 +461,7 @@ header {
 #ptt-btn.has-profile .ptt-profile { display: block; }
 #ptt-btn.has-profile .ptt-icon-wrap { display: none; }
 #ptt-btn.has-profile .ptt-label { 
-  position: relative; z-index: 2; 
+  position: relative; z-index: 4; 
   text-shadow: 0 1px 4px rgba(0,0,0,0.7);
   color: rgba(255,255,255,0.85);
 }
@@ -833,12 +833,11 @@ body.light body::before { opacity: 0.07; }
 
 /* Reactions dropdown */
 .reactions-trigger-btn {
-  display: flex; align-items: center; gap: 6px;
-  padding: 7px 13px; border-radius: 20px;
+  display: flex; align-items: center; justify-content: center;
+  width: 36px; height: 36px; border-radius: 20px;
   background: var(--bg3); border: 1.5px solid var(--border2);
   font-size: 1rem; color: var(--text-dim); cursor: pointer;
-  transition: all 0.2s;
-  font-family: var(--mono); font-size: 0.65rem; letter-spacing: 0.06em; text-transform: uppercase;
+  transition: all 0.2s; flex-shrink: 0;
 }
 .reactions-trigger-btn:hover { border-color: var(--accent-dim); color: var(--accent); background: var(--accent-glow); }
 .reactions-trigger-btn.open { border-color: var(--accent-dim); color: var(--accent); background: var(--accent-glow); }
@@ -1690,6 +1689,15 @@ body.light body::before { opacity: 0.07; }
 .ch-random-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-glow); border-style: solid; }
 .ch-random-btn:active { opacity: 0.75; }
 
+/* Join private room input */
+#join-private-wrap .ch-create-input::placeholder { color: var(--text-dim); }
+#join-private-wrap .ch-create-btn {
+  border-color: rgba(248,113,113,0.35); color: rgba(248,113,113,0.7);
+}
+#join-private-wrap .ch-create-btn:hover {
+  border-color: var(--danger); color: var(--danger); background: rgba(248,113,113,0.08);
+}
+
 /* Channel privacy badge */
 .ch-privacy-badge {
   font-size: 0.5rem; opacity: 0.5; flex-shrink: 0; line-height: 1;
@@ -2110,7 +2118,19 @@ body.light body::before { opacity: 0.07; }
           </label>
           <button id="new-ch-btn" class="ch-create-btn">+</button>
         </div>
-
+        <!-- Join private room by name -->
+        <div id="join-private-wrap" style="margin-top:6px;">
+          <div class="ch-create-row">
+            <input id="join-private-input" class="ch-create-input" type="text" maxlength="20"
+              placeholder="🔒 join private…" autocomplete="off" spellcheck="false">
+            <button id="join-private-btn" class="ch-create-btn" title="Join private room">
+              <svg width="11" height="11" viewBox="0 0 16 16" fill="none">
+                <rect x="3" y="7.5" width="10" height="7" rx="1.5" stroke="currentColor" stroke-width="1.4"/>
+                <path d="M5 7.5V5a3 3 0 016 0v2.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+              </svg>
+            </button>
+          </div>
+        </div>
       </div>
       <div class="sidebar-footer">
         <button id="about-btn" title="About & Shortcuts">
@@ -2201,7 +2221,7 @@ body.light body::before { opacity: 0.07; }
             <div class="mobile-member-rail" id="mobile-member-rail-right"></div>
           </div>
           <div style="display:none" id="mobile-member-rail"></div>
-          <div class="ptt-hint">hold button · or hold <kbd id="space-kbd">Space</kbd></div>
+          <div class="ptt-hint" id="ptt-hint-bar">hold button · or hold <kbd id="space-kbd">Space</kbd></div>
 
           <!-- Mute button — prominent, below PTT -->
           <button id="mute-btn" style="display:none" class="mute-btn-standalone">
@@ -2222,12 +2242,12 @@ body.light body::before { opacity: 0.07; }
           </button>
 
           <!-- Compact: raise hand + reactions -->
-          <div id="ptt-extra-row" style="display:none;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;">
+          <div id="ptt-extra-row" style="display:none;align-items:center;justify-content:center;gap:6px;">
             <button id="raise-hand-btn" class="raise-hand-btn-compact" title="Raise hand (H)">✋</button>
             <!-- Reactions dropdown -->
             <div class="reactions-dropdown-wrap" id="reactions-dropdown-wrap">
               <button id="reactions-trigger-btn" class="reactions-trigger-btn" title="React">
-                <span>😊</span><span>react</span>
+                <span>😊</span>
               </button>
               <div class="reactions-dropdown" id="reactions-dropdown">
                 <button class="reaction-btn" data-emoji="👍" title="Thumbs up">👍</button>
@@ -2827,6 +2847,18 @@ body.light body::before { opacity: 0.07; }
           <label class="ptt-key-option"><input type="radio" name="ptt-key" value="KeyV" id="ptt-key-v"><span>V</span></label>
           <label class="ptt-key-option"><input type="radio" name="ptt-key" value="AltLeft" id="ptt-key-alt"><span>Alt</span></label>
         </div>
+      </div>
+
+      <div class="settings-row compact">
+        <div class="settings-row-label">
+          <span>Show PTT Hint</span>
+          <small>Show "hold button / hold Space" below PTT</small>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" id="ptt-hint-toggle" checked>
+          <div class="toggle-track"></div>
+          <div class="toggle-thumb"></div>
+        </label>
       </div>
     </div>
 
@@ -3609,7 +3641,7 @@ function markChannelActivity(ch) {
     localStorage.setItem('chirp_name', n);
     // Request mic permission once here so browser caches it; errors are non-fatal
     if (navigator.mediaDevices?.getUserMedia) {
-      navigator.mediaDevices.getUserMedia({ audio: true, video: false })
+      navigator.mediaDevices.getUserMedia({ audio: buildMicConstraints('', false), video: false })
         .then(stream => {
           state.localStream = stream;
           state.audioTrack  = stream.getAudioTracks()[0];
@@ -4255,6 +4287,21 @@ function setupSettings() {
     }));
   }
 
+  // PTT hint visibility toggle
+  const pttHintToggle = document.getElementById('ptt-hint-toggle');
+  if (pttHintToggle) {
+    const savedHint = localStorage.getItem('chirp_ptthint');
+    pttHintToggle.checked = savedHint === null ? true : savedHint === '1';
+    const hintBar = document.getElementById('ptt-hint-bar');
+    if (hintBar) hintBar.style.display = pttHintToggle.checked ? '' : 'none';
+    pttHintToggle.addEventListener('change', () => {
+      localStorage.setItem('chirp_ptthint', pttHintToggle.checked ? '1' : '0');
+      const hb = document.getElementById('ptt-hint-bar');
+      if (hb) hb.style.display = pttHintToggle.checked ? '' : 'none';
+      toast(pttHintToggle.checked ? 'PTT hint shown' : 'PTT hint hidden');
+    });
+  }
+
   // Output volume slider
   const volSlider = document.getElementById('output-volume');
   const volVal    = document.getElementById('output-volume-val');
@@ -4370,14 +4417,16 @@ function setupSettings() {
 function updatePttLabel() {
   const label = DOM['ptt-label-text'];
   const btn   = DOM['ptt-btn'];
+  const hintBarEl = document.getElementById('ptt-hint-bar');
+  const showHint = localStorage.getItem('chirp_ptthint') !== '0';
   if (state.vadEnabled) {
     if (label) label.textContent = 'listening';
     btn?.classList.add('vad-mode');
-    if (DOM.pttHint) DOM.pttHint.style.display = 'none';
+    if (hintBarEl) hintBarEl.style.display = 'none';
   } else {
     if (label) label.textContent = !state.currentChannel ? '' : 'hold to talk';
     btn?.classList.remove('vad-mode');
-    if (DOM.pttHint) DOM.pttHint.style.display = state.currentChannel ? '' : 'none';
+    if (hintBarEl) hintBarEl.style.display = (showHint && state.currentChannel) ? '' : 'none';
   }
 }
 
@@ -4444,6 +4493,22 @@ function setupChannelCreate() {
     }
     if (e.key === 'Escape') { searchInput.value = ''; renderChannels(''); }
   });
+
+  // Join private room by name
+  const joinPrivateInput = document.getElementById('join-private-input');
+  const joinPrivateBtn   = document.getElementById('join-private-btn');
+  function joinPrivateRoom() {
+    const raw = normalizeChannelName(joinPrivateInput?.value);
+    if (!raw) { joinPrivateInput?.focus(); toast('Enter a private room name', 'red'); return; }
+    joinPrivateInput.value = '';
+    // Mark as private locally so it shows the lock and doesn't leak to lobby
+    channelVisibility[raw] = 'private';
+    safeAddChannel(raw);
+    requestJoinChannel(raw);
+    SFX.channelCreate?.();
+  }
+  joinPrivateBtn?.addEventListener('click', joinPrivateRoom);
+  joinPrivateInput?.addEventListener('keydown', e => { if (e.key === 'Enter') joinPrivateRoom(); });
 }
 
 function addChannel(ch) {
@@ -4657,6 +4722,10 @@ function makePeerConfig() {
       { urls: 'stun:stun.l.google.com:19302' },
       { urls: 'stun:stun1.l.google.com:19302' },
       { urls: 'stun:global.stun.twilio.com:3478' },
+      // Free TURN servers — help tablets behind strict NAT (e.g. Samsung on mobile data)
+      { urls: 'turn:openrelay.metered.ca:80',     username: 'openrelayproject', credential: 'openrelayproject' },
+      { urls: 'turn:openrelay.metered.ca:443',    username: 'openrelayproject', credential: 'openrelayproject' },
+      { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
     ]},
   };
   ['host', 'port', 'path', 'secure', 'key'].forEach(key => {
@@ -4892,10 +4961,19 @@ function lobbyAnnounce(newChannel) {
 function syncChannelPeers() {
   if (!state.currentChannel) return;
   Object.entries(state.lobbyRegistry).forEach(([pid, info]) => {
+    if (pid === state.myId) return;
+    if (info.channel !== state.currentChannel) return;
     const existing = state.connections[pid];
-    if (pid !== state.myId && info.channel === state.currentChannel && (!existing || !existing.conn?.open))
-      connectToPeer(pid, true);
+    // Connect if no connection OR connection is closed/stale (helps Samsung tablets)
+    if (!existing || !existing.conn?.open) {
+      connectToPeer(pid, true, info.joinTime);
+    } else if (!state.calls[pid] && !state.inboundCalls[pid] && state.localStream) {
+      // Data conn is open but audio call is missing — re-initiate
+      callPeer(pid);
+    }
   });
+  // Also ensure any connected peers we have audio for are reflected in member list
+  renderMembers();
 }
 
 /* ═══════════════════════════════════════════
@@ -6668,6 +6746,23 @@ function setupMobileNav() {
 })();
 
 /* ═══════════════════════════════════════════
+   PROFANITY FILTER
+═══════════════════════════════════════════ */
+const PROFANITY_LIST = [
+  'fuck','shit','ass','bitch','bastard','damn','crap','piss','dick','cock',
+  'pussy','cunt','motherfucker','asshole','jackass','bullshit','douchebag',
+  'nigger','nigga','faggot','retard','whore','slut','twat','wanker','prick',
+  'fucker','shithead','dumbass','dipshit','goddamn','bollocks','bugger',
+];
+const _profanityRx = new RegExp(
+  `\\b(${PROFANITY_LIST.map(w => w.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).join('|')})\\b`,
+  'gi'
+);
+function filterProfanity(text) {
+  return text.replace(_profanityRx, m => m[0] + '*'.repeat(m.length - 1));
+}
+
+/* ═══════════════════════════════════════════
    TEXT CHAT
 ═══════════════════════════════════════════ */
 (function setupChat() {
@@ -6736,9 +6831,10 @@ function setupMobileNav() {
   function sendMessage() {
     const text = inputEl.value.trim();
     if (!text || !state.currentChannel) return;
+    const filtered = filterProfanity(text);
     inputEl.value = '';
-    appendMessage(state.myName, text, true);
-    broadcastAll({ type: 'chat', name: state.myName, text });
+    appendMessage(state.myName, filtered, true);
+    broadcastAll({ type: 'chat', name: state.myName, text: filtered });
   }
 
   headerBtn.addEventListener('click', () => toggleChat());
@@ -6765,7 +6861,7 @@ function setupMobileNav() {
   // Clear messages on leave
   const origLeave = window._hookLeaveChannel;
   window._chatAppendSystem = (text) => appendMessage(null, text, false, true);
-  window._chatReceive = (name, text) => appendMessage(name, text, false, false);
+  window._chatReceive = (name, text) => appendMessage(name, filterProfanity(text), false, false);
 
   // Hook into the existing handleData function by patching broadcastAll listener
   // We patch handleData via global hook
