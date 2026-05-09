@@ -1988,6 +1988,113 @@ body.light body::before { opacity: 0.07; }
 @keyframes breathe    { 0%, 100% { opacity: 0.15; transform: scale(1); } 50% { opacity: 0.22; transform: scale(1.04); } }
 @keyframes spin       { to { transform: rotate(360deg); } }
 @keyframes countBump  { 0% { transform: scale(1); } 40% { transform: scale(1.4); } 100% { transform: scale(1); } }
+
+/* ═══════════════════════════════════════════
+   SCREEN SHARE
+═══════════════════════════════════════════ */
+#screen-share-overlay {
+  display: none; position: fixed; inset: 0; z-index: 400;
+  background: rgba(0,0,0,0.85); backdrop-filter: blur(4px);
+  flex-direction: column; align-items: stretch; justify-content: flex-start;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+#screen-share-overlay.show { display: flex; }
+
+.screen-share-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 18px; border-bottom: 1px solid var(--border); flex-shrink: 0;
+  background: var(--bg2);
+}
+.screen-share-title {
+  font-family: var(--mono); font-size: 0.68rem; color: var(--text-dim);
+  letter-spacing: 0.15em; text-transform: uppercase;
+  display: flex; align-items: center; gap: 8px;
+}
+.screen-share-title .ss-dot {
+  width: 7px; height: 7px; border-radius: 50%; background: var(--danger);
+  box-shadow: 0 0 8px var(--danger); animation: blink 0.7s ease-in-out infinite alternate;
+}
+.screen-share-close {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: var(--bg4); border: 1px solid var(--border2);
+  color: var(--text-dim); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s, color 0.15s;
+}
+.screen-share-close:hover { background: rgba(248,113,113,0.1); color: var(--danger); border-color: rgba(248,113,113,0.4); }
+
+.screen-share-grid {
+  flex: 1; overflow-y: auto; display: flex; flex-wrap: wrap;
+  gap: 8px; padding: 12px; align-content: flex-start;
+}
+.screen-tile {
+  position: relative; background: var(--bg3); border: 1px solid var(--border2);
+  border-radius: 10px; overflow: hidden; flex: 1 1 320px; min-height: 180px;
+  display: flex; flex-direction: column;
+}
+.screen-tile-label {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  background: linear-gradient(transparent, rgba(0,0,0,0.7));
+  padding: 18px 10px 8px;
+  font-family: var(--mono); font-size: 0.6rem; color: var(--text);
+  letter-spacing: 0.06em; display: flex; align-items: center; gap: 6px;
+}
+.screen-tile-label .ss-dot {
+  width: 6px; height: 6px; border-radius: 50%; background: var(--danger);
+  box-shadow: 0 0 6px var(--danger); animation: blink 0.7s ease-in-out infinite alternate;
+  flex-shrink: 0;
+}
+.screen-tile video {
+  width: 100%; height: 100%; object-fit: contain; display: block; background: #000;
+}
+.screen-share-bar {
+  padding: 10px 14px; border-top: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  background: var(--bg2); flex-shrink: 0;
+}
+#stop-screen-share-btn {
+  background: rgba(248,113,113,0.1); border: 1px solid rgba(248,113,113,0.4);
+  border-radius: var(--radius-sm); padding: 9px 20px;
+  font-family: var(--mono); font-size: 0.68rem; color: var(--danger);
+  letter-spacing: 0.08em; cursor: pointer; text-transform: uppercase;
+  transition: background 0.15s; display: flex; align-items: center; gap: 8px;
+}
+#stop-screen-share-btn:hover { background: rgba(248,113,113,0.18); }
+
+/* Screen share FAB in channel bar */
+#screen-share-btn {
+  display: none; align-items: center; justify-content: center;
+  width: 30px; height: 30px; border-radius: var(--radius-sm);
+  background: var(--bg3); border: 1px solid var(--border);
+  color: var(--text-dim); cursor: pointer;
+  transition: border-color 0.2s, color 0.2s, background 0.2s, transform 0.12s;
+  flex-shrink: 0;
+}
+#screen-share-btn:hover { border-color: var(--accent-dim); color: var(--accent); background: var(--accent-glow); }
+#screen-share-btn:active { transform: scale(0.94); }
+#screen-share-btn.sharing { border-color: rgba(248,113,113,0.45); color: var(--danger); background: rgba(248,113,113,0.08); animation: rec-pulse-fab 1.8s ease-in-out infinite; }
+
+/* Channel bar right-side action group */
+.channel-bar-actions {
+  display: flex; align-items: center; gap: 6px; flex-shrink: 0; margin-left: auto;
+}
+
+/* ptt-extra-row — always a row of pill buttons, never hidden on mobile via height */
+#ptt-extra-row {
+  position: relative; z-index: 1;
+}
+@media (max-width: 640px) {
+  /* On mobile, anchor hand + react buttons into the channel bar right side */
+  #ptt-extra-row { display: none !important; } /* hide from center-area on mobile */
+  .channel-bar-mobile-extras {
+    display: flex; align-items: center; gap: 6px;
+  }
+  /* screen share viewer on mobile: full screen below nav */
+  #screen-share-overlay { padding-bottom: var(--mobile-nav-height, 64px); }
+}
+@media (min-width: 641px) {
+  .channel-bar-mobile-extras { display: none; }
+}
 </style>
 </head>
 <body>
@@ -2174,6 +2281,36 @@ body.light body::before { opacity: 0.07; }
           </button>
           <input id="channel-topic-input" class="channel-topic-input" maxlength="80"
             placeholder="set topic..." autocomplete="off" spellcheck="false" style="display:none">
+        </div>
+        <!-- Channel bar right actions: screen share + mobile hand/react -->
+        <div class="channel-bar-actions" id="channel-bar-actions" style="display:none">
+          <!-- Screen share button (desktop + mobile) -->
+          <button id="screen-share-btn" title="Share screen">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+              <rect x="2" y="4" width="20" height="14" rx="2" stroke="currentColor" stroke-width="1.8"/>
+              <path d="M8 20h8M12 18v2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+              <path d="M9 11l3-3 3 3M12 8v6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+          <!-- Mobile-only: raise hand + react in bar -->
+          <div class="channel-bar-mobile-extras">
+            <button id="raise-hand-btn-bar" class="raise-hand-btn-compact" title="Raise hand">✋</button>
+            <div class="reactions-dropdown-wrap" id="reactions-dropdown-wrap-bar">
+              <button id="reactions-trigger-btn-bar" class="reactions-trigger-btn" title="React">
+                <span>😊</span>
+              </button>
+              <div class="reactions-dropdown" id="reactions-dropdown-bar" style="bottom:calc(100% + 8px);top:auto;">
+                <button class="reaction-btn" data-emoji="👍">👍</button>
+                <button class="reaction-btn" data-emoji="👎">👎</button>
+                <button class="reaction-btn" data-emoji="🔥">🔥</button>
+                <button class="reaction-btn" data-emoji="😂">😂</button>
+                <button class="reaction-btn" data-emoji="🎉">🎉</button>
+                <button class="reaction-btn" data-emoji="❤️">❤️</button>
+                <button class="reaction-btn" data-emoji="👀">👀</button>
+                <button class="reaction-btn" data-emoji="🤔">🤔</button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -2365,6 +2502,11 @@ body.light body::before { opacity: 0.07; }
         <span>Record Session</span>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style="margin-left:auto;opacity:0.3"><path d="M9 18l6-6-6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>
+      <button class="mobile-more-item" id="mmore-screenshare">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="2" y="4" width="20" height="14" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M8 20h8M12 18v2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M9 11l3-3 3 3M12 8v6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span id="mmore-screenshare-label">Share Screen</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style="margin-left:auto;opacity:0.3"><path d="M9 18l6-6-6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
       <button class="mobile-more-item" id="mmore-about">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.6"/><line x1="12" y1="8" x2="12" y2="8.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="12" y1="11" x2="12" y2="16" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
         <span>About &amp; Feedback</span>
@@ -2372,6 +2514,29 @@ body.light body::before { opacity: 0.07; }
       </button>
     </div>
   </div>
+
+<!-- Screen share overlay -->
+<div id="screen-share-overlay">
+  <div class="screen-share-header">
+    <div class="screen-share-title">
+      <span class="ss-dot" id="ss-header-dot" style="display:none"></span>
+      <span id="ss-header-label">Screen Share</span>
+    </div>
+    <button class="screen-share-close" id="screen-share-overlay-close" title="Close">
+      <svg width="12" height="12" viewBox="0 0 14 14" fill="none"><line x1="1" y1="1" x2="13" y2="13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><line x1="13" y1="1" x2="1" y2="13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+    </button>
+  </div>
+  <div class="screen-share-grid" id="screen-share-grid">
+    <!-- screen tiles injected here -->
+  </div>
+  <div class="screen-share-bar">
+    <button id="stop-screen-share-btn" style="display:none">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="2" fill="currentColor" opacity="0.8"/></svg>
+      Stop sharing
+    </button>
+    <span id="ss-no-shares-msg" style="font-family:var(--mono);font-size:0.62rem;color:var(--text-dim);letter-spacing:0.08em;">No one is sharing their screen</span>
+  </div>
+</div>
 
 </div>
 <div id="install-banner">
@@ -3521,11 +3686,15 @@ function updateChannelControls() {
   const share = DOM['share-channel-btn'];
   const leave = DOM['leave-channel-btn'];
   const more  = document.getElementById('mobile-more-btn');
+  const barActions = document.getElementById('channel-bar-actions');
+  const ssBtn = document.getElementById('screen-share-btn');
 
   if (share) share.style.display = inChannel ? 'flex' : 'none';
   if (leave) leave.style.display = inChannel ? 'flex' : 'none';
   // ··· button: JS sets base display; mobile media-query overrides to flex via !important
   if (more) more.style.display = inChannel ? '' : 'none';
+  if (barActions) barActions.style.display = inChannel ? 'flex' : 'none';
+  if (ssBtn) ssBtn.style.display = inChannel ? 'flex' : 'none';
   if (!topic) return;
 
   topic.style.display = inChannel ? '' : 'none';
@@ -3686,6 +3855,7 @@ function startApp() {
     const moreSheet   = document.getElementById('mobile-more-sheet');
     const mmoreAbout    = document.getElementById('mmore-about');
     const mmoreRecord   = document.getElementById('mmore-record');
+    const mmoreScreenshare = document.getElementById('mmore-screenshare');
     if (!moreBtn || !moreOverlay) return;
 
     function openMore() {
@@ -3705,6 +3875,11 @@ function startApp() {
     if (mmoreRecord) mmoreRecord.addEventListener('click', () => {
       closeMore();
       document.getElementById('rec-overlay')?.classList.add('show');
+    });
+    if (mmoreScreenshare) mmoreScreenshare.addEventListener('click', () => {
+      closeMore();
+      // Trigger the screen share button
+      document.getElementById('screen-share-btn')?.click();
     });
   })();
   setupLeaveCleanup();
@@ -7232,6 +7407,372 @@ function filterProfanity(text) {
       }
     });
   };
+})();
+
+/* ═══════════════════════════════════════════
+   MOBILE BAR: RAISE HAND + REACT DUPLICATES
+   Wire the channel-bar copies to same actions
+═══════════════════════════════════════════ */
+(function setupMobileBarExtras() {
+  // Raise hand bar button
+  const handBtnBar = document.getElementById('raise-hand-btn-bar');
+  const handBtnMain = document.getElementById('raise-hand-btn');
+  if (handBtnBar && handBtnMain) {
+    handBtnBar.addEventListener('click', () => handBtnMain.click());
+    // Sync raised state to bar button
+    const _origRaiseHandReceive = window._raiseHandReceive;
+    const syncHandBar = () => {
+      const raised = handBtnMain.classList.contains('raised');
+      handBtnBar.classList.toggle('raised', raised);
+    };
+    // Watch for class changes on the main button
+    new MutationObserver(syncHandBar).observe(handBtnMain, { attributes: true, attributeFilter: ['class'] });
+  }
+
+  // Reactions trigger bar button
+  const triggerBar = document.getElementById('reactions-trigger-btn-bar');
+  const dropdownBar = document.getElementById('reactions-dropdown-bar');
+  if (triggerBar && dropdownBar) {
+    triggerBar.addEventListener('click', e => {
+      e.stopPropagation();
+      const open = dropdownBar.classList.toggle('open');
+      triggerBar.classList.toggle('open', open);
+    });
+    document.addEventListener('click', e => {
+      if (!triggerBar.contains(e.target) && !dropdownBar.contains(e.target)) {
+        dropdownBar.classList.remove('open');
+        triggerBar.classList.remove('open');
+      }
+    });
+    // Wire reaction buttons to same handler as main ones
+    dropdownBar.querySelectorAll('.reaction-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const emoji = btn.dataset.emoji;
+        dropdownBar.classList.remove('open');
+        triggerBar.classList.remove('open');
+        // Trigger same reaction logic as main buttons
+        const mainBtn = document.querySelector(`#reactions-dropdown .reaction-btn[data-emoji="${emoji}"]`);
+        if (mainBtn) { mainBtn.click(); return; }
+        // Fallback: fire directly if window._reactionSend exists
+        if (window._reactionSend) window._reactionSend(emoji);
+      });
+    });
+  }
+})();
+
+/* ═══════════════════════════════════════════
+   SCREEN SHARE
+═══════════════════════════════════════════ */
+(function setupScreenShare() {
+  const overlay    = document.getElementById('screen-share-overlay');
+  const grid       = document.getElementById('screen-share-grid');
+  const ssBtn      = document.getElementById('screen-share-btn');
+  const stopBtn    = document.getElementById('stop-screen-share-btn');
+  const closeBtn   = document.getElementById('screen-share-overlay-close');
+  const noShareMsg = document.getElementById('ss-no-shares-msg');
+  const headerDot  = document.getElementById('ss-header-dot');
+  const headerLbl  = document.getElementById('ss-header-label');
+
+  // State
+  let myScreenStream = null;      // local getDisplayMedia stream
+  let myScreenCall   = null;      // PeerJS call carrying screen track to each peer
+  const remoteScreenCalls = {};   // peerId -> MediaConnection (inbound screen calls)
+  const remoteTiles = {};         // peerId -> { tile, video } DOM elements
+
+  // Show/hide the overlay
+  function openOverlay() { overlay?.classList.add('show'); updateNoShareMsg(); }
+  function closeOverlay() { overlay?.classList.remove('show'); }
+
+  // Update "no one sharing" message
+  function updateNoShareMsg() {
+    const hasTiles = Object.keys(remoteTiles).length > 0 || myScreenStream;
+    if (noShareMsg) noShareMsg.style.display = hasTiles ? 'none' : '';
+  }
+
+  // Create a tile for a remote screen
+  function addRemoteTile(peerId, stream) {
+    if (remoteTiles[peerId]) return;
+    const name = state.connections[peerId]?.name || peerId;
+    const tile = document.createElement('div');
+    tile.className = 'screen-tile';
+    tile.dataset.peer = peerId;
+    const video = document.createElement('video');
+    video.autoplay = true; video.playsInline = true; video.muted = false;
+    video.srcObject = stream;
+    const label = document.createElement('div');
+    label.className = 'screen-tile-label';
+    label.innerHTML = `<span class="ss-dot"></span><span>${name}</span>`;
+    tile.appendChild(video);
+    tile.appendChild(label);
+    grid?.appendChild(tile);
+    remoteTiles[peerId] = { tile, video };
+    updateNoShareMsg();
+    // Auto-open overlay when a remote share arrives
+    openOverlay();
+  }
+
+  function removeRemoteTile(peerId) {
+    const t = remoteTiles[peerId];
+    if (!t) return;
+    t.video.srcObject = null;
+    t.tile.remove();
+    delete remoteTiles[peerId];
+    updateNoShareMsg();
+    // Auto-close overlay if nothing left and we're not sharing
+    if (!myScreenStream && Object.keys(remoteTiles).length === 0) closeOverlay();
+  }
+
+  // Add own preview tile
+  let myTile = null;
+  function addMyTile(stream) {
+    if (myTile) return;
+    const tile = document.createElement('div');
+    tile.className = 'screen-tile';
+    const video = document.createElement('video');
+    video.autoplay = true; video.playsInline = true; video.muted = true;
+    video.srcObject = stream;
+    const label = document.createElement('div');
+    label.className = 'screen-tile-label';
+    label.innerHTML = `<span class="ss-dot"></span><span>You (sharing)</span>`;
+    tile.appendChild(video);
+    tile.appendChild(label);
+    grid?.prepend(tile);
+    myTile = tile;
+    updateNoShareMsg();
+  }
+
+  function removeMyTile() {
+    myTile?.remove(); myTile = null;
+    updateNoShareMsg();
+  }
+
+  // Start sharing
+  async function startScreenShare() {
+    if (!navigator.mediaDevices?.getDisplayMedia) {
+      toast('Screen sharing not supported on this browser', 'red'); return;
+    }
+    if (!state.currentChannel) {
+      toast('Join a channel first to share your screen', 'red'); return;
+    }
+    try {
+      myScreenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
+    } catch {
+      toast('Screen share cancelled or denied', 'red'); return;
+    }
+
+    ssBtn?.classList.add('sharing');
+    stopBtn.style.display = '';
+    if (headerDot) headerDot.style.display = '';
+    if (headerLbl) headerLbl.textContent = 'Screen Share — You are sharing';
+
+    addMyTile(myScreenStream);
+    openOverlay();
+
+    // Notify all channel peers via data channel, then call each with screen stream
+    broadcastAll({ type: 'screen-share-start', name: state.myName });
+    Object.entries(state.connections).forEach(([peerId, info]) => {
+      if (info.channel !== state.currentChannel) return;
+      callPeerScreen(peerId);
+    });
+
+    // Handle track ending (user stops via browser UI)
+    myScreenStream.getVideoTracks()[0].onended = stopScreenShare;
+  }
+
+  // Call a peer with the screen stream (separate call from audio)
+  function callPeerScreen(peerId) {
+    if (!myScreenStream || !state.peer?.open) return;
+    const call = state.peer.call(peerId, myScreenStream, { metadata: { type: 'screen' } });
+    if (!myScreenCall) myScreenCall = {};
+    myScreenCall[peerId] = call;
+    call.on('close', () => { if (myScreenCall) delete myScreenCall[peerId]; });
+    call.on('error', () => { if (myScreenCall) delete myScreenCall[peerId]; });
+  }
+
+  function stopScreenShare() {
+    if (!myScreenStream) return;
+    myScreenStream.getTracks().forEach(t => t.stop());
+    myScreenStream = null;
+    // Close all outgoing screen calls
+    if (myScreenCall) {
+      Object.values(myScreenCall).forEach(c => { try { c.close(); } catch {} });
+      myScreenCall = null;
+    }
+    ssBtn?.classList.remove('sharing');
+    stopBtn.style.display = 'none';
+    if (headerDot) headerDot.style.display = 'none';
+    if (headerLbl) headerLbl.textContent = 'Screen Share';
+    removeMyTile();
+    broadcastAll({ type: 'screen-share-stop' });
+    if (Object.keys(remoteTiles).length === 0) closeOverlay();
+  }
+
+  // Button wiring
+  ssBtn?.addEventListener('click', () => {
+    if (myScreenStream) { openOverlay(); return; }
+    startScreenShare();
+  });
+  stopBtn?.addEventListener('click', stopScreenShare);
+  closeBtn?.addEventListener('click', closeOverlay);
+
+  // Intercept inbound PeerJS calls — check metadata for screen type
+  const _origPeerOnCall = state.peer; // peer may not be ready yet; we patch via event proxy below
+  window._handleScreenCall = function(call) {
+    if (call.metadata?.type !== 'screen') return false; // not a screen call
+    call.answer(); // no stream needed — just receive
+    call.on('stream', stream => {
+      remoteScreenCalls[call.peer] = call;
+      addRemoteTile(call.peer, stream);
+    });
+    call.on('close', () => { delete remoteScreenCalls[call.peer]; removeRemoteTile(call.peer); });
+    call.on('error', () => { delete remoteScreenCalls[call.peer]; removeRemoteTile(call.peer); });
+    return true;
+  };
+
+  // Handle data messages
+  window._screenShareReceive = function(peerId, type) {
+    if (type === 'screen-share-stop') {
+      removeRemoteTile(peerId);
+      delete remoteScreenCalls[peerId];
+    }
+  };
+
+  // Expose stopScreenShare for when a peer leaves the channel
+  window._stopScreenShareForPeer = function(peerId) {
+    removeRemoteTile(peerId);
+    delete remoteScreenCalls[peerId];
+  };
+
+  // Clean up when we leave channel
+  const _origLeave = typeof leaveChannel === 'function' ? leaveChannel : null;
+  if (_origLeave) {
+    const __prev = window.leaveChannel;
+    window.leaveChannel = async function() {
+      stopScreenShare();
+      Object.keys(remoteTiles).forEach(removeRemoteTile);
+      closeOverlay();
+      return __prev ? __prev.apply(this, arguments) : _origLeave.apply(this, arguments);
+    };
+  }
+})();
+
+/* ═══════════════════════════════════════════
+   PATCH PEER CALL HANDLER FOR SCREEN CALLS
+═══════════════════════════════════════════ */
+(function patchPeerCallHandler() {
+  // We need to intercept 'call' events on state.peer after it's initialized.
+  // initPeer sets up the call handler; we wrap it after the fact via a polling check.
+  let patched = false;
+  function tryPatch() {
+    if (patched || !state.peer) return;
+    const origEmit = state.peer.emit?.bind(state.peer);
+    if (!origEmit) return;
+    state.peer.emit = function(event, ...args) {
+      if (event === 'call' && args[0]?.metadata?.type === 'screen') {
+        if (window._handleScreenCall) window._handleScreenCall(args[0]);
+        return;
+      }
+      return origEmit(event, ...args);
+    };
+    patched = true;
+  }
+  // Poll until peer exists (initPeer is async)
+  const iv = setInterval(() => { tryPatch(); if (patched) clearInterval(iv); }, 200);
+  setTimeout(() => clearInterval(iv), 30000);
+})();
+
+/* ═══════════════════════════════════════════
+   WIRE SCREEN SHARE DATA MESSAGES
+═══════════════════════════════════════════ */
+(function patchHandleDataForScreen() {
+  const _prev = typeof handleData === 'function' ? handleData : null;
+  if (!_prev) return;
+  const _wrapped = window.handleData || _prev;
+  window.handleData = function(peerId, data) {
+    if (data.type === 'screen-share-start' || data.type === 'screen-share-stop') {
+      if (window._screenShareReceive) window._screenShareReceive(peerId, data.type);
+      return;
+    }
+    _wrapped(peerId, data);
+  };
+})();
+
+/* ═══════════════════════════════════════════
+   BACKGROUND AUDIO KEEPALIVE
+   Plays a silent audio node to prevent iOS/Android
+   from suspending the AudioContext and WebRTC when
+   the app goes to the background.
+═══════════════════════════════════════════ */
+(function setupBackgroundAudio() {
+  let keepAliveCtx = null;
+  let keepAliveNode = null;
+  let keepAliveSource = null;
+
+  function startKeepAlive() {
+    if (keepAliveCtx) return;
+    try {
+      keepAliveCtx = new (window.AudioContext || window.webkitAudioContext)();
+      // Create a tiny silent buffer and loop it
+      const buf = keepAliveCtx.createBuffer(1, keepAliveCtx.sampleRate * 0.5, keepAliveCtx.sampleRate);
+      keepAliveNode = keepAliveCtx.createGain();
+      keepAliveNode.gain.value = 0.00001; // nearly silent
+      keepAliveNode.connect(keepAliveCtx.destination);
+      function playLoop() {
+        keepAliveSource = keepAliveCtx.createBufferSource();
+        keepAliveSource.buffer = buf;
+        keepAliveSource.connect(keepAliveNode);
+        keepAliveSource.onended = playLoop;
+        keepAliveSource.start();
+      }
+      playLoop();
+    } catch {}
+  }
+
+  function resumeKeepAlive() {
+    if (keepAliveCtx?.state === 'suspended') keepAliveCtx.resume().catch(() => {});
+  }
+
+  // Start once a channel is joined (requires user gesture to have happened)
+  document.addEventListener('click', () => { startKeepAlive(); resumeKeepAlive(); }, { once: false, capture: true });
+  document.addEventListener('touchstart', () => { startKeepAlive(); resumeKeepAlive(); }, { once: false, capture: true });
+
+  // Wake lock to prevent screen from sleeping (helps keep background audio going)
+  async function requestWakeLock() {
+    if (!('wakeLock' in navigator)) return;
+    try {
+      if (state.wakeLock) return;
+      state.wakeLock = await navigator.wakeLock.request('screen');
+      state.wakeLock.addEventListener('release', () => { state.wakeLock = null; });
+    } catch {}
+  }
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      resumeKeepAlive();
+      if (state.currentChannel) requestWakeLock();
+    }
+  });
+
+  // Patch joinChannel to request wake lock and start keepalive
+  const _prevJoin = window.joinChannel;
+  if (_prevJoin) {
+    window.joinChannel = function(ch) {
+      const r = _prevJoin.apply(this, arguments);
+      startKeepAlive();
+      requestWakeLock();
+      return r;
+    };
+  }
+
+  // Release wake lock when leaving
+  const _prevLeave = window.leaveChannel;
+  if (_prevLeave) {
+    window.leaveChannel = async function() {
+      const r = await _prevLeave.apply(this, arguments);
+      try { state.wakeLock?.release(); state.wakeLock = null; } catch {}
+      return r;
+    };
+  }
 })();
 
 </script>
