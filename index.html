@@ -18,6 +18,7 @@
    DESIGN TOKENS
 ═══════════════════════════════════════════ */
 :root {
+  --bg-grid-pulse: 0;
   --bg:          #0c0c0e;
   --bg2:         #111114;
   --bg3:         #18181d;
@@ -53,8 +54,29 @@ body::before {
     linear-gradient(var(--border) 1px, transparent 1px),
     linear-gradient(90deg, var(--border) 1px, transparent 1px);
   background-size: 40px 40px;
-  opacity: 0.25;
+  opacity: calc(0.2 + var(--bg-grid-pulse) * 0.22);
   pointer-events: none; z-index: 0;
+  animation: bgGridDrift 22s linear infinite;
+  transition: opacity 0.12s ease-out;
+}
+body::after {
+  content: '';
+  position: fixed; inset: 0;
+  background: radial-gradient(ellipse 75% 65% at 50% 42%,
+    rgba(124,106,255,0.07) 0%,
+    transparent 58%);
+  opacity: calc(0.35 + var(--bg-grid-pulse) * 0.55);
+  pointer-events: none; z-index: 0;
+  animation: bgCenterPulse 10s ease-in-out infinite;
+  transition: opacity 0.14s ease-out;
+}
+@keyframes bgGridDrift {
+  0%   { background-position: 0 0, 0 0; }
+  100% { background-position: 40px 40px, -40px 40px; }
+}
+@keyframes bgCenterPulse {
+  0%, 100% { transform: scale(1) translate(0, 0); }
+  50%      { transform: scale(1.04) translate(0, -0.5%); }
 }
 
 /* ═══════════════════════════════════════════
@@ -1045,6 +1067,31 @@ body.light body::before { opacity: 0.07; }
 }
 #about-btn:hover { border-color: var(--border2); color: var(--accent); background: var(--accent-glow); transform: scale(1.08); }
 #about-btn:active { transform: scale(0.94); }
+
+.ptt-toolbar {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  width: 100%;
+  flex-wrap: wrap;
+  padding: 6px 0 4px;
+}
+#ptt-section.visible .ptt-toolbar { display: flex; }
+.ptt-toolbar #about-btn {
+  width: 40px; height: 40px; border-radius: 10px;
+  background: var(--bg3); border: 1px solid var(--border2);
+}
+.ptt-toolbar #record-fab {
+  width: 40px; height: 40px; border-radius: 10px;
+  background: var(--bg3); border: 1px solid var(--border2);
+}
+@media (max-width: 640px) {
+  .ptt-toolbar #about-btn,
+  .ptt-toolbar #record-fab {
+    width: 48px; height: 48px; border-radius: 12px;
+  }
+}
 
 /* Chat toggle in header */
 #chat-toggle-header-btn {
@@ -2162,6 +2209,12 @@ body.light body::before { opacity: 0.07; }
     <div class="header-right">
       <span class="ping-chip" id="ping-chip" style="display:none"></span>
       <button class="btn-ghost" id="install-btn">install</button>
+      <button id="header-settings-btn" class="channel-icon-btn header-action-btn" type="button" title="Settings" aria-label="Settings">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
       <!-- In-channel actions — shown/hidden by updateChannelControls -->
       <button id="mobile-more-btn" class="channel-icon-btn header-action-btn" title="More" aria-label="More options" style="display:none">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
@@ -2242,27 +2295,6 @@ body.light body::before { opacity: 0.07; }
             </button>
           </div>
         </div>
-      </div>
-      <div class="sidebar-footer">
-        <button id="about-btn" title="About & Shortcuts">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
-            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.6"/>
-            <line x1="12" y1="8" x2="12" y2="8.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-            <line x1="12" y1="11" x2="12" y2="16" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
-          </svg>
-        </button>
-        <button id="record-fab" title="Record Session">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="12" cy="12" r="6" fill="currentColor" opacity="0.85"/>
-            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.6" opacity="0.5"/>
-          </svg>
-        </button>
-        <button id="settings-fab" title="Settings">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-        </button>
       </div>
     </div>
 
@@ -2362,7 +2394,26 @@ body.light body::before { opacity: 0.07; }
             <div class="mobile-member-rail" id="mobile-member-rail-right"></div>
           </div>
           <div style="display:none" id="mobile-member-rail"></div>
-          <div class="ptt-hint" id="ptt-hint-bar">hold button · or hold <kbd id="space-kbd">Space</kbd></div>
+          <div class="ptt-hint" id="ptt-hint-bar">
+            <span id="ptt-hint-ptt">hold button · or hold <kbd id="space-kbd">Space</kbd></span>
+            <span id="ptt-hint-vad" style="display:none">Speak when ready — voice detection transmits for you</span>
+          </div>
+
+          <div class="ptt-toolbar" id="ptt-toolbar" aria-label="Session tools">
+            <button id="about-btn" type="button" title="About & Shortcuts" aria-label="About and shortcuts">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.6"/>
+                <line x1="12" y1="8" x2="12" y2="8.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                <line x1="12" y1="11" x2="12" y2="16" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+              </svg>
+            </button>
+            <button id="record-fab" type="button" title="Record session" aria-label="Record session">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="12" cy="12" r="6" fill="currentColor" opacity="0.85"/>
+                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.6" opacity="0.5"/>
+              </svg>
+            </button>
+          </div>
 
           <!-- Mute button — prominent, below PTT -->
           <button id="mute-btn" style="display:none" class="mute-btn-standalone">
@@ -2496,24 +2547,9 @@ body.light body::before { opacity: 0.07; }
 <div id="mobile-more-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);backdrop-filter:blur(6px);z-index:300;align-items:flex-end;justify-content:center;padding:0 0 env(safe-area-inset-bottom);">
     <div id="mobile-more-sheet" style="width:100%;background:var(--bg2);border:1px solid var(--border2);border-radius:20px 20px 0 0;padding:8px 0 16px;animation:fadeUp 0.28s cubic-bezier(0.34,1.56,0.64,1);">
       <div style="width:36px;height:4px;border-radius:2px;background:var(--border2);margin:0 auto 16px;"></div>
-      <button class="mobile-more-item" id="mmore-settings">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        <span>Settings</span>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style="margin-left:auto;opacity:0.3"><path d="M9 18l6-6-6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      </button>
-      <button class="mobile-more-item" id="mmore-record">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="6" fill="currentColor" opacity="0.85"/><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.6" opacity="0.5"/></svg>
-        <span>Record Session</span>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style="margin-left:auto;opacity:0.3"><path d="M9 18l6-6-6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      </button>
       <button class="mobile-more-item" id="mmore-screenshare">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="2" y="4" width="20" height="14" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M8 20h8M12 18v2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M9 11l3-3 3 3M12 8v6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
         <span id="mmore-screenshare-label">Share Screen</span>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style="margin-left:auto;opacity:0.3"><path d="M9 18l6-6-6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      </button>
-      <button class="mobile-more-item" id="mmore-about">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.6"/><line x1="12" y1="8" x2="12" y2="8.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="12" y1="11" x2="12" y2="16" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
-        <span>About &amp; Feedback</span>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style="margin-left:auto;opacity:0.3"><path d="M9 18l6-6-6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>
     </div>
@@ -2629,7 +2665,7 @@ body.light body::before { opacity: 0.07; }
       <div>
         <div class="about-section-title">Links</div>
         <div class="about-links">
-          <a class="about-link" href="https://github.com" target="_blank" rel="noopener">
+          <a class="about-link" href="https://github.com/JeffreyHamilton6399/Chirp" target="_blank" rel="noopener">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
             Source
           </a>
@@ -2874,6 +2910,15 @@ body.light body::before { opacity: 0.07; }
           </svg>
           Download
         </button>
+        <button id="rec-share-btn" class="rec-action-btn rec-action-ghost">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+            <circle cx="18" cy="5" r="3" stroke="currentColor" stroke-width="1.8"/>
+            <circle cx="6" cy="12" r="3" stroke="currentColor" stroke-width="1.8"/>
+            <circle cx="18" cy="19" r="3" stroke="currentColor" stroke-width="1.8"/>
+            <path d="M8.59 13.51l6.83 3.98M15.41 6.51l-6.82 3.98" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+          </svg>
+          Save or share
+        </button>
         <button id="rec-new-btn" class="rec-action-btn rec-action-ghost">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
             <circle cx="12" cy="12" r="6" fill="currentColor" opacity="0.85"/>
@@ -3072,6 +3117,18 @@ body.light body::before { opacity: 0.07; }
         </div>
         <label class="toggle">
           <input type="checkbox" id="autojoin-toggle">
+          <div class="toggle-track"></div>
+          <div class="toggle-thumb"></div>
+        </label>
+      </div>
+
+      <div class="settings-row compact">
+        <div class="settings-row-label">
+          <span>Auto-Record New Channels</span>
+          <small>Start recording when you create a channel (not when joining)</small>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" id="autorec-toggle">
           <div class="toggle-track"></div>
           <div class="toggle-thumb"></div>
         </label>
@@ -3372,6 +3429,30 @@ function shouldUseNewDataConn(peerId, incoming, currentIncoming) {
 
 function normalizeChannelName(value) {
   return String(value || '').trim().toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 20);
+}
+
+/* ═══ Profanity — chat filter + channel name policy ═══ */
+const PROFANITY_LIST = [
+  'fuck','shit','ass','bitch','bastard','damn','crap','piss','dick','cock',
+  'pussy','cunt','motherfucker','asshole','jackass','bullshit','douchebag',
+  'nigger','nigga','faggot','retard','whore','slut','twat','wanker','prick',
+  'fucker','shithead','dumbass','dipshit','goddamn','bollocks','bugger',
+];
+const _profanityRx = new RegExp(
+  `\\b(${PROFANITY_LIST.map(w => w.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).join('|')})\\b`,
+  'gi'
+);
+function filterProfanity(text) {
+  return text.replace(_profanityRx, m => m[0] + '*'.repeat(m.length - 1));
+}
+function profanityChannelCheckString(raw) {
+  return String(raw || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').replace(/\s+/g, ' ').trim();
+}
+function isDisallowedChannelName(rawInput, normalized) {
+  if (!normalized) return true;
+  if (BLOCKED_DEFAULTS.has(normalized)) return true;
+  const cand = profanityChannelCheckString(rawInput);
+  return Boolean(cand && _profanityRx.test(cand));
 }
 
 function setLobbyChannel(peerId, channel, name) {
@@ -3868,9 +3949,6 @@ function startApp() {
   (function setupMobileMore() {
     const moreBtn     = document.getElementById('mobile-more-btn');
     const moreOverlay = document.getElementById('mobile-more-overlay');
-    const moreSheet   = document.getElementById('mobile-more-sheet');
-    const mmoreAbout    = document.getElementById('mmore-about');
-    const mmoreRecord   = document.getElementById('mmore-record');
     const mmoreScreenshare = document.getElementById('mmore-screenshare');
     if (!moreBtn || !moreOverlay) return;
 
@@ -3884,17 +3962,8 @@ function startApp() {
     moreBtn.addEventListener('click', openMore);
     moreOverlay.addEventListener('click', e => { if (e.target === moreOverlay) closeMore(); });
 
-    if (mmoreAbout) mmoreAbout.addEventListener('click', () => {
-      closeMore();
-      document.getElementById('about-overlay')?.classList.add('show');
-    });
-    if (mmoreRecord) mmoreRecord.addEventListener('click', () => {
-      closeMore();
-      document.getElementById('rec-overlay')?.classList.add('show');
-    });
     if (mmoreScreenshare) mmoreScreenshare.addEventListener('click', () => {
       closeMore();
-      // Trigger the screen share button
       document.getElementById('screen-share-btn')?.click();
     });
   })();
@@ -4183,7 +4252,7 @@ const SFX = (() => {
 ═══════════════════════════════════════════ */
 function setupSettings() {
   const overlay    = document.getElementById('settings-overlay');
-  const btn        = document.getElementById('settings-fab');
+  const btn        = document.getElementById('header-settings-btn');
   const closeBtn   = document.getElementById('settings-close');
   const vadToggle  = document.getElementById('vad-toggle');
   const vadSlider  = document.getElementById('vad-threshold');
@@ -4205,20 +4274,12 @@ function setupSettings() {
     overlay.classList.add('show');
     SFX.settingsOpen();
   }
-  btn.addEventListener('click', openSettings);
+  btn?.addEventListener('click', openSettings);
   // Mobile nav settings button (may no longer exist)
   const navSettingsBtn = document.getElementById('nav-settings-btn');
   if (navSettingsBtn) navSettingsBtn.addEventListener('click', openSettings);
   closeBtn.addEventListener('click', () => overlay.classList.remove('show'));
   overlay.addEventListener('click', e => { if (e.target === overlay) overlay.classList.remove('show'); });
-
-  // Mobile ··· more sheet → Settings item
-  const mmoreSettings = document.getElementById('mmore-settings');
-  if (mmoreSettings) mmoreSettings.addEventListener('click', () => {
-    const moreOverlay = document.getElementById('mobile-more-overlay');
-    if (moreOverlay) moreOverlay.style.display = 'none';
-    openSettings();
-  });
 
   // Save callsign
   function saveCallsign() {
@@ -4473,6 +4534,7 @@ function setupSettings() {
         state.pttKey = r.value;
         const lbl = r.value === 'Space' ? 'Space' : r.value.replace('Key','').replace('AltLeft','Alt');
         if (kbdEl) kbdEl.textContent = lbl;
+        updatePttLabel();
         toast(`PTT key: ${lbl}`);
       }
     }));
@@ -4483,13 +4545,19 @@ function setupSettings() {
   if (pttHintToggle) {
     const savedHint = localStorage.getItem('chirp_ptthint');
     pttHintToggle.checked = savedHint === null ? true : savedHint === '1';
-    const hintBar = document.getElementById('ptt-hint-bar');
-    if (hintBar) hintBar.style.display = pttHintToggle.checked ? '' : 'none';
     pttHintToggle.addEventListener('change', () => {
       localStorage.setItem('chirp_ptthint', pttHintToggle.checked ? '1' : '0');
-      const hb = document.getElementById('ptt-hint-bar');
-      if (hb) hb.style.display = pttHintToggle.checked ? '' : 'none';
+      updatePttLabel();
       toast(pttHintToggle.checked ? 'PTT hint shown' : 'PTT hint hidden');
+    });
+  }
+
+  const autorecToggle = document.getElementById('autorec-toggle');
+  if (autorecToggle) {
+    autorecToggle.checked = localStorage.getItem('chirp_autorec') === '1';
+    autorecToggle.addEventListener('change', () => {
+      localStorage.setItem('chirp_autorec', autorecToggle.checked ? '1' : '0');
+      toast(autorecToggle.checked ? 'Will auto-record new channels you create' : 'Auto-record off', 'info');
     });
   }
 
@@ -4603,21 +4671,38 @@ function setupSettings() {
       populateMicDevices();
     });
   }
+
+  updatePttLabel();
 }
 
 function updatePttLabel() {
   const label = DOM['ptt-label-text'];
   const btn   = DOM['ptt-btn'];
   const hintBarEl = document.getElementById('ptt-hint-bar');
+  const hintPtt = document.getElementById('ptt-hint-ptt');
+  const hintVad = document.getElementById('ptt-hint-vad');
   const showHint = localStorage.getItem('chirp_ptthint') !== '0';
+  const inCh = Boolean(state.currentChannel);
   if (state.vadEnabled) {
     if (label) label.textContent = 'listening';
     btn?.classList.add('vad-mode');
-    if (hintBarEl) hintBarEl.style.display = 'none';
+    btn?.setAttribute('aria-label', 'Voice detection — speak to transmit');
+    btn?.setAttribute('title', 'Voice detection is on — speak to transmit');
+    if (hintBarEl) {
+      hintBarEl.style.display = (showHint && inCh) ? '' : 'none';
+      if (hintPtt) hintPtt.style.display = 'none';
+      if (hintVad) hintVad.style.display = '';
+    }
   } else {
-    if (label) label.textContent = !state.currentChannel ? '' : 'hold to talk';
+    if (label) label.textContent = !inCh ? '' : 'hold to talk';
     btn?.classList.remove('vad-mode');
-    if (hintBarEl) hintBarEl.style.display = (showHint && state.currentChannel) ? '' : 'none';
+    btn?.setAttribute('aria-label', 'Push to talk');
+    btn?.removeAttribute('title');
+    if (hintBarEl) {
+      hintBarEl.style.display = (showHint && inCh) ? '' : 'none';
+      if (hintPtt) hintPtt.style.display = '';
+      if (hintVad) hintVad.style.display = 'none';
+    }
   }
 }
 
@@ -4642,11 +4727,17 @@ function setupChannelCreate() {
     });
   }
 
-  function createChannel(raw) {
+  async function createChannel() {
+    const rawInput = input.value;
+    const raw = normalizeChannelName(rawInput);
     if (!raw) { input.focus(); return; }
+    if (isDisallowedChannelName(rawInput, raw)) {
+      toast('That channel name isn\'t allowed', 'red');
+      return;
+    }
     if (liveChannels.has(raw)) {
       toast(`#${raw} already exists — joining it`, 'green');
-      joinChannel(raw);
+      await joinChannel(raw);
       input.value = '';
       return;
     }
@@ -4656,12 +4747,16 @@ function setupChannelCreate() {
     channelVisibility[raw] = isPrivate ? 'private' : 'public';
     persistChannelVisibility();
     addChannel(raw);
-    joinChannel(raw);
+    await joinChannel(raw);
     SFX.channelCreate();
+    if (localStorage.getItem('chirp_autorec') === '1' && typeof window.chirpStartSessionRecording === 'function') {
+      const day = new Date().toISOString().slice(0, 10);
+      await window.chirpStartSessionRecording({ suggestedBase: `chirp-${raw}-${day}`, skipSetupUi: true });
+    }
   }
 
-  btn.addEventListener('click', () => createChannel(normalizeChannelName(input.value)));
-  input.addEventListener('keydown', e => { if (e.key === 'Enter') createChannel(normalizeChannelName(input.value)); });
+  btn.addEventListener('click', () => { createChannel(); });
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') createChannel(); });
 
   // Join random public channel
   if (randomBtn) {
@@ -4674,14 +4769,19 @@ function setupChannelCreate() {
   }
 
   searchInput.addEventListener('input',   () => renderChannels(searchInput.value.trim().toLowerCase()));
-  searchInput.addEventListener('keydown', e => {
+  searchInput.addEventListener('keydown', async e => {
     if (e.key === 'Enter') {
+      const rawInput = searchInput.value;
       const raw = normalizeChannelName(searchInput.value);
       if (!raw) return;
+      if (isDisallowedChannelName(rawInput, raw)) {
+        toast('That channel name isn\'t allowed', 'red');
+        return;
+      }
       searchInput.value = '';
       renderChannels('');
       addChannel(raw);
-      joinChannel(raw);
+      await joinChannel(raw);
     }
     if (e.key === 'Escape') { searchInput.value = ''; renderChannels(''); }
   });
@@ -4690,8 +4790,13 @@ function setupChannelCreate() {
   const joinPrivateInput = document.getElementById('join-private-input');
   const joinPrivateBtn   = document.getElementById('join-private-btn');
   function joinPrivateRoom() {
+    const rawInput = joinPrivateInput?.value || '';
     const raw = normalizeChannelName(joinPrivateInput?.value);
     if (!raw) { joinPrivateInput?.focus(); toast('Enter a private room name', 'red'); return; }
+    if (isDisallowedChannelName(rawInput, raw)) {
+      toast('That channel name isn\'t allowed', 'red');
+      return;
+    }
     joinPrivateInput.value = '';
     // Mark as private locally so it shows the lock and doesn't leak to lobby
     channelVisibility[raw] = 'private';
@@ -5537,6 +5642,7 @@ async function joinChannel(ch) {
 
   // Start VAD if enabled
   if (state.vadEnabled) startVAD();
+  updatePttLabel();
 }
 
 async function leaveChannel() {
@@ -5572,6 +5678,7 @@ async function leaveChannel() {
   updatePrivacyBtn(); updateChannelControls();
   DOM.channelBar?.classList.remove('in-channel');
   renderChannels();
+  updatePttLabel();
 }
 
 function removePeer(peerId, opts = {}) {
@@ -6046,6 +6153,8 @@ async function startVAD() {
       const rms = Math.sqrt(sum / speechBins);
       const thr = 4 + (state.vadThreshold / 100) * 56;
 
+      setBgGridPulse(Math.min(1, rms / 72));
+
       if (rms > thr) {
         clearTimeout(silenceTimer); silenceTimer = null;
         if (!state.isTalking && !state.isMuted) startTalking();
@@ -6061,6 +6170,7 @@ function stopVAD() {
   if (state.vadAnimId) { cancelAnimationFrame(state.vadAnimId); state.vadAnimId = null; }
   if (state.vadCtx)    { try { state.vadCtx.close(); } catch {} state.vadCtx = null; }
   state.vadAnalyser = null;
+  setBgGridPulse(0);
 
   // Release the dedicated VAD stream (but not if it's the same as localStream)
   if (state.vadStream && state.vadStream !== state.localStream) {
@@ -6096,6 +6206,11 @@ function setupMuteBtn() {
 /* ═══════════════════════════════════════════
    WAVEFORM
 ═══════════════════════════════════════════ */
+function setBgGridPulse(level01) {
+  const v = Math.max(0, Math.min(1, level01));
+  document.documentElement.style.setProperty('--bg-grid-pulse', String(v));
+}
+
 let waveAnalyser, waveAnimId;
 // Shared AudioContext for the PTT waveform — created once and reused.
 // Re-creating / closing on every PTT press is expensive and can exhaust
@@ -6130,6 +6245,7 @@ function stopWaveform() {
   try { _waveStreamNode?.disconnect(); } catch {}
   _waveStreamNode = null;
   waveAnalyser = null;
+  setBgGridPulse(0);
   // Suspend the context so it stops consuming CPU while idle
   try { if (_waveCtxShared?.state === 'running') _waveCtxShared.suspend(); } catch {}
   const canvas = document.getElementById('waveform-canvas');
@@ -6166,8 +6282,10 @@ function drawWaveform() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     const step = canvas.width / data.length;
     const barW = step * 0.6;
+    let avg = 0;
     for (let i = 0; i < data.length; i++) {
       const v    = data[i];
+      avg += v;
       const h    = Math.max((v / 255) * canvas.height * 0.9, 2);
       const x    = i * step;
       ctx.fillStyle = FILL_CACHE[v];
@@ -6175,6 +6293,7 @@ function drawWaveform() {
       ctx.roundRect(x, (canvas.height - h) / 2, barW, h, 2);
       ctx.fill();
     }
+    setBgGridPulse((avg / data.length / 255) * 1.35);
   }
   frame();
 }
@@ -6483,9 +6602,10 @@ function setupMobileNav() {
   const durTime    = document.getElementById('rec-dur-time');
   const volSlider  = document.getElementById('rec-vol');
   const dlBtn      = document.getElementById('rec-download-btn');
+  const shareBtn   = document.getElementById('rec-share-btn');
   const newBtn     = document.getElementById('rec-new-btn');
 
-  if (!fab || !overlay) return;
+  if (!overlay) return;
 
   // ── Helpers ───────────────────────────────
   function fmtTime(sec) {
@@ -6689,8 +6809,8 @@ function setupMobileNav() {
   overlay.addEventListener('click', e => { if (e.target === overlay) closeOverlay(); });
 
   // ── Start recording ───────────────────────
-  startBtn.addEventListener('click', async () => {
-    if (!state.localStream && !(await acquireLocalMicStream())) return;
+  async function startRecordingSession() {
+    if (!state.localStream && !(await acquireLocalMicStream())) return false;
 
     rec.format   = 'mp3';
     rec.mimeType = pickMime();
@@ -6723,19 +6843,45 @@ function setupMobileNav() {
     rec.mediaRecorder.onstop = finaliseRecording;
     rec.mediaRecorder.start(1000); // collect every 1s
 
-    // Start timer
     rec.timerInterval = setInterval(() => {
       const elapsed = (Date.now() - rec.startTime - rec.pausedAt) / 1000;
       if (timerEl) timerEl.textContent = fmtTime(elapsed);
     }, 500);
 
     startRecWaveform(stream);
-    fab.classList.add('recording');
+    fab?.classList.add('recording');
     showScreen('active');
     badge.classList.remove('paused');
     badge.textContent = '● REC';
     SFX.recStart();
-  });
+    return true;
+  }
+
+  startBtn.addEventListener('click', () => { startRecordingSession(); });
+
+  window.chirpStartSessionRecording = async (opts = {}) => {
+    if (!state.currentChannel) {
+      toast('Join a channel first', 'red');
+      return false;
+    }
+    if (rec.mediaRecorder && rec.mediaRecorder.state !== 'inactive') {
+      toast('Already recording', 'info');
+      return false;
+    }
+    if (opts.suggestedBase && filenameEl) {
+      const base = String(opts.suggestedBase).replace(/[^\w\-.]/g, '_').slice(0, 80);
+      filenameEl.value = base || 'chirp-session';
+    }
+    overlay.classList.add('show');
+    if (opts.skipSetupUi) showScreen('active');
+    const ok = await startRecordingSession();
+    if (!ok) {
+      if (opts.skipSetupUi) overlay.classList.remove('show');
+      return false;
+    }
+    if (opts.skipSetupUi) toast('Recording…', 'green');
+    return true;
+  };
 
   // ── Pause / Resume ────────────────────────
   let _pauseStart = 0;
@@ -6787,7 +6933,7 @@ function setupMobileNav() {
     stopRecWaveform();
     SFX.recStop();
     window._recAddPeerStream = null; // remove live-add hook
-    fab.classList.remove('recording');
+    fab?.classList.remove('recording');
     // Cleanup audio ctx
     try { if (rec.audioCtx) rec.audioCtx.close(); } catch {}
     rec.audioCtx = null;
@@ -6802,7 +6948,7 @@ function setupMobileNav() {
     const totalSecs   = (Date.now() - rec.startTime - rec.pausedAt) / 1000;
 
     // FAB: stop pulsing
-    fab.classList.remove('recording');
+    fab?.classList.remove('recording');
 
     // Update done UI
     doneName.textContent = filename;
@@ -6852,14 +6998,33 @@ function setupMobileNav() {
     animatePlayerProgress();
 
     // Download button — always available even if dir-saved
-    dlBtn.onclick = () => {
+    function triggerDownload() {
       const a = document.createElement('a');
       a.href     = url;
       a.download = filename;
       a.click();
       toast('Downloading…', 'green');
       SFX.saved();
-    };
+    }
+    dlBtn.onclick = triggerDownload;
+
+    if (shareBtn) {
+      shareBtn.onclick = async () => {
+        const mime = rec.blob.type || `audio/${extension === 'm4a' ? 'mp4' : extension}`;
+        const file = new File([rec.blob], filename, { type: mime });
+        try {
+          if (navigator.share && navigator.canShare?.({ files: [file] })) {
+            await navigator.share({ files: [file], title: 'Chirp recording' });
+            toast('Shared', 'green');
+            SFX.saved();
+            return;
+          }
+        } catch (e) {
+          if (e?.name === 'AbortError') return;
+        }
+        triggerDownload();
+      };
+    }
 
     // If saved to dir, update label
     if (savedToDir && rec.dirHandle) {
@@ -6953,23 +7118,6 @@ function setupMobileNav() {
     });
   }
 })();
-
-/* ═══════════════════════════════════════════
-   PROFANITY FILTER
-═══════════════════════════════════════════ */
-const PROFANITY_LIST = [
-  'fuck','shit','ass','bitch','bastard','damn','crap','piss','dick','cock',
-  'pussy','cunt','motherfucker','asshole','jackass','bullshit','douchebag',
-  'nigger','nigga','faggot','retard','whore','slut','twat','wanker','prick',
-  'fucker','shithead','dumbass','dipshit','goddamn','bollocks','bugger',
-];
-const _profanityRx = new RegExp(
-  `\\b(${PROFANITY_LIST.map(w => w.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).join('|')})\\b`,
-  'gi'
-);
-function filterProfanity(text) {
-  return text.replace(_profanityRx, m => m[0] + '*'.repeat(m.length - 1));
-}
 
 /* ═══════════════════════════════════════════
    TEXT CHAT
@@ -7349,8 +7497,8 @@ function filterProfanity(text) {
   // Patch joinChannel to show extras and broadcast status
   const _origJoin = typeof joinChannel === 'function' ? joinChannel : null;
   if (_origJoin) {
-    window.joinChannel = function(ch) {
-      _origJoin(ch);
+    window.joinChannel = async function(ch) {
+      await _origJoin(ch);
       if (pttExtraRow)  pttExtraRow.style.display  = 'flex';
       if (reactionWrap) reactionWrap.style.display  = '';
       if (window._broadcastStatus) setTimeout(window._broadcastStatus, 500);
