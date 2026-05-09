@@ -671,6 +671,23 @@ header {
   scrollbar-width: none;
 }
 .mobile-member-rail::-webkit-scrollbar { display: none; }
+
+/* Container that puts peer chips left/right of the PTT button */
+.ptt-and-peers {
+  display: flex; align-items: center; justify-content: center;
+  gap: 0; width: 100%;
+}
+.ptt-and-peers .mobile-member-rail {
+  flex: 1; min-width: 0; min-height: 0;
+  width: auto; padding: 0 6px;
+  justify-content: flex-end;
+}
+.ptt-and-peers #mobile-member-rail-right {
+  justify-content: flex-start;
+}
+.ptt-and-peers .ptt-wrap {
+  flex-shrink: 0;
+}
 .mobile-member-chip {
   width: 38px; height: 38px; border-radius: 50%;
   background: var(--bg3); border: 1.5px solid var(--border2);
@@ -679,11 +696,6 @@ header {
   background-size: cover; background-position: center;
   cursor: pointer; flex-shrink: 0;
   box-shadow: 0 4px 14px rgba(0,0,0,0.22);
-}
-.mobile-member-chip.self {
-  border-color: var(--accent-dim);
-  width: 44px; height: 44px;
-  box-shadow: 0 0 0 2px var(--accent-glow), 0 4px 14px rgba(0,0,0,0.22);
 }
 .mobile-member-chip.talking { border-color: var(--green); box-shadow: 0 0 16px rgba(34,211,165,0.35); }
 .mobile-member-chip.has-photo { color: transparent; }
@@ -894,7 +906,8 @@ header {
   .ptt-ring-2     { width: 238px; height: 238px; }
   .ptt-ring-3     { width: 280px; height: 280px; }
   .center-area    { gap: 24px; padding: 18px 16px; min-height: 0; }
-  #ptt-section    { gap: 22px; max-width: min(320px, 100%); }
+  #ptt-section    { gap: 22px; max-width: 100%; }
+  .ptt-and-peers  { width: 100%; }
 
   .ch-create-wrap {
     padding: 10px 12px;
@@ -1587,24 +1600,28 @@ header {
 
         <div id="ptt-section">
           <canvas id="waveform-canvas"></canvas>
-          <div class="ptt-wrap">
-            <button id="ptt-btn" aria-label="Push to talk">
-              <div class="ptt-profile" id="ptt-profile"></div>
-              <div class="ptt-icon-wrap">
-                <svg width="34" height="34" viewBox="0 0 34 34" fill="none">
-                  <rect x="12" y="3" width="10" height="19" rx="5" fill="#7c6aff" opacity="0.9"/>
-                  <path d="M6 17C6 23.627 11 29 17 29C23 29 28 23.627 28 17" stroke="#7c6aff" stroke-width="2" stroke-linecap="round"/>
-                  <line x1="17" y1="29" x2="17" y2="33" stroke="#7c6aff" stroke-width="2" stroke-linecap="round"/>
-                  <line x1="11" y1="33" x2="23" y2="33" stroke="#7c6aff" stroke-width="2" stroke-linecap="round"/>
-                </svg>
-              </div>
-              <span class="ptt-label" id="ptt-label-text">hold to talk</span>
-            </button>
-            <div class="ptt-ring ptt-ring-1"></div>
-            <div class="ptt-ring ptt-ring-2"></div>
-            <div class="ptt-ring ptt-ring-3"></div>
+          <div class="ptt-and-peers">
+            <div class="mobile-member-rail" id="mobile-member-rail-left"></div>
+            <div class="ptt-wrap">
+              <button id="ptt-btn" aria-label="Push to talk">
+                <div class="ptt-profile" id="ptt-profile"></div>
+                <div class="ptt-icon-wrap">
+                  <svg width="34" height="34" viewBox="0 0 34 34" fill="none">
+                    <rect x="12" y="3" width="10" height="19" rx="5" fill="#7c6aff" opacity="0.9"/>
+                    <path d="M6 17C6 23.627 11 29 17 29C23 29 28 23.627 28 17" stroke="#7c6aff" stroke-width="2" stroke-linecap="round"/>
+                    <line x1="17" y1="29" x2="17" y2="33" stroke="#7c6aff" stroke-width="2" stroke-linecap="round"/>
+                    <line x1="11" y1="33" x2="23" y2="33" stroke="#7c6aff" stroke-width="2" stroke-linecap="round"/>
+                  </svg>
+                </div>
+                <span class="ptt-label" id="ptt-label-text">hold to talk</span>
+              </button>
+              <div class="ptt-ring ptt-ring-1"></div>
+              <div class="ptt-ring ptt-ring-2"></div>
+              <div class="ptt-ring ptt-ring-3"></div>
+            </div>
+            <div class="mobile-member-rail" id="mobile-member-rail-right"></div>
           </div>
-          <div class="mobile-member-rail" id="mobile-member-rail"></div>
+          <div style="display:none" id="mobile-member-rail"></div>
           <div class="ptt-hint">hold button · or hold <kbd id="space-kbd">Space</kbd></div>
 
           <!-- Mute button — prominent, below PTT -->
@@ -3436,14 +3453,15 @@ function renderChannels(filter) {
     const isPrivate = channelVisibility[ch] === 'private';
     const key = `${ch}|${state.currentChannel === ch}|${isTalking}|${cnt}|${isPrivate}`;
     let el = scroll.querySelector(`[data-channel="${ch}"]`);
-    if (!el) {
+    const isNew = !el;
+    if (isNew) {
       el = document.createElement('div');
       el.dataset.channel = ch;
       el.addEventListener('click', () => { if (state.currentChannel !== ch) requestJoinChannel(ch); });
     }
-    el.className = `channel-item${state.currentChannel === ch ? ' active' : ''}${isTalking ? ' talking' : ''}`;
     if (el.dataset.rkey !== key) {
       el.dataset.rkey = key;
+      el.className = `channel-item${state.currentChannel === ch ? ' active' : ''}${isTalking ? ' talking' : ''}`;
       el.innerHTML = `
       <span class="ch-hash">${isPrivate ? '🔒' : '#'}</span>
       <span class="ch-name">${ch}</span>
@@ -3451,7 +3469,7 @@ function renderChannels(filter) {
       <span class="ch-count" id="count-${ch}">${cnt || ''}</span>
     `;
     }
-    scroll.appendChild(el);
+    if (isNew) scroll.appendChild(el);
   });
 }
 
@@ -4324,34 +4342,48 @@ function renderMembers() {
 }
 
 function renderMobileMemberRail() {
-  const rail = DOM['mobile-member-rail'];
-  if (!rail) return;
-  if (!state.currentChannel) { rail.innerHTML = ''; return; }
+  const railLeft  = document.getElementById('mobile-member-rail-left');
+  const railRight = document.getElementById('mobile-member-rail-right');
+  if (!railLeft || !railRight) return;
 
-  rail.innerHTML = '';
-  const people = [
-    { id: state.myId, name: state.myName, avatar: state.myAvatar, talking: state.isTalking, self: true },
-    ...Object.entries(state.connections)
-      .filter(([, info]) => info.channel === state.currentChannel)
-      .map(([id, info]) => ({ id, name: info.name || id, avatar: info.avatar, talking: info.talking, self: false })),
-  ];
-  people.slice(0, 6).forEach(person => {
+  if (!state.currentChannel) {
+    railLeft.innerHTML = '';
+    railRight.innerHTML = '';
+    return;
+  }
+
+  const peers = Object.entries(state.connections)
+    .filter(([, info]) => info.channel === state.currentChannel)
+    .map(([id, info]) => ({ id, name: info.name || id, avatar: info.avatar, talking: info.talking }));
+
+  // Split peers evenly: left half gets the first half, right half the rest
+  const half = Math.ceil(peers.length / 2);
+  const leftPeers  = peers.slice(0, half);
+  const rightPeers = peers.slice(half);
+
+  function makeChip(person) {
     const chip = document.createElement('button');
     chip.type = 'button';
-    chip.className = `mobile-member-chip${person.self ? ' self' : ''}${person.talking ? ' talking' : ''}${avatarClass(person.avatar)}`;
-    chip.title = person.self ? `${person.name} (you)` : person.name;
+    chip.className = `mobile-member-chip${person.talking ? ' talking' : ''}${person.avatar ? ' has-photo' : ''}`;
+    chip.title = person.name;
     chip.textContent = avatarInitial(person.name);
     if (person.avatar) chip.style.backgroundImage = `url('${person.avatar}')`;
-    if (!person.self) {
-      chip.addEventListener('click', e => showModMenu(e, person.id, person.name));
-    }
-    rail.appendChild(chip);
-  });
-  if (people.length > 6) {
+    chip.addEventListener('click', e => showModMenu(e, person.id, person.name));
+    return chip;
+  }
+
+  railLeft.innerHTML = '';
+  railRight.innerHTML = '';
+
+  leftPeers.forEach(p => railLeft.appendChild(makeChip(p)));
+  rightPeers.forEach(p => railRight.appendChild(makeChip(p)));
+
+  // +N overflow badge if more than 6 total peers
+  if (peers.length > 6) {
     const more = document.createElement('span');
     more.className = 'mobile-member-more';
-    more.textContent = `+${people.length - 6}`;
-    rail.appendChild(more);
+    more.textContent = `+${peers.length - 6}`;
+    railRight.appendChild(more);
   }
 }
 
