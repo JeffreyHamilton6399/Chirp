@@ -301,7 +301,7 @@ header {
 .channel-bar {
   padding: 12px 24px;
   border-bottom: 1px solid var(--border);
-  display: flex; align-items: center; justify-content: space-between;
+  display: flex; align-items: center;
   flex-shrink: 0; background: var(--bg2);
   transition: box-shadow 0.3s;
 }
@@ -319,7 +319,7 @@ header {
 .channel-topic-input::placeholder { color: var(--text-dim); }
 .channel-topic-input:not([readonly]):focus { background: var(--bg3); border-color: var(--border2); }
 .channel-topic-input[readonly] { color: var(--text-dim); }
-.channel-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+
 .channel-icon-btn {
   display: none; align-items: center; justify-content: center;
   width: 30px; height: 30px; border-radius: var(--radius-sm);
@@ -330,6 +330,19 @@ header {
 .channel-icon-btn:hover { border-color: var(--accent-dim); color: var(--accent); background: var(--accent-glow); }
 .channel-icon-btn:active { transform: scale(0.94); }
 .leave-channel-btn:hover { border-color: rgba(248,113,113,0.45); color: var(--danger); background: rgba(248,113,113,0.08); }
+/* In-channel header actions — share, leave, ··· */
+.header-action-btn { flex-shrink: 0; }
+/* Thin separator before the in-channel group */
+#share-channel-btn.header-action-btn {
+  margin-left: 6px;
+  padding-left: 6px;
+  position: relative;
+}
+#share-channel-btn.header-action-btn::before {
+  content: '';
+  position: absolute; left: -4px; top: 20%; bottom: 20%;
+  width: 1px; background: var(--border2); border-radius: 1px;
+}
 
 /* TX pill — the main status indicator */
 .tx-pill {
@@ -897,7 +910,7 @@ header {
   }
   header { height: 52px; padding: 0 14px; }
   .header-left, .channel-bar-left { min-width: 0; }
-  .header-right, .tx-pill, .ch-privacy-bar-btn, .channel-actions { flex-shrink: 0; }
+  .header-right, .tx-pill, .ch-privacy-bar-btn { flex-shrink: 0; }
   .brand-name { font-size: 1rem; }
   #install-btn { display: none !important; }
   #toast      { bottom: 84px; }
@@ -948,7 +961,6 @@ header {
   .main-content   { background: var(--bg); }
   .channel-bar    { padding: 11px 14px; gap: 10px; min-height: 48px; }
   .channel-topic-input { display: none !important; }
-  .channel-actions { gap: 6px; }
   .channel-icon-btn { width: 32px; height: 32px; }
   .channel-bar h2 { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   #ptt-btn        { width: 160px; height: 160px; }
@@ -1539,6 +1551,26 @@ header {
     <div class="header-right">
       <span class="ping-chip" id="ping-chip" style="display:none"></span>
       <button class="btn-ghost" id="install-btn">install</button>
+      <!-- In-channel actions — shown/hidden by updateChannelControls -->
+      <button id="mobile-more-btn" class="channel-icon-btn header-action-btn" title="More" aria-label="More options" style="display:none">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+          <circle cx="5" cy="12" r="1.5" fill="currentColor"/>
+          <circle cx="12" cy="12" r="1.5" fill="currentColor"/>
+          <circle cx="19" cy="12" r="1.5" fill="currentColor"/>
+        </svg>
+      </button>
+      <button id="share-channel-btn" class="channel-icon-btn header-action-btn" title="Copy invite link" aria-label="Copy invite link">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+          <path d="M10 13a5 5 0 007.07 0l2.12-2.12a5 5 0 00-7.07-7.07L11 4.93" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          <path d="M14 11a5 5 0 00-7.07 0L4.81 13.12a5 5 0 007.07 7.07L13 19.07" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </button>
+      <button id="leave-channel-btn" class="channel-icon-btn header-action-btn leave-channel-btn" title="Leave channel" aria-label="Leave channel">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+          <path d="M10 17l5-5-5-5M15 12H3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M14 3h5a2 2 0 012 2v14a2 2 0 01-2 2h-5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </button>
     </div>
   </header>
 
@@ -1607,11 +1639,7 @@ header {
       <div class="channel-bar">
         <div class="channel-bar-left">
           <h2 id="channel-title"><span>#</span><span id="channel-name-display">—</span></h2>
-          <input id="channel-topic-input" class="channel-topic-input" maxlength="80"
-            placeholder="set topic..." autocomplete="off" spellcheck="false" style="display:none">
-        </div>
-        <div class="channel-actions">
-          <!-- Privacy toggle — host only, visible when in a channel -->
+          <!-- Privacy pill — host only, sits inline with the channel name -->
           <button id="ch-privacy-btn" style="display:none" title="Toggle channel privacy" class="ch-privacy-bar-btn">
             <svg id="ch-privacy-bar-public" width="13" height="13" viewBox="0 0 16 16" fill="none">
               <circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.4"/>
@@ -1623,26 +1651,8 @@ header {
             </svg>
             <span id="ch-privacy-bar-label">public</span>
           </button>
-          <!-- Mobile ··· menu trigger -->
-          <button id="mobile-more-btn" class="channel-icon-btn" title="More" aria-label="More options" style="display:none">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
-              <circle cx="5" cy="12" r="1.5" fill="currentColor"/>
-              <circle cx="12" cy="12" r="1.5" fill="currentColor"/>
-              <circle cx="19" cy="12" r="1.5" fill="currentColor"/>
-            </svg>
-          </button>
-          <button id="share-channel-btn" class="channel-icon-btn" title="Copy invite link" aria-label="Copy invite link">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
-              <path d="M10 13a5 5 0 007.07 0l2.12-2.12a5 5 0 00-7.07-7.07L11 4.93" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-              <path d="M14 11a5 5 0 00-7.07 0L4.81 13.12a5 5 0 007.07 7.07L13 19.07" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-            </svg>
-          </button>
-          <button id="leave-channel-btn" class="channel-icon-btn leave-channel-btn" title="Leave channel" aria-label="Leave channel">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
-              <path d="M10 17l5-5-5-5M15 12H3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M14 3h5a2 2 0 012 2v14a2 2 0 01-2 2h-5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-            </svg>
-          </button>
+          <input id="channel-topic-input" class="channel-topic-input" maxlength="80"
+            placeholder="set topic..." autocomplete="off" spellcheck="false" style="display:none">
         </div>
       </div>
 
@@ -1760,7 +1770,7 @@ header {
     </div>
   </div>
 
-</div> style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);backdrop-filter:blur(6px);z-index:300;align-items:flex-end;justify-content:center;padding:0 0 env(safe-area-inset-bottom);">
+<div id="mobile-more-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);backdrop-filter:blur(6px);z-index:300;align-items:flex-end;justify-content:center;padding:0 0 env(safe-area-inset-bottom);">
     <div id="mobile-more-sheet" style="width:100%;background:var(--bg2);border:1px solid var(--border2);border-radius:20px 20px 0 0;padding:8px 0 16px;animation:fadeUp 0.28s cubic-bezier(0.34,1.56,0.64,1);">
       <div style="width:36px;height:4px;border-radius:2px;background:var(--border2);margin:0 auto 16px;"></div>
       <button class="mobile-more-item" id="mmore-settings">
@@ -2772,9 +2782,12 @@ function updateChannelControls() {
   const topic = DOM['channel-topic-input'];
   const share = DOM['share-channel-btn'];
   const leave = DOM['leave-channel-btn'];
+  const more  = document.getElementById('mobile-more-btn');
 
   if (share) share.style.display = inChannel ? 'flex' : 'none';
   if (leave) leave.style.display = inChannel ? 'flex' : 'none';
+  // ··· button: JS sets base display; mobile media-query overrides to flex via !important
+  if (more) more.style.display = inChannel ? '' : 'none';
   if (!topic) return;
 
   topic.style.display = inChannel ? '' : 'none';
