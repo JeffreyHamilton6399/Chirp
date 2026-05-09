@@ -2561,10 +2561,15 @@ body.light header { background: rgba(248,248,252,0.86); }
         </div>
         <!-- Channel bar right: leave, about (share link is in hub; chat toggle moved to members header) -->
         <div class="channel-bar-actions" id="channel-bar-actions" style="display:none">
-          <button id="share-channel-btn" class="channel-icon-btn header-action-btn channel-bar-action" title="Invite / copy link" aria-label="Copy invite link" style="display:none!important">
+          <button id="share-channel-btn" class="channel-icon-btn header-action-btn channel-bar-action" title="Share channel QR" aria-label="Share channel QR code" onclick="if(typeof openChannelQR==='function'&&typeof state!=='undefined')openChannelQR(state.currentChannel)">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
-              <path d="M10 13a5 5 0 007.07 0l2.12-2.12a5 5 0 00-7.07-7.07L11 4.93" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-              <path d="M14 11a5 5 0 00-7.07 0L4.81 13.12a5 5 0 007.07 7.07L13 19.07" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              <rect x="3" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.8"/>
+              <rect x="14" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.8"/>
+              <rect x="3" y="14" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.8"/>
+              <rect x="5" y="5" width="3" height="3" fill="currentColor" rx="0.5"/>
+              <rect x="16" y="5" width="3" height="3" fill="currentColor" rx="0.5"/>
+              <rect x="5" y="16" width="3" height="3" fill="currentColor" rx="0.5"/>
+              <path d="M14 14h3v3h-3zM17 14h3M17 17v3M14 20h3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
             </svg>
           </button>
           <button id="chat-toggle-header-btn" class="channel-icon-btn header-action-btn channel-bar-action" title="Toggle chat (C)" aria-label="Toggle chat" style="position:relative;display:none!important">
@@ -4063,6 +4068,8 @@ function setupLeaveCleanup() {
 
 function inviteChannelFromUrl() {
   const raw = decodeURIComponent((location.hash || '').replace(/^#\/?/, ''));
+  // Don't interpret structured hashes as channel names
+  if (raw.startsWith('channels=') || raw.startsWith('join=')) return '';
   return normalizeChannelName(raw.replace(/^channel[=/]/, ''));
 }
 
@@ -5269,13 +5276,18 @@ function requestJoinChannel(ch, _retryCount = 0) {
   // Private channel: request permission from existing members
   const members = getPeersInChannel(ch);
   if (members.length === 0) {
-    // Lobby may not have synced yet — retry up to 3 times before assuming we're first in
+    // Lobby may not have synced yet — retry up to 3 times before giving up
     if (_retryCount < 3) {
       setTimeout(() => requestJoinChannel(ch, _retryCount + 1), 900);
       return;
     }
-    // Truly the first member: join directly as host
-    joinChannel(ch);
+    // No one found in the private room — don't create it, just tell the user
+    toast(`No private room "#${ch}" found`, 'red');
+    // Remove the channel we optimistically added
+    liveChannels.delete(ch);
+    delete channelVisibility[ch];
+    persistChannelVisibility?.();
+    renderChannels?.();
     return;
   }
 
@@ -8466,9 +8478,14 @@ function setupMobileNav() {
 
   let currentUrl = '';
 
-  function buildShareUrl() {
-    const channels = typeof publicChannels === 'function' ? publicChannels() : [];
+  function buildShareUrl(focusChannel) {
     const base = location.origin + location.pathname;
+    // If a specific channel is given (e.g. from the channel bar QR button), encode it directly
+    // so the link works for both public and private channels.
+    if (focusChannel) {
+      return base + '#join=' + encodeURIComponent(focusChannel);
+    }
+    const channels = typeof publicChannels === 'function' ? publicChannels() : [];
     if (!channels.length) return base;
     // Encode all public channels as comma-separated hash: #channels=a,b,c
     return base + '#channels=' + channels.map(encodeURIComponent).join(',');
@@ -8531,17 +8548,25 @@ function setupMobileNav() {
     }
   }
 
-  function openQR() {
-    currentUrl = buildShareUrl();
-    const channels = typeof publicChannels === 'function' ? publicChannels() : [];
+  function openQR(focusChannel) {
+    currentUrl = buildShareUrl(focusChannel || null);
     drawQR(currentUrl);
     if (channelList) {
-      channelList.textContent = channels.length
-        ? 'Channels: ' + channels.map(c => '#' + c).join(', ')
-        : 'No public channels to share';
+      if (focusChannel) {
+        const isPrivate = typeof channelVisibility !== 'undefined' && channelVisibility[focusChannel] === 'private';
+        channelList.textContent = (isPrivate ? '🔒 ' : '#') + focusChannel + ' — scan to join';
+      } else {
+        const channels = typeof publicChannels === 'function' ? publicChannels() : [];
+        channelList.textContent = channels.length
+          ? 'Channels: ' + channels.map(c => '#' + c).join(', ')
+          : 'No public channels to share';
+      }
     }
     overlay.style.display = 'flex';
   }
+
+  // Expose globally so the channel bar QR button can call openQR(currentChannel)
+  window.openChannelQR = openQR;
 
   function closeQR() { overlay.style.display = 'none'; }
 
@@ -8560,11 +8585,33 @@ function setupMobileNav() {
     window.open(currentUrl, '_blank');
   });
 
-  sidebarBtn?.addEventListener('click', openQR);
+  sidebarBtn?.addEventListener('click', () => {
+    const ch = typeof state !== 'undefined' ? state.currentChannel : null;
+    openQR(ch || null);
+  });
 
-  // Auto-import channels from URL hash if format is #channels=a,b,c
+  // Auto-import channels from URL hash
+  // Supports: #join=channelname  (single channel, public or private — auto-joins)
+  //           #channels=a,b,c    (multi-channel list, public only)
   (function importFromHash() {
     const raw = decodeURIComponent((location.hash || '').replace(/^#/, ''));
+
+    // Single-channel join link (works for private rooms)
+    if (raw.startsWith('join=')) {
+      const ch = raw.slice('join='.length).trim();
+      if (!ch) return;
+      setTimeout(() => {
+        if (typeof safeAddChannel === 'function') safeAddChannel(ch);
+        if (typeof renderChannels === 'function') renderChannels();
+        if (typeof requestJoinChannel === 'function') requestJoinChannel(ch);
+        else if (typeof joinChannel === 'function') joinChannel(ch);
+        toast(`Joining #${ch}…`, 'info');
+        history.replaceState(null, '', location.pathname + location.search);
+      }, 1200);
+      return;
+    }
+
+    // Multi-channel list (public channels only)
     if (!raw.startsWith('channels=')) return;
     const names = raw.slice('channels='.length).split(',').map(decodeURIComponent).filter(Boolean);
     // Wait for app to be ready
