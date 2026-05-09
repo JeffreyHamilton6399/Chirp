@@ -271,7 +271,9 @@ header {
   font-family: var(--mono); font-size: 0.58rem; font-weight: 500;
   color: var(--text-dim); letter-spacing: 0.2em; text-transform: uppercase;
   border-bottom: 1px solid var(--border); flex-shrink: 0;
+  display: flex; align-items: center; gap: 6px;
 }
+#qr-open-sidebar-btn:hover { border-color: var(--accent-dim) !important; color: var(--accent) !important; background: var(--accent-glow) !important; }
 
 .ch-search-wrap {
   padding: 7px 10px 6px; border-bottom: 1px solid var(--border); flex-shrink: 0;
@@ -1289,7 +1291,12 @@ body.light header { background: rgba(248,248,252,0.86); }
   font-family: var(--mono); font-size: 0.58rem; font-weight: 500;
   color: var(--text-dim); letter-spacing: 0.2em; text-transform: uppercase;
   border-bottom: 1px solid var(--border); flex-shrink: 0;
-  display: flex; align-items: center; justify-content: space-between;
+  display: flex; align-items: center; gap: 7px;
+}
+#chat-toggle-members-btn:hover {
+  border-color: var(--accent-dim) !important;
+  color: var(--accent) !important;
+  background: var(--accent-glow) !important;
 }
 .member-count-badge {
   background: var(--bg4); border: 1px solid var(--border2);
@@ -2227,10 +2234,13 @@ body.light header { background: rgba(248,248,252,0.86); }
   gap: 8px; padding: 12px; align-content: flex-start;
 }
 .screen-tile {
-  position: relative; background: var(--bg3); border: 1px solid var(--border2);
-  border-radius: 10px; overflow: hidden; flex: 1 1 320px; min-height: 180px;
-  display: flex; flex-direction: column;
+  position: relative; background: #000; border: 1px solid var(--border2);
+  border-radius: 10px; overflow: hidden;
+  flex: 1 1 320px;
+  display: flex; align-items: center; justify-content: center;
+  min-height: 160px; max-height: 70vh;
 }
+.screen-tile.portrait { flex: 0 1 220px; max-height: 55vh; }
 .screen-tile-label {
   position: absolute; bottom: 0; left: 0; right: 0;
   background: linear-gradient(transparent, rgba(0,0,0,0.7));
@@ -2245,6 +2255,28 @@ body.light header { background: rgba(248,248,252,0.86); }
 }
 .screen-tile video {
   width: 100%; height: 100%; object-fit: contain; display: block; background: #000;
+  max-height: 70vh;
+}
+.screen-tile.portrait video { max-height: 55vh; }
+#ss-active-pill {
+  position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
+  z-index: 350;
+  background: var(--bg2); border: 1px solid rgba(248,113,113,0.4);
+  border-radius: 20px; padding: 6px 14px 6px 10px;
+  font-family: var(--mono); font-size: 0.62rem; color: var(--danger);
+  letter-spacing: 0.08em; cursor: pointer;
+  display: none; align-items: center; gap: 8px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.45);
+  white-space: nowrap;
+}
+#ss-active-pill.show { display: flex; animation: fadeUp 0.25s ease; }
+#ss-active-pill .ss-dot {
+  width: 7px; height: 7px; border-radius: 50%; background: var(--danger);
+  box-shadow: 0 0 7px var(--danger); animation: blink 0.7s ease-in-out infinite alternate;
+  flex-shrink: 0;
+}
+@media (max-width: 640px) {
+  #ss-active-pill { bottom: calc(var(--mobile-nav-height, 64px) + 12px); }
 }
 .screen-share-bar {
   padding: 10px 14px; border-top: 1px solid var(--border);
@@ -2453,7 +2485,11 @@ body.light header { background: rgba(248,248,252,0.86); }
   <div class="app-body">
     <!-- Sidebar: channels -->
     <div class="sidebar" id="sidebar">
-      <div class="sidebar-header">Channels</div>
+      <div class="sidebar-header">Channels
+        <button id="qr-open-sidebar-btn" title="Share channel list (QR)" style="background:none;border:1px solid var(--border);border-radius:var(--radius-sm);width:22px;height:22px;display:flex;align-items:center;justify-content:center;color:var(--text-dim);cursor:pointer;margin-left:auto;flex-shrink:0;transition:border-color 0.18s,color 0.18s,background 0.18s;">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.7"/><rect x="14" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.7"/><rect x="3" y="14" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.7"/><rect x="5" y="5" width="3" height="3" fill="currentColor"/><rect x="16" y="5" width="3" height="3" fill="currentColor"/><rect x="5" y="16" width="3" height="3" fill="currentColor"/><path d="M14 14h3v3h-3zM17 17h3v3h-3zM14 20h3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
       <div class="ch-search-wrap">
         <div class="ch-search-row">
           <svg width="11" height="11" viewBox="0 0 11 11" fill="none" style="flex-shrink:0;opacity:0.4">
@@ -2523,19 +2559,18 @@ body.light header { background: rgba(248,248,252,0.86); }
           <input id="channel-topic-input" class="channel-topic-input" maxlength="80"
             placeholder="set topic..." autocomplete="off" spellcheck="false" style="display:none">
         </div>
-        <!-- Channel bar right: invite, chat, leave, about (screen share lives under PTT) -->
+        <!-- Channel bar right: leave, about (share link is in hub; chat toggle moved to members header) -->
         <div class="channel-bar-actions" id="channel-bar-actions" style="display:none">
-          <button id="share-channel-btn" class="channel-icon-btn header-action-btn channel-bar-action" title="Invite / copy link" aria-label="Copy invite link">
+          <button id="share-channel-btn" class="channel-icon-btn header-action-btn channel-bar-action" title="Invite / copy link" aria-label="Copy invite link" style="display:none!important">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
               <path d="M10 13a5 5 0 007.07 0l2.12-2.12a5 5 0 00-7.07-7.07L11 4.93" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
               <path d="M14 11a5 5 0 00-7.07 0L4.81 13.12a5 5 0 007.07 7.07L13 19.07" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
             </svg>
           </button>
-          <button id="chat-toggle-header-btn" class="channel-icon-btn header-action-btn channel-bar-action" title="Toggle chat (C)" aria-label="Toggle chat" style="position:relative">
+          <button id="chat-toggle-header-btn" class="channel-icon-btn header-action-btn channel-bar-action" title="Toggle chat (C)" aria-label="Toggle chat" style="position:relative;display:none!important">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
-            <span class="chat-unread-badge" id="chat-unread-badge" style="display:none"></span>
           </button>
           <button id="leave-channel-btn" class="channel-icon-btn header-action-btn leave-channel-btn channel-bar-action" title="Leave channel" aria-label="Leave channel">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
@@ -2543,7 +2578,7 @@ body.light header { background: rgba(248,248,252,0.86); }
               <path d="M14 3h5a2 2 0 012 2v14a2 2 0 01-2 2h-5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
             </svg>
           </button>
-          <button id="about-btn" type="button" class="channel-icon-btn header-action-btn channel-bar-action about-bar-btn" title="About & Shortcuts" aria-label="About and shortcuts">
+          <button id="about-btn" type="button" class="channel-icon-btn header-action-btn channel-bar-action about-bar-btn" title="About & Shortcuts" aria-label="About and shortcuts" style="display:none!important">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
               <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.6"/>
               <line x1="12" y1="8" x2="12" y2="8.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
@@ -2687,16 +2722,6 @@ body.light header { background: rgba(248,248,252,0.86); }
                   <span class="hub-folder-item-lbl">Raise</span>
                 </button>
 
-                <!-- About & shortcuts -->
-                <button class="hub-folder-item" id="hub-about-btn" type="button" title="About &amp; shortcuts" role="menuitem">
-                  <svg class="hub-folder-item-icon" width="20" height="20" viewBox="0 0 24 24" fill="none">
-                    <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.6"/>
-                    <line x1="12" y1="8" x2="12" y2="8.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                    <line x1="12" y1="11" x2="12" y2="16" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
-                  </svg>
-                  <span class="hub-folder-item-lbl">About</span>
-                </button>
-
               </div><!-- /.hub-folder -->
             </div><!-- /.hub-wrap -->
 
@@ -2725,6 +2750,12 @@ body.light header { background: rgba(248,248,252,0.86); }
       <div class="members-header">
         Members
         <span class="member-count-badge" id="member-count-badge">0</span>
+        <button id="chat-toggle-members-btn" type="button" title="Toggle chat (C)" aria-label="Toggle chat" style="margin-left:auto;display:none;background:none;border:1px solid var(--border);border-radius:var(--radius-sm);width:26px;height:26px;align-items:center;justify-content:center;color:var(--text-dim);cursor:pointer;transition:border-color 0.18s,color 0.18s,background 0.18s;flex-shrink:0;position:relative;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span class="chat-unread-badge" id="chat-unread-badge" style="display:none"></span>
+        </button>
       </div>
       <div class="member-scroll" id="member-list"></div>
     </div>
@@ -2737,6 +2768,7 @@ body.light header { background: rgba(248,248,252,0.86); }
       <div class="chat-messages" id="chat-messages">
         <div class="chat-msg-system">No messages yet</div>
       </div>
+      <div id="chat-typing-row" style="min-height:18px;padding:2px 12px 0;display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:0.55rem;color:var(--text-dim);letter-spacing:0.06em;"></div>
       <div class="chat-input-wrap">
         <textarea id="chat-input" class="chat-input" rows="1" placeholder="Message…" maxlength="500"></textarea>
         <button id="chat-send-btn" class="chat-send-btn" title="Send (Enter)">
@@ -2823,6 +2855,33 @@ body.light header { background: rgba(248,248,252,0.86); }
       Stop sharing
     </button>
     <span id="ss-no-shares-msg" style="font-family:var(--mono);font-size:0.62rem;color:var(--text-dim);letter-spacing:0.08em;">No one is sharing their screen</span>
+  </div>
+</div>
+
+<!-- Floating pill: someone is screen sharing (overlay closed) -->
+<div id="ss-active-pill" role="button" tabindex="0" aria-label="View screen share">
+  <span class="ss-dot"></span>
+  <span id="ss-active-pill-label">screen share active</span>
+  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" style="opacity:0.6"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><polyline points="15 3 21 3 21 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="10" y1="14" x2="21" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+</div>
+
+<!-- QR / channel-list share modal -->
+<div id="qr-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(8px);z-index:600;align-items:center;justify-content:center;padding:20px;">
+  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:18px;padding:28px 24px;width:100%;max-width:340px;display:flex;flex-direction:column;gap:18px;box-shadow:0 20px 60px rgba(0,0,0,0.5);">
+    <div style="display:flex;align-items:center;justify-content:space-between;">
+      <div style="font-family:var(--mono);font-size:0.62rem;color:var(--text-dim);letter-spacing:0.18em;text-transform:uppercase;">Share Channels</div>
+      <button id="qr-close-btn" style="background:none;border:1px solid var(--border);border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;color:var(--text-dim);cursor:pointer;">
+        <svg width="11" height="11" viewBox="0 0 14 14" fill="none"><line x1="1" y1="1" x2="13" y2="13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><line x1="13" y1="1" x2="1" y2="13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div style="text-align:center;">
+      <canvas id="qr-canvas" width="200" height="200" style="border-radius:10px;background:#fff;padding:8px;display:block;margin:0 auto;"></canvas>
+    </div>
+    <div style="font-family:var(--mono);font-size:0.58rem;color:var(--text-dim);letter-spacing:0.08em;text-align:center;line-height:1.6;" id="qr-channel-list"></div>
+    <div style="display:flex;gap:8px;">
+      <button id="qr-copy-btn" style="flex:1;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:10px;font-family:var(--mono);font-size:0.62rem;color:var(--text-mid);letter-spacing:0.08em;cursor:pointer;transition:border-color 0.18s,color 0.18s;">Copy URL</button>
+      <button id="qr-open-btn" style="flex:1;background:var(--accent);border:none;border-radius:var(--radius-sm);padding:10px;font-family:var(--mono);font-size:0.62rem;color:#fff;letter-spacing:0.08em;cursor:pointer;font-weight:700;box-shadow:0 4px 16px rgba(124,106,255,0.3);">Open in Tab</button>
+    </div>
   </div>
 </div>
 
@@ -4030,16 +4089,18 @@ function updateChannelControls() {
   const share = DOM['share-channel-btn'];
   const leave = DOM['leave-channel-btn'];
   const chatToggle = document.getElementById('chat-toggle-header-btn');
+  const membersChatBtn = document.getElementById('chat-toggle-members-btn');
   const aboutBtn = document.getElementById('about-btn');
   const more  = document.getElementById('mobile-more-btn');
   const barActions = document.getElementById('channel-bar-actions');
   const ssBtn = document.getElementById('screen-share-btn');
   const narrowPhone = typeof window.matchMedia === 'function' && window.matchMedia('(max-width: 640px)').matches;
 
-  if (share) share.style.display = inChannel ? 'flex' : 'none';
+  if (share) share.style.display = 'none'; // hidden — link is in hub dropdown
   if (leave) leave.style.display = inChannel ? 'flex' : 'none';
-  if (chatToggle) chatToggle.style.display = inChannel ? 'flex' : 'none';
-  if (aboutBtn) aboutBtn.style.display = inChannel && !narrowPhone ? 'flex' : 'none';
+  if (chatToggle) chatToggle.style.display = 'none'; // moved to members panel
+  if (membersChatBtn) membersChatBtn.style.display = inChannel ? 'flex' : 'none';
+  if (aboutBtn) aboutBtn.style.display = 'none'; // removed from bar
   if (more) {
     const mobileUi = typeof window.matchMedia === 'function' && window.matchMedia('(max-width: 640px)').matches;
     if (mobileUi) {
@@ -7389,11 +7450,12 @@ function setupMobileNav() {
 (function setupChat() {
   const panel      = document.getElementById('chat-panel');
   const headerBtn  = document.getElementById('chat-toggle-header-btn');
+  const membersBtn = document.getElementById('chat-toggle-members-btn');
   const messagesEl = document.getElementById('chat-messages');
   const inputEl    = document.getElementById('chat-input');
   const sendBtn    = document.getElementById('chat-send-btn');
   const badgeEl    = document.getElementById('chat-unread-badge');
-  if (!panel || !headerBtn) return;
+  if (!panel) return;
 
   let isOpen        = false;
   let unread        = 0;
@@ -7402,7 +7464,12 @@ function setupMobileNav() {
   function toggleChat(open) {
     isOpen = open !== undefined ? open : !isOpen;
     panel.classList.toggle('collapsed', !isOpen);
-    headerBtn.classList.toggle('active', isOpen);
+    if (headerBtn) headerBtn.classList.toggle('active', isOpen);
+    if (membersBtn) {
+      membersBtn.style.borderColor = isOpen ? 'var(--accent-dim)' : '';
+      membersBtn.style.color = isOpen ? 'var(--accent)' : '';
+      membersBtn.style.background = isOpen ? 'var(--accent-glow)' : '';
+    }
     if (isOpen) { clearUnread(); setTimeout(() => inputEl?.focus(), 250); }
   }
 
@@ -7458,7 +7525,8 @@ function setupMobileNav() {
     broadcastAll({ type: 'chat', name: state.myName, text: filtered });
   }
 
-  headerBtn.addEventListener('click', () => toggleChat());
+  if (headerBtn) headerBtn.addEventListener('click', () => toggleChat());
+  if (membersBtn) membersBtn.addEventListener('click', () => toggleChat());
 
   sendBtn.addEventListener('click', sendMessage);
   inputEl.addEventListener('keydown', e => {
@@ -8361,6 +8429,371 @@ function setupMobileNav() {
 
   // Start polling after a short delay to let the app init
   setTimeout(() => requestAnimationFrame(monitor), 4000);
+})();
+
+/* ═══════════════════════════════════════════
+   SPATIAL AUDIO
+   Pan each peer's voice left/right based on
+   their position in the member list.
+   Position 0 (self) is centre; peers spread
+   out symmetrically: -0.8 … 0 … +0.8.
+═══════════════════════════════════════════ */
+(function setupSpatialAudio() {
+  let spatialCtx = null;
+  // Map: peerId -> { source, panner, gainNode }
+  const nodes = {};
+
+  function getCtx() {
+    if (!spatialCtx || spatialCtx.state === 'closed') {
+      spatialCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (spatialCtx.state === 'suspended') spatialCtx.resume().catch(() => {});
+    return spatialCtx;
+  }
+
+  // Build / update the audio graph for a peer
+  function hookPeer(peerId, stream) {
+    if (nodes[peerId]) return; // already hooked
+    try {
+      const ctx    = getCtx();
+      const source = ctx.createMediaStreamSource(stream);
+      const panner = ctx.createStereoPanner();
+      panner.pan.value = 0;
+      source.connect(panner);
+      panner.connect(ctx.destination);
+      nodes[peerId] = { source, panner };
+    } catch(e) {}
+  }
+
+  function unhookPeer(peerId) {
+    const n = nodes[peerId];
+    if (!n) return;
+    try { n.source.disconnect(); n.panner.disconnect(); } catch {}
+    delete nodes[peerId];
+  }
+
+  // Recompute pan values whenever the member list changes
+  function updatePans() {
+    if (!state.currentChannel) return;
+    const peers = Object.entries(state.connections)
+      .filter(([, info]) => info.channel === state.currentChannel)
+      .map(([id]) => id);
+
+    const count = peers.length;
+    peers.forEach((peerId, idx) => {
+      const n = nodes[peerId];
+      if (!n) return;
+      // Spread across -0.8 to +0.8; if only one peer, keep centre
+      const pan = count <= 1 ? 0 : -0.8 + (idx / (count - 1)) * 1.6;
+      try { n.panner.pan.setTargetAtTime(pan, getCtx().currentTime, 0.1); } catch {}
+    });
+  }
+
+  // Intercept playRemoteStream to hook spatial audio
+  const _origPlay = window.playRemoteStream || (typeof playRemoteStream === 'function' ? playRemoteStream : null);
+  if (typeof playRemoteStream === 'function') {
+    window.playRemoteStream = function(peerId, stream) {
+      // Call original first (creates <audio> element, sets volume)
+      playRemoteStream(peerId, stream);
+      // Mute the raw <audio> element — spatial graph handles output
+      const audio = document.getElementById(`audio-${peerId}`);
+      if (audio) {
+        audio.volume = 0;
+        audio.muted = true;
+      }
+      hookPeer(peerId, stream);
+      updatePans();
+    };
+  }
+
+  // Intercept removeAudio to unhook
+  if (typeof removeAudio === 'function') {
+    const _origRemove = removeAudio;
+    window.removeAudio = function(peerId) {
+      unhookPeer(peerId);
+      _origRemove(peerId);
+    };
+  }
+
+  // Re-pan whenever renderMembers runs (order may have changed)
+  const _origRender = window.renderMembers || (typeof renderMembers === 'function' ? renderMembers : null);
+  if (_origRender) {
+    window.renderMembers = function() {
+      _origRender.apply(this, arguments);
+      updatePans();
+    };
+  }
+
+  // Expose so other code can trigger a re-pan
+  window._spatialUpdatePans = updatePans;
+})();
+
+/* ═══════════════════════════════════════════
+   CHANNEL LIST QR / URL SHARING
+   Encodes all public channel names into a URL
+   and renders a QR code using the Canvas API
+   (tiny pure-JS QR via google chart API fallback
+   or inline mini-encoder).
+═══════════════════════════════════════════ */
+(function setupChannelQR() {
+  const overlay      = document.getElementById('qr-overlay');
+  const closeBtn     = document.getElementById('qr-close-btn');
+  const copyBtn      = document.getElementById('qr-copy-btn');
+  const openBtn      = document.getElementById('qr-open-btn');
+  const canvas       = document.getElementById('qr-canvas');
+  const channelList  = document.getElementById('qr-channel-list');
+  const sidebarBtn   = document.getElementById('qr-open-sidebar-btn');
+  if (!overlay || !canvas) return;
+
+  let currentUrl = '';
+
+  function buildShareUrl() {
+    const channels = typeof publicChannels === 'function' ? publicChannels() : [];
+    const base = location.origin + location.pathname;
+    if (!channels.length) return base;
+    // Encode all public channels as comma-separated hash: #channels=a,b,c
+    return base + '#channels=' + channels.map(encodeURIComponent).join(',');
+  }
+
+  function drawQR(url) {
+    // Use Google Chart API to generate QR (simple, no deps)
+    const size = 200;
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, size, size);
+      ctx.drawImage(img, 0, 0, size, size);
+    };
+    img.onerror = () => {
+      // Fallback: just write the URL as text on canvas
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0, 0, 200, 200);
+      ctx.fillStyle = '#111';
+      ctx.font = '9px monospace';
+      ctx.fillText('Scan not available', 10, 20);
+      ctx.fillText('Copy URL below', 10, 35);
+    };
+    img.src = `https://chart.googleapis.com/chart?cht=qr&chs=200x200&chl=${encodeURIComponent(url)}&choe=UTF-8`;
+  }
+
+  function openQR() {
+    currentUrl = buildShareUrl();
+    const channels = typeof publicChannels === 'function' ? publicChannels() : [];
+    drawQR(currentUrl);
+    if (channelList) {
+      channelList.textContent = channels.length
+        ? 'Channels: ' + channels.map(c => '#' + c).join(', ')
+        : 'No public channels to share';
+    }
+    overlay.style.display = 'flex';
+  }
+
+  function closeQR() { overlay.style.display = 'none'; }
+
+  closeBtn?.addEventListener('click', closeQR);
+  overlay?.addEventListener('click', e => { if (e.target === overlay) closeQR(); });
+
+  copyBtn?.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(currentUrl);
+      copyBtn.textContent = 'Copied!';
+      setTimeout(() => { copyBtn.textContent = 'Copy URL'; }, 1800);
+    } catch { toast('Could not copy URL', 'red'); }
+  });
+
+  openBtn?.addEventListener('click', () => {
+    window.open(currentUrl, '_blank');
+  });
+
+  sidebarBtn?.addEventListener('click', openQR);
+
+  // Auto-import channels from URL hash if format is #channels=a,b,c
+  (function importFromHash() {
+    const raw = decodeURIComponent((location.hash || '').replace(/^#/, ''));
+    if (!raw.startsWith('channels=')) return;
+    const names = raw.slice('channels='.length).split(',').map(decodeURIComponent).filter(Boolean);
+    // Wait for app to be ready
+    setTimeout(() => {
+      names.forEach(ch => {
+        if (typeof safeAddChannel === 'function') safeAddChannel(ch);
+      });
+      if (names.length) {
+        if (typeof renderChannels === 'function') renderChannels();
+        toast(`Imported ${names.length} channel${names.length > 1 ? 's' : ''} from link`, 'green');
+      }
+      // Clean hash
+      history.replaceState(null, '', location.pathname + location.search);
+    }, 1200);
+  })();
+})();
+
+/* ═══════════════════════════════════════════
+   TYPING INDICATORS
+   Broadcast a 'typing' event when the user
+   types in the chat box; show "Name is typing…"
+   in the chat panel for 3s.
+═══════════════════════════════════════════ */
+(function setupTypingIndicators() {
+  const inputEl    = document.getElementById('chat-input');
+  const typingRow  = document.getElementById('chat-typing-row');
+  if (!inputEl || !typingRow) return;
+
+  // Map: peerId -> { name, timer }
+  const typingPeers = {};
+  let myTypingTimer = null;
+  let lastTypingSent = 0;
+
+  function renderTyping() {
+    const names = Object.values(typingPeers).map(p => p.name);
+    if (!names.length) { typingRow.textContent = ''; return; }
+    const text = names.length === 1
+      ? `${names[0]} is typing…`
+      : names.length === 2
+        ? `${names[0]} and ${names[1]} are typing…`
+        : `${names.slice(0, 2).join(', ')} and others are typing…`;
+    typingRow.innerHTML = `<span style="animation:blink 1s ease-in-out infinite alternate;display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--text-dim);margin-right:4px;vertical-align:middle;"></span>${text}`;
+  }
+
+  function clearPeerTyping(peerId) {
+    if (typingPeers[peerId]) {
+      clearTimeout(typingPeers[peerId].timer);
+      delete typingPeers[peerId];
+      renderTyping();
+    }
+  }
+
+  // Receive typing from peers
+  window._typingReceive = function(peerId, name) {
+    if (typingPeers[peerId]) clearTimeout(typingPeers[peerId].timer);
+    typingPeers[peerId] = {
+      name: name || state.connections[peerId]?.name || 'Someone',
+      timer: setTimeout(() => clearPeerTyping(peerId), 3500),
+    };
+    renderTyping();
+  };
+
+  // Clear when peer sends a message
+  window._typingClear = function(peerId) { clearPeerTyping(peerId); };
+
+  // Send typing event as user types
+  inputEl.addEventListener('input', () => {
+    if (!state.currentChannel) return;
+    const now = Date.now();
+    if (now - lastTypingSent < 1500) return; // throttle
+    lastTypingSent = now;
+    if (typeof broadcastAll === 'function') {
+      broadcastAll({ type: 'typing', name: state.myName });
+    }
+    clearTimeout(myTypingTimer);
+    // Send "stopped typing" after 3s of inactivity
+    myTypingTimer = setTimeout(() => {
+      if (typeof broadcastAll === 'function') {
+        broadcastAll({ type: 'typing-stop' });
+      }
+    }, 3000);
+  });
+
+  // Clear own typing when message is sent
+  const _origSend = window._chatHandleData;
+  const sendBtn = document.getElementById('chat-send-btn');
+  function clearMyTyping() {
+    clearTimeout(myTypingTimer);
+    if (typeof broadcastAll === 'function') broadcastAll({ type: 'typing-stop' });
+  }
+  sendBtn?.addEventListener('click', clearMyTyping);
+  inputEl?.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) clearMyTyping();
+  });
+
+  // Wire into handleData patch
+  const _origHandleData = window.handleData;
+  if (_origHandleData) {
+    window.handleData = function(peerId, data) {
+      if (data.type === 'typing') {
+        window._typingReceive(peerId, data.name);
+        return;
+      }
+      if (data.type === 'typing-stop') {
+        window._typingClear(peerId);
+        return;
+      }
+      if (data.type === 'chat') {
+        // Clear typing indicator when a message arrives
+        window._typingClear(peerId);
+      }
+      _origHandleData(peerId, data);
+    };
+  }
+})();
+
+/* ═══════════════════════════════════════════
+   SCREEN SHARE IMPROVEMENTS
+   1. Detect portrait streams and add .portrait
+      class to tiles so they don't stretch.
+   2. Show floating pill when overlay is closed
+      but shares are still active.
+   3. Fix: re-open overlay from the pill click
+      or from clicking the hub Share button while
+      already sharing.
+═══════════════════════════════════════════ */
+(function patchScreenShare() {
+  const pill      = document.getElementById('ss-active-pill');
+  const pillLabel = document.getElementById('ss-active-pill-label');
+  const overlay   = document.getElementById('screen-share-overlay');
+  if (!pill || !overlay) return;
+
+  function updatePill() {
+    const grid = document.getElementById('screen-share-grid');
+    const hasTiles = grid && grid.children.length > 0;
+    const overlayOpen = overlay.classList.contains('show');
+    if (hasTiles && !overlayOpen) {
+      const count = grid.children.length;
+      if (pillLabel) pillLabel.textContent = count === 1 ? 'screen share active' : `${count} screens active`;
+      pill.classList.add('show');
+    } else {
+      pill.classList.remove('show');
+    }
+  }
+
+  // Watch overlay open/close and grid mutations
+  const mo = new MutationObserver(updatePill);
+  mo.observe(overlay, { attributes: true, attributeFilter: ['class'] });
+  const grid = document.getElementById('screen-share-grid');
+  if (grid) mo.observe(grid, { childList: true });
+
+  // Pill click re-opens overlay
+  pill.addEventListener('click', () => {
+    overlay.classList.add('show');
+    pill.classList.remove('show');
+  });
+  pill.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pill.click(); }
+  });
+
+  // Add portrait class to tiles based on video stream dimensions
+  function tagPortrait(tile) {
+    const video = tile.querySelector('video');
+    if (!video) return;
+    function check() {
+      if (video.videoWidth && video.videoHeight) {
+        tile.classList.toggle('portrait', video.videoHeight > video.videoWidth);
+      }
+    }
+    video.addEventListener('loadedmetadata', check);
+    if (video.videoWidth) check();
+  }
+
+  // Patch existing tile creation — observe grid for new tiles
+  if (grid) {
+    const tileObs = new MutationObserver(mutations => {
+      mutations.forEach(m => m.addedNodes.forEach(n => {
+        if (n.classList?.contains('screen-tile')) tagPortrait(n);
+      }));
+    });
+    tileObs.observe(grid, { childList: true });
+  }
 })();
 
 </script>
