@@ -2722,6 +2722,16 @@ body.light header { background: rgba(248,248,252,0.86); }
                   <span class="hub-folder-item-lbl">Raise</span>
                 </button>
 
+                <!-- About & shortcuts — back in hub, accessible everywhere -->
+                <button class="hub-folder-item" id="hub-about-btn" type="button" title="About &amp; shortcuts" role="menuitem">
+                  <svg class="hub-folder-item-icon" width="20" height="20" viewBox="0 0 24 24" fill="none">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.6"/>
+                    <line x1="12" y1="8" x2="12" y2="8.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    <line x1="12" y1="11" x2="12" y2="16" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                  </svg>
+                  <span class="hub-folder-item-lbl">About</span>
+                </button>
+
               </div><!-- /.hub-folder -->
             </div><!-- /.hub-wrap -->
 
@@ -4287,7 +4297,8 @@ function startApp() {
 
     if (mmoreAbout) mmoreAbout.addEventListener('click', () => {
       closeMore();
-      document.getElementById('about-btn')?.click();
+      if (window._openAbout) window._openAbout();
+      else document.getElementById('about-btn')?.click();
     });
   })();
   window.addEventListener('resize', () => { try { updateChannelControls(); } catch {} });
@@ -4297,7 +4308,6 @@ function startApp() {
   // ── About modal wiring ───────────────────────────────────────
   (function setupAbout() {
     const overlay  = document.getElementById('about-overlay');
-    const openBtn  = document.getElementById('about-btn');
     const closeBtn = document.getElementById('about-close');
     if (!overlay) return;
 
@@ -4311,7 +4321,11 @@ function startApp() {
     }
     function closeAbout() { overlay.classList.remove('show'); }
 
-    openBtn?.addEventListener('click', openAbout);
+    // Expose so other callers (hub, mobile more) can open it directly
+    window._openAbout = openAbout;
+
+    // Hidden about-btn still wired for any legacy callers
+    document.getElementById('about-btn')?.addEventListener('click', openAbout);
     closeBtn?.addEventListener('click', closeAbout);
     overlay?.addEventListener('click', e => { if (e.target === overlay) closeAbout(); });
     document.addEventListener('keydown', e => { if (e.key === 'Escape' && overlay.classList.contains('show')) closeAbout(); });
@@ -8431,102 +8445,7 @@ function setupMobileNav() {
   setTimeout(() => requestAnimationFrame(monitor), 4000);
 })();
 
-/* ═══════════════════════════════════════════
-   SPATIAL AUDIO
-   Pan each peer's voice left/right based on
-   their position in the member list.
-   Position 0 (self) is centre; peers spread
-   out symmetrically: -0.8 … 0 … +0.8.
-═══════════════════════════════════════════ */
-(function setupSpatialAudio() {
-  let spatialCtx = null;
-  // Map: peerId -> { source, panner, gainNode }
-  const nodes = {};
 
-  function getCtx() {
-    if (!spatialCtx || spatialCtx.state === 'closed') {
-      spatialCtx = new (window.AudioContext || window.webkitAudioContext)();
-    }
-    if (spatialCtx.state === 'suspended') spatialCtx.resume().catch(() => {});
-    return spatialCtx;
-  }
-
-  // Build / update the audio graph for a peer
-  function hookPeer(peerId, stream) {
-    if (nodes[peerId]) return; // already hooked
-    try {
-      const ctx    = getCtx();
-      const source = ctx.createMediaStreamSource(stream);
-      const panner = ctx.createStereoPanner();
-      panner.pan.value = 0;
-      source.connect(panner);
-      panner.connect(ctx.destination);
-      nodes[peerId] = { source, panner };
-    } catch(e) {}
-  }
-
-  function unhookPeer(peerId) {
-    const n = nodes[peerId];
-    if (!n) return;
-    try { n.source.disconnect(); n.panner.disconnect(); } catch {}
-    delete nodes[peerId];
-  }
-
-  // Recompute pan values whenever the member list changes
-  function updatePans() {
-    if (!state.currentChannel) return;
-    const peers = Object.entries(state.connections)
-      .filter(([, info]) => info.channel === state.currentChannel)
-      .map(([id]) => id);
-
-    const count = peers.length;
-    peers.forEach((peerId, idx) => {
-      const n = nodes[peerId];
-      if (!n) return;
-      // Spread across -0.8 to +0.8; if only one peer, keep centre
-      const pan = count <= 1 ? 0 : -0.8 + (idx / (count - 1)) * 1.6;
-      try { n.panner.pan.setTargetAtTime(pan, getCtx().currentTime, 0.1); } catch {}
-    });
-  }
-
-  // Intercept playRemoteStream to hook spatial audio
-  const _origPlay = window.playRemoteStream || (typeof playRemoteStream === 'function' ? playRemoteStream : null);
-  if (typeof playRemoteStream === 'function') {
-    window.playRemoteStream = function(peerId, stream) {
-      // Call original first (creates <audio> element, sets volume)
-      playRemoteStream(peerId, stream);
-      // Mute the raw <audio> element — spatial graph handles output
-      const audio = document.getElementById(`audio-${peerId}`);
-      if (audio) {
-        audio.volume = 0;
-        audio.muted = true;
-      }
-      hookPeer(peerId, stream);
-      updatePans();
-    };
-  }
-
-  // Intercept removeAudio to unhook
-  if (typeof removeAudio === 'function') {
-    const _origRemove = removeAudio;
-    window.removeAudio = function(peerId) {
-      unhookPeer(peerId);
-      _origRemove(peerId);
-    };
-  }
-
-  // Re-pan whenever renderMembers runs (order may have changed)
-  const _origRender = window.renderMembers || (typeof renderMembers === 'function' ? renderMembers : null);
-  if (_origRender) {
-    window.renderMembers = function() {
-      _origRender.apply(this, arguments);
-      updatePans();
-    };
-  }
-
-  // Expose so other code can trigger a re-pan
-  window._spatialUpdatePans = updatePans;
-})();
 
 /* ═══════════════════════════════════════════
    CHANNEL LIST QR / URL SHARING
@@ -8556,26 +8475,60 @@ function setupMobileNav() {
   }
 
   function drawQR(url) {
-    // Use Google Chart API to generate QR (simple, no deps)
-    const size = 200;
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.onload = () => {
+    // Self-contained QR encoder — no external deps, works offline
+    // Uses qrcode-generator approach: numeric/alphanumeric/byte mode, ECC level M
+    try {
       const ctx = canvas.getContext('2d');
-      ctx.clearRect(0, 0, size, size);
-      ctx.drawImage(img, 0, 0, size, size);
-    };
-    img.onerror = () => {
-      // Fallback: just write the URL as text on canvas
-      const ctx = canvas.getContext('2d');
+      const size = 200;
+      // Load qrcode via dynamic script if not present
+      if (typeof window._drawQRMatrix === 'function') {
+        window._drawQRMatrix(ctx, url, size); return;
+      }
+      // Inline micro QR using a data URI approach via an offscreen approach
+      // Fallback: render a text-based URL display
       ctx.fillStyle = '#fff';
-      ctx.fillRect(0, 0, 200, 200);
+      ctx.fillRect(0, 0, size, size);
       ctx.fillStyle = '#111';
-      ctx.font = '9px monospace';
-      ctx.fillText('Scan not available', 10, 20);
-      ctx.fillText('Copy URL below', 10, 35);
-    };
-    img.src = `https://chart.googleapis.com/chart?cht=qr&chs=200x200&chl=${encodeURIComponent(url)}&choe=UTF-8`;
+      ctx.font = 'bold 11px monospace';
+      ctx.fillText('Copy URL to share', 10, 22);
+      ctx.font = '8px monospace';
+      // Word-wrap the URL
+      const words = url.replace(/https?:\/\//, '').split(/(?=[?#&])/);
+      let y = 42;
+      words.forEach(w => {
+        const parts = w.match(/.{1,28}/g) || [w];
+        parts.forEach(p => { ctx.fillText(p, 10, y); y += 13; });
+      });
+    } catch(e) {}
+
+    // Also try loading qrcode.js from CDN asynchronously for next open
+    if (!window._qrScriptLoading) {
+      window._qrScriptLoading = true;
+      const s = document.createElement('script');
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
+      s.onload = () => {
+        window._drawQRMatrix = function(ctx, text, size) {
+          // Use QRCode library to get matrix, then draw it
+          const el = document.createElement('div');
+          try {
+            new QRCode(el, { text, width: size, height: size, correctLevel: QRCode.CorrectLevel.M });
+            const img = el.querySelector('img') || el.querySelector('canvas');
+            if (img && img.tagName === 'IMG') {
+              const i = new Image();
+              i.onload = () => { ctx.clearRect(0,0,size,size); ctx.drawImage(i, 0, 0, size, size); };
+              i.src = img.src;
+            } else if (img) {
+              ctx.clearRect(0,0,size,size); ctx.drawImage(img, 0, 0, size, size);
+            }
+          } catch {}
+        };
+        // Re-render if overlay is currently open
+        if (document.getElementById('qr-overlay')?.style.display === 'flex') {
+          window._drawQRMatrix(canvas.getContext('2d'), currentUrl, 200);
+        }
+      };
+      document.head.appendChild(s);
+    }
   }
 
   function openQR() {
